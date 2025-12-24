@@ -81,7 +81,7 @@
         .nav-item {
             display: flex; flex-direction: column; justify-content: center;
             align-items: center; color: var(--tg-theme-hint-color);
-            font-size: 24px; text-decoration: none; flex: 1;
+            font-size: 18px; text-decoration: none; flex: 1;
         }
         .nav-item.active { color: var(--tg-theme-button-color, #2481cc); }
 
@@ -119,7 +119,7 @@
                 <div class="p-3">
                     <h2 class="text-sm font-bold truncate">Oversize Grey</h2>
                     <span class="price-tag">2 500 ₽</span>
-                    <button class="btn-green" onclick="addToCart('Oversize Grey', 2500, 'tshirt_grey')">В КОРЗИНУ</button>
+                    <button class="btn-green" onclick="addToCart('Oversize Grey', 2500, 'tshirtgrey.png')">В КОРЗИНУ</button>
                 </div>
             </div>
 
@@ -132,7 +132,7 @@
                 <div class="p-3">
                     <h2 class="text-sm font-bold truncate">Oversize Black</h2>
                     <span class="price-tag">2 500 ₽</span>
-                    <button class="btn-green" onclick="addToCart('Oversize Black', 2500, 'tshirt_black')">В КОРЗИНУ</button>
+                    <button class="btn-green" onclick="addToCart('Oversize Black', 2500, 'tshirtblack.png')">В КОРЗИНУ</button>
                 </div>
             </div>
         </div>
@@ -205,7 +205,7 @@
             btn.classList.toggle('active');
             if (btn.classList.contains('active')) {
                 favorites.push(name);
-                tg.showPopup({ title: 'Избранное', message: `Товар ${name} добавлен. Выберите размер при заказе!` });
+                tg.showPopup({ title: 'Избранное', message: `Товар ${name} добавлен в избранное!` });
             } else {
                 favorites = favorites.filter(f => f !== name);
             }
@@ -217,50 +217,72 @@
             list.innerHTML = favorites.length ? favorites.map(f => `<div class="p-3 bg-zinc-100 dark:bg-zinc-800 rounded-lg">${f}</div>`).join('') : 'Тут пока пусто';
         }
 
-        function addToCart(name, price, img) {
-            tg.showPopup({
-                title: 'Выберите размер',
-                message: `Добавляем ${name}`,
-                buttons: [
-                    {id: '42', text: '42', type: 'default'},
-                    {id: '44', text: '44', type: 'default'},
-                    {id: '46', text: '46', type: 'default'}
-                ]
-            }, (btnId) => {
-                if (btnId) {
-                    // Сохраняем картинку в объекте товара
-                    cart.push({ name, price, size: btnId, img: img });
-                    renderCart();
-                    tg.HapticFeedback.notificationOccurred('success');
-                }
-            });
-        }
+        // Функция добавления товара с единым размером и сохранением фото
+function addToCart(name, price, img) {
+    // Сохраняем товар в массив с параметром img
+    cart.push({ 
+        name: name, 
+        price: price, 
+        size: 'Единый (42-46)', 
+        img: img 
+    });
+    
+    renderCart(); // Перерисовываем корзину
+    
+    tg.HapticFeedback.notificationOccurred('success');
+    tg.showAlert(`${name} добавлен в корзину!`);
+}
 
-        function renderCart() {
-            const list = document.getElementById('cart-list');
-            const form = document.getElementById('order-form');
-            const msg = document.getElementById('empty-cart-msg');
-            
-            if (cart.length > 0) {
-                list.innerHTML = cart.map((item, idx) => `
-                    <div class="flex items-center p-3 bg-zinc-100 dark:bg-zinc-800 rounded-lg mb-2">
-                        <img src="${item.img}" class="w-12 h-12 object-cover rounded mr-3">
-                        <div class="flex-1">
-                            <b>${item.name}</b> <br>
-                            <small class="opacity-60">Размер: ${item.size}</small>
-                        </div>
-                        <div class="text-green-500 font-bold">${item.price} ₽</div>
-                        <button onclick="removeItem(${idx})" class="text-red-500 ml-4"><i class="fas fa-times text-lg"></i></button>
-                    </div>
-                `).join('');
-                form.classList.remove('hidden');
-                msg.classList.add('hidden');
-            } else {
-                list.innerHTML = '';
-                form.classList.add('hidden');
-                msg.classList.remove('hidden');
-            }
-        }
+// Функция отрисовки корзины с отображением фото
+function renderCart() {
+    const list = document.getElementById('cart-list');
+    const form = document.getElementById('order-form');
+    const msg = document.getElementById('empty-cart-msg');
+    
+    if (cart.length > 0) {
+        // Считаем итоговую сумму заказа
+        const total = cart.reduce((sum, item) => sum + item.price, 0);
+
+        // Отрисовываем список товаров
+        let cartHtml = cart.map((item, idx) => `
+            <div class="flex items-center p-3 bg-zinc-100 dark:bg-zinc-800 rounded-lg mb-2">
+                <img src="${item.img}" class="w-12 h-12 object-cover rounded mr-3 shadow-sm" onerror="this.src='https://via.placeholder.com/50'">
+                
+                <div class="flex-1">
+                    <b class="text-sm">${item.name}</b> <br>
+                    <small class="opacity-60">Размер: ${item.size}</small>
+                </div>
+                
+                <div class="text-green-500 font-bold ml-2">${item.price} ₽</div>
+                
+                <button onclick="removeItem(${idx})" class="text-red-500 ml-4">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `).join('');
+
+        // Добавляем красивую карточку с итогом в список
+        cartHtml += `
+            <div class="flex justify-between items-center p-4 mt-4 bg-white dark:bg-zinc-900 border-t-2 border-green-500 rounded-lg shadow-md">
+                <span class="font-bold text-lg text-gray-700 dark:text-gray-300">К ОПЛАТЕ:</span>
+                <span class="font-black text-xl text-green-500">${total} ₽</span>
+            </div>
+        `;
+
+        list.innerHTML = cartHtml;
+        form.classList.remove('hidden');
+        msg.classList.add('hidden');
+
+        // ОБНОВЛЯЕМ ТЕКСТ НА КНОПКЕ ЗАКАЗА
+        const orderBtn = form.querySelector('button');
+        orderBtn.innerHTML = `ОФОРМИТЬ ЗАКАЗ НА ${total} ₽`;
+        
+    } else {
+        list.innerHTML = '';
+        form.classList.add('hidden');
+        msg.classList.remove('hidden');
+    }
+}
 
         function removeItem(idx) {
             cart.splice(idx, 1);
@@ -268,25 +290,87 @@
         }
 
         function sendOrder() {
-            const fio = document.getElementById('fio').value;
-            const phone = document.getElementById('phone').value;
-            const delivery = document.getElementById('delivery').value;
+    const fioInput = document.getElementById('fio');
+    const phoneInput = document.getElementById('phone');
+    const delivery = document.getElementById('delivery').value;
 
-            if (!fio || !phone) {
-                tg.showAlert("Пожалуйста, введите Имя и Телефон!");
-                return;
-            }
+    const fio = fioInput.value.trim();
+    const phone = phoneInput.value.trim();
 
-            const data = {
-                заказчик: fio,
-                телефон: phone,
-                доставка: delivery,
-                товары: cart,
-                итого: cart.reduce((s, i) => s + i.price, 0)
-            };
+    // Сбрасываем стили ошибок перед проверкой
+    fioInput.style.border = "1px solid var(--tg-theme-hint-color)";
+    phoneInput.style.border = "1px solid var(--tg-theme-hint-color)";
 
+    // Проверка заполнения
+    if (!fio) {
+        tg.showAlert("Пожалуйста, введите ваше Имя и Фамилию!");
+        fioInput.style.border = "2px solid #e74c3c";
+        fioInput.focus();
+        return;
+    }
+
+    if (!phone || phone.length < 5) {
+        tg.showAlert("Пожалуйста, введите корректный номер телефона!");
+        phoneInput.style.border = "2px solid #e74c3c";
+        phoneInput.focus();
+        return;
+    }
+
+    // Если всё ок, собираем данные для отправки
+    const total = cart.reduce((s, i) => s + i.price, 0);
+    const data = {
+        заказчик: fio,
+        телефон: phone,
+        доставка: delivery,
+        товары: cart.map(item => ({
+            название: item.name,
+            размер: item.size,
+            цена: item.price
+        })),
+        итого: total
+    };
+
+    // Подтверждение перед отправкой
+    tg.showConfirm(`Отправить заказ на сумму ${total} ₽?`, (isConfirmed) => {
+        if (isConfirmed) {
             tg.sendData(JSON.stringify(data));
+            tg.close(); // Закрываем приложение после успешной отправки
         }
+    });
+}
+
+            function sendOrder() {
+    const fioInput = document.getElementById('fio');
+    const phoneInput = document.getElementById('phone');
+    const delivery = document.getElementById('delivery').value;
+
+    const fio = fioInput.value.trim();
+    const phone = phoneInput.value.trim();
+
+    // Проверка на заполнение
+    if (!fio || !phone) {
+        tg.showAlert("Пожалуйста, введите Имя и Телефон!");
+        return;
+    }
+
+    // ЭТУ ЧАСТЬ ОСТАВЛЯЕМ И ОБНОВЛЯЕМ
+    const total = cart.reduce((s, i) => s + i.price, 0);
+    const data = {
+        заказчик: fio,
+        телефон: phone,
+        доставка: delivery,
+        товары: cart,
+        итого: total
+    };
+
+    // Подтверждение и отправка
+    tg.showConfirm(`Отправить заказ на сумму ${total} ₽?`, (isConfirmed) => {
+        if (isConfirmed) {
+            tg.sendData(JSON.stringify(data));
+            tg.close(); 
+        }
+    });
+}
 
         function filterCategory(cat) {
             document.querySelectorAll('.product-card').forEach(card => {
