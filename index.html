@@ -107,6 +107,24 @@
         </select>
 
         <div id="product-list">
+            
+            <div class="card product-card" data-category="футболки" data-id="tshirt_black">
+                <img src="tshirtblack.png" class="w-full h-72 object-cover" onerror="this.src='https://via.placeholder.com/400x500?text=Photo+Coming+Soon'">
+                <button class="fav-btn" onclick="toggleFavorite(this, 'tshirt_black')"><i class="far fa-heart"></i></button>
+                <div class="p-4">
+                    <h2 class="text-lg font-bold mb-1">Футболка "Oversize Black"</h2>
+                    <p class="text-sm opacity-60 mb-4">Футболка с кружевами. Единый размер (42-46).</p>
+                    
+                    <div class="flex gap-2 mb-4">
+                        <button onclick="selectOption(this, 'size', '42-46')" class="size-btn active">42-46</button>
+                    </div>
+
+                    <div class="flex justify-between items-center">
+                        <span class="text-xl font-black text-white">2 500 ₽</span>
+                        <button onclick="addToCart('Футболка Black', 2500, this)" class="bg-blue-600 text-white px-6 py-2 rounded-xl font-bold text-sm">В корзину</button>
+                    </div>
+                </div>
+            </div>
 
             <div class="card product-card" data-category="футболки" data-id="tshirt_grey">
                 <img src="tshirtgrey.png" class="w-full h-72 object-cover" onerror="this.src='https://via.placeholder.com/400x500?text=Photo+Coming+Soon'">
@@ -118,6 +136,7 @@
                     <div class="flex gap-2 mb-4">
                         <button onclick="selectOption(this, 'size', '42-46')" class="size-btn active">42-46</button>
                     </div>
+
 
                     <div class="flex justify-between items-center">
                         <span class="text-xl font-black text-green-500">2 500 ₽</span>
