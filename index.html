@@ -96,36 +96,17 @@
         <h1 class="text-2xl font-bold mb-6">Коллекция Naran Wear</h1>
 
         <select class="category-select" onchange="filterCategory(this.value)">
-            <option value="all">🔍 Все категории</option>
-            <option value="футболки">👕 Футболки</option>
-            <option value="свитеры">🧶 Свитеры</option>
-            <option value="кардиганы">🧥 Кардиганы</option>
-            <option value="худи">🧥 Худи</option>
-            <option value="юбки">👗 Юбки</option>
-            <option value="платья">👗 Платья</option>
+            <option value="all"> Все категории</option>
+            <option value="футболки"> Футболки</option>
+            <option value="свитеры"> Свитеры</option>
+            <option value="кардиганы"> Кардиганы</option>
+            <option value="худи"> Худи</option>
+            <option value="юбки"> Юбки</option>
+            <option value="платья"> Платья</option>
             <option value="верхняя_одежда">❄️ Верхняя одежда</option>
         </select>
 
         <div id="product-list">
-            <div class="card product-card" data-category="худи" data-id="hoodie_basic">
-                <img src="hoodie.jpg" class="w-full h-72 object-cover" onerror="this.src='https://via.placeholder.com/400x500?text=Photo+Coming+Soon'">
-                <button class="fav-btn" onclick="toggleFavorite(this, 'hoodie_basic')"><i class="far fa-heart"></i></button>
-                <div class="p-4">
-                    <h2 class="text-lg font-bold mb-1">Худи "Basic Graphite"</h2>
-                    <p class="text-sm opacity-60 mb-4">Оверсайз крой, 100% хлопок.</p>
-                    
-                    <div class="flex gap-2 mb-4">
-                        <button onclick="selectOption(this, 'size', 'S')" class="size-btn">S</button>
-                        <button onclick="selectOption(this, 'size', 'M')" class="size-btn active">M</button>
-                        <button onclick="selectOption(this, 'size', 'L')" class="size-btn">L</button>
-                    </div>
-
-                    <div class="flex justify-between items-center">
-                        <span class="text-xl font-black text-blue-500">4 900 ₽</span>
-                        <button onclick="addToCart('Худи Basic', 4900, this)" class="bg-blue-600 text-white px-6 py-2 rounded-xl font-bold text-sm">В корзину</button>
-                    </div>
-                </div>
-            </div>
 
             <div class="card product-card" data-category="футболки" data-id="tshirt_grey">
                 <img src="tshirtgrey.png" class="w-full h-72 object-cover" onerror="this.src='https://via.placeholder.com/400x500?text=Photo+Coming+Soon'">
