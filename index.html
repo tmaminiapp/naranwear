@@ -1,1 +1,63 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: var(--tg-theme-bg-color); color: var(--tg-theme-text-color); font-family: sans-serif; }
+        .card { background-color: var(--tg-theme-secondary-bg-color); border-radius: 20px; overflow: hidden; transition: transform 0.2s; }
+        .card:active { transform: scale(0.98); }
+        .size-btn { border: 1px solid #e2e8f0; border-radius: 8px; padding: 4px 12px; font-size: 12px; }
+        .size-btn.active { background-color: #3b82f6; color: white; border-color: #3b82f6; }
+    </style>
+</head>
+<body class="p-4">
+    <h1 class="text-2xl font-bold mb-6">Коллекция Naran Wear</h1>
 
+    <div class="card shadow-md mb-6">
+        <img src="https://via.placeholder.com/600x800?text=Hoodie+Naran" class="w-full h-64 object-cover">
+        <div class="p-4">
+            <h2 class="text-lg font-bold mb-1">Худи "Basic Graphite"</h2>
+            <p class="text-sm opacity-60 mb-4">Оверсайз крой, 100% хлопок. Идеально для прогулок.</p>
+            
+            <p class="text-xs font-semibold mb-2 uppercase opacity-50">Выберите размер:</p>
+            <div class="flex gap-2 mb-4">
+                <button onclick="selectSize(this, 'S')" class="size-btn">S</button>
+                <button onclick="selectSize(this, 'M')" class="size-btn active">M</button>
+                <button onclick="selectSize(this, 'L')" class="size-btn">L</button>
+            </div>
+
+            <div class="flex justify-between items-center">
+                <span class="text-xl font-black text-blue-500">4 900 ₽</span>
+                <button onclick="addToCart('Худи Basic', 4900)" class="bg-blue-600 text-white px-6 py-2 rounded-xl font-bold text-sm">В корзину</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let tg = window.Telegram.WebApp;
+        let selectedSize = 'M';
+
+        function selectSize(btn, size) {
+            // Убираем активный класс у всех кнопок в этом блоке
+            btn.parentElement.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
+            // Добавляем нажатой кнопке
+            btn.classList.add('active');
+            selectedSize = size;
+        }
+
+        function addToCart(name, price) {
+            tg.MainButton.text = `Купить ${name} (${selectedSize}) — ${price}₽`;
+            tg.MainButton.show();
+            tg.HapticFeedback.notificationOccurred('success');
+        }
+
+        tg.onEvent('mainButtonClicked', function() {
+            // Здесь мы отправим данные боту
+            tg.sendData(JSON.stringify({product: "Худи", size: selectedSize, price: 4900}));
+        });
+    </script>
+</body>
+</html>
