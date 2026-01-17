@@ -296,22 +296,33 @@
         </div>
     </div>
 
-    <div v-if="activeTab === 'admin'">
-    <h3 style="font-size: 14px; margin-top: 0;">Добавить товар</h3>
+    <div v-if="activeTab === 'admin'" style="padding: 15px; background: #fff; border-radius: 20px; margin: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+    <h3 style="font-size: 18px; margin-bottom: 15px; color: var(--accent); text-align: center;">Новый товар</h3>
     
-    <input class="input-c" v-model="newP.name" placeholder="Название" style="margin-bottom: 10px;">
-    <input class="input-c" v-model.number="newP.price" placeholder="Цена" style="margin-bottom: 10px;">
+    <input class="input-c" v-model="newP.name" placeholder="Название (например: Корсет атласный)" style="margin-bottom: 10px;">
+    
+    <textarea class="input-c" v-model="newP.desc" placeholder="Описание товара..." style="margin-bottom: 10px; height: 80px; font-family: inherit; padding: 10px;"></textarea>
 
-    <div style="margin-bottom: 10px;">
-        <label style="font-size: 12px; display: block; margin-bottom: 5px;">Загрузить фото:</label>
-        <input type="file" @change="handleFileUpload" accept="image/*" class="input-c">
-        <div v-if="uploading" style="font-size: 10px; color: #007aff; margin-top: 5px;">
-            ⏳ Загрузка фото в облако Firebase...
-        </div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+        <input class="input-c" v-model.number="newP.price" placeholder="Цена (только цифры)">
+        <select class="input-c" v-model="newP.category">
+            <option disabled value="">Категория</option>
+            <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
+        </select>
     </div>
 
-    <button class="buy-btn" @click="addProduct" :disabled="uploading" style="margin-top: 10px;">
-        {{ uploading ? 'ЗАГРУЗКА...' : 'ДОБАВИТЬ В КАТАЛОГ' }}
+    <input class="input-c" v-model="newP.sizesInput" placeholder="Размеры через запятую (42, 44, 46)" style="margin-bottom: 15px;">
+
+    <div style="border: 1px dashed var(--gray); padding: 12px; border-radius: 12px; margin-bottom: 15px; background: #f9f9f9;">
+        <label style="font-size: 11px; color: var(--gray); display: block; margin-bottom: 8px;">ФОТО ТОВАРА:</label>
+        <input type="file" @change="handleFileUpload" accept="image/*" class="input-c" style="font-size: 11px; margin-bottom: 10px;">
+        <p style="text-align: center; font-size: 10px; color: var(--gray); margin: 5px 0;">ИЛИ</p>
+        <input class="input-c" v-model="newP.img" placeholder="Ссылка на фото (например, с ImgBB)">
+    </div>
+
+    <button class="buy-btn" @click="addProduct" :disabled="uploading || !newP.img" style="padding: 15px;">
+        <span v-if="uploading">⏳ ЗАГРУЗКА...</span>
+        <span v-else>ОПУБЛИКОВАТЬ</span>
     </button>
 </div>
 
