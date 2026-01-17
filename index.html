@@ -197,7 +197,7 @@
             @click.stop="toggleHideProduct(p)" 
             style="position: absolute; top: 10px; left: 10px; z-index: 9999; background: white; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border: 2px solid var(--accent); cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
             <span style="font-size: 20px;">{{ p.hidden ? '👁️‍🗨️' : '👁️' }}</span>
-          </div>
+          </button>
     
     <div v-if="p.hidden && activeTab === 'admin'" 
          style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 5; display: flex; align-items: center; justify-content: center; pointer-events: none; border-radius: 24px;">
