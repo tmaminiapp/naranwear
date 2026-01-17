@@ -193,9 +193,20 @@
             </div>
             <div class="products-grid">
                 <div v-for="p in filteredProducts" :key="p.id" class="card">
-                    <button class="fav-heart" @click.stop="toggleFav(p)" :class="{active: isFav(p)}">
-                        <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-                    </button>
+    <button v-if="isAdmin && activeTab === 'admin'" 
+            @click.stop="toggleHideProduct(p)" 
+            style="position: absolute; top: 10px; left: 10px; z-index: 30; background: rgba(255,255,255,0.9); border-radius: 50%; width: 34px; height: 34px; border: 1px solid var(--accent); display: flex; align-items: center; justify-content: center; font-size: 18px;">
+        {{ p.hidden ? '👁️‍🗨️' : '👁️' }}
+    </button>
+    
+    <div v-if="p.hidden && activeTab === 'admin'" 
+         style="position: absolute; top: 50%; left: 0; right: 0; background: rgba(0,0,0,0.6); color: #fff; text-align: center; padding: 5px; font-size: 10px; z-index: 5;">
+        СКРЫТО
+    </div>
+
+    <button class="fav-heart" @click.stop="toggleFav(p)" :class="{active: isFav(p)}">
+        <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+    </button>
                     <div class="slider-wrapper" @click="openP(p)">
                         <div class="slider-inner" @scroll="e => handleScroll(e, p)">
                             <img v-for="img in p.images" :src="img">
@@ -369,7 +380,7 @@
 </div>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-  import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+  import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
   import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
 
   const firebaseConfig = {
@@ -387,7 +398,7 @@
 
   window.db = db;
   window.storage = storage;
-  window.fbMethods = { collection, addDoc, onSnapshot, query, orderBy, ref, uploadBytes, getDownloadURL };
+  window.fbMethods = { collection, addDoc, onSnapshot, query, orderBy, ref, uploadBytes, getDownloadURL, doc, updateDoc, deleteDoc };
 </script>
 
 <script>
@@ -439,7 +450,10 @@
             }
         },
         computed: {
-            filteredProducts() { return this.products.filter(p => p.category === this.currentCat) },
+            filteredProducts() { 
+    if (this.activeTab === 'admin') return this.products.filter(p => p.category === this.currentCat);
+    return this.products.filter(p => p.category === this.currentCat && p.hidden !== true);
+},
             favItems() { 
                 return this.favs.map(f => {
                     const product = this.products.find(p => p.id === f.id);
@@ -523,6 +537,11 @@
         console.error("Ошибка при добавлении: ", e);
         alert('Ошибка при сохранении. Проверьте соединение.');
     }
+},
+async toggleHideProduct(p) {
+    const docRef = window.fbMethods.doc(window.db, "products", p.id);
+    await window.fbMethods.updateDoc(docRef, { hidden: !p.hidden });
+    alert(p.hidden ? 'Товар показан' : 'Товар скрыт');
 },
             initMap() {
     this.$nextTick(() => {
