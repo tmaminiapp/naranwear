@@ -399,7 +399,7 @@
             return {
                 uploading: false,      // следит, идет ли загрузка прямо сейчас
                 uploadProgress: 0,
-                newP: { name: '', price: '', category: 'ПИДЖАКИ', img: '' },
+                newP: { name: '', price: '', img: '', category: '', desc: '', sizesInput: '42, 44, 46', sizes: [] },
                 adminId: 387881523,
                 isAdmin: false,
                 showMenu: false,
@@ -495,28 +495,33 @@
     }
 },
             async addProduct() {
-    if (!this.newP.name || !this.newP.price || !this.newP.img) {
-        alert('Заполните название, цену и загрузите фото!');
+    if (!this.newP.name || !this.newP.price || !this.newP.img || !this.newP.category) {
+        alert('Заполните все поля (Название, Цена, Категория и Фото)');
         return;
     }
 
     try {
-        // Отправляем в Firebase Firestore
-        await window.fbMethods.addDoc(window.fbMethods.collection(window.db, "products"), {
+        // Превращаем строку размеров в массив
+        const sizesArray = this.newP.sizesInput.split(',').map(s => s.trim());
+
+        const productData = {
             name: this.newP.name,
             price: Number(this.newP.price),
+            img: this.newP.img,
             category: this.newP.category,
-            images: [this.newP.img],
-            sizes: ['42', '44'],
-            desc: 'Новый товар из админки',
-            createdAt: new Date()
-        });
+            desc: this.newP.desc || '',
+            sizes: sizesArray,
+            createdAt: window.fbMethods.serverTimestamp()
+        };
 
-        this.newP = { name: '', price: '', category: 'ПИДЖАКИ', img: '' };
-        this.vibrate();
-        alert('Товар опубликован в каталоге!');
+        await window.fbMethods.addDoc(window.fbMethods.collection(window.db, "products"), productData);
+        
+        // Очистка полей после добавления
+        this.newP = { name: '', price: '', img: '', category: '', desc: '', sizesInput: '42, 44, 46', sizes: [] };
+        alert('Товар успешно добавлен!');
     } catch (e) {
-        alert('Ошибка публикации: ' + e.message);
+        console.error("Ошибка при добавлении: ", e);
+        alert('Ошибка при сохранении. Проверьте соединение.');
     }
 },
             initMap() {
