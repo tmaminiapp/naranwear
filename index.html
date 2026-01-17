@@ -629,6 +629,9 @@ locateMe() {
 },
             send() {
                 this.vibrate();
+                if (this.form.phone) {
+                    localStorage.setItem('naran_user_phone', this.form.phone);
+        }
                 const now = new Date();
                 const dateStr = now.getDate().toString().padStart(2, '0') + 
                                 (now.getMonth() + 1).toString().padStart(2, '0') + 
@@ -659,7 +662,10 @@ locateMe() {
         const u = tg.initDataUnsafe.user;
         this.user = { first_name: u.first_name, photo: u.photo_url };
         this.form.name = u.first_name;
-        if (u.id === this.adminId) this.isAdmin = true;
+        const savedPhone = localStorage.getItem('naran_user_phone');
+        if (savedPhone) {
+            this.form.phone = savedPhone;
+        }
     }
 
     // Слушаем базу данных Firebase в реальном времени
