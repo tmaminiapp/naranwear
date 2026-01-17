@@ -193,7 +193,7 @@
             </div>
             <div class="products-grid">
                 <div v-for="p in filteredProducts" :key="p.id" class="card" style="position: relative;">
-                <div v-if="isAdmin && activeTab === 'admin'"
+                <button v-if="isAdmin && activeTab === 'admin'"
             @click.stop="toggleHideProduct(p)" 
             style="position: absolute; top: 10px; left: 10px; z-index: 9999; background: white; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border: 2px solid var(--accent); cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
             <span style="font-size: 20px;">{{ p.hidden ? '👁️‍🗨️' : '👁️' }}</span>
