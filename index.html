@@ -11,8 +11,8 @@
     
     <style>
         :root { 
-            --accent: #653937; /* Насыщенный розовый */
-            --bg: #c3acac; /* Нежно-розовый фон */
+            --accent: #e0dbda; /* Насыщенный розовый */
+            --bg: #b18383; /* Нежно-розовый фон */
             --card-bg: #ffffff;
             --dark: #2d2d2d; 
             --gray: #a0a0a0; 
@@ -130,11 +130,7 @@
         /* ФОРМЫ */
         .input-c { width: 100%; padding: 14px; border-radius: 12px; border: 1px solid #eee; font-size: 15px; background: #fdfdfd; font-family: inherit; }
         .order-btn { width: 100%; padding: 18px; background: var(--accent); color: #fff; border: none; border-radius: 18px; font-weight: 800; font-size: 16px; margin-top: 20px; box-shadow: 0 5px 15px rgba(255, 133, 162, 0.3); }
-        .product-hidden { 
-            opacity: 0.5; 
-            filter: grayscale(0.8); 
-            border: 2px dashed #ff4444 !important;
-        }
+        
         #map { 
     width: 100%; 
     height: 250px; /* Убедитесь, что высота указана в px */
@@ -196,7 +192,7 @@
                 <button v-for="c in categories" @click="currentCat = c; vibrate()" :class="['cat-tab', currentCat === c ? 'active' : '']">{{c}}</button>
             </div>
             <div class="products-grid">
-                <div v-for="p in filteredProducts" :key="p.id" :class="['card', p.hidden ? 'product-hidden' : '']">
+                <div v-for="p in filteredProducts" :key="p.id" class="card" style="position: relative;">
                 <button v-if="activeTab === 'admin'" 
         @click.stop="toggleHideProduct(p)" 
         style="position: absolute; top: 10px; left: 10px; z-index: 9999; background: #ff4444; border: 2px solid white; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3); cursor: pointer; padding: 0;">
@@ -304,43 +300,42 @@
         </div>
 
         <div v-if="activeTab === 'profile'">
-            <div style="text-align: center; padding: 40px 0;">
-                <img :src="user.photo || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'" 
-                     style="width: 100px; height: 100px; border-radius: 50%; border: 3px solid var(--accent); padding: 3px;">
-                <h2 style="margin-top: 15px;">{{user.first_name}}</h2>
-                <p style="font-size: 12px; color: var(--gray); margin-bottom: 25px;">Клиент NARAN</p>
-                
-                <button class="cat-tab" @click="window.Telegram.WebApp.openTelegramLink('https://t.me/opttania')">Написать в поддержку</button>
+    <div style="text-align: center; padding: 30px 0;">
+        <img :src="user.photo || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'" style="width: 80px; height: 80px; border-radius: 50%; border: 3px solid var(--accent); padding: 3px;">
+        <h2 style="margin-top: 10px;">{{user.first_name}}</h2>
+        <p style="font-size: 12px; color: var(--gray); margin-bottom: 15px;">Клиент NARAN</p>
+        <button class="cat-tab" @click="window.Telegram.WebApp.openTelegramLink('https://t.me/opttania')">Написать в поддержку</button>
+    </div>
 
-                <div v-if="isAdmin" style="margin-top: 40px; text-align: left; border-top: 2px dashed var(--accent); padding-top: 30px; padding-left: 15px; padding-right: 15px;">
-                    <h3 style="color: var(--accent); text-align: center; margin-bottom: 20px;">⚙️ Админ-панель</h3>
-                    
-                    <div style="background: #fff; border-radius: 20px; padding: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 30px;">
-                        <h4 style="margin: 0 0 15px 0;">Добавить новый товар</h4>
-                        <input class="input-c" v-model="newP.name" placeholder="Название">
-                        <input class="input-c" v-model.number="newP.price" placeholder="Цена">
-                        <select class="input-c" v-model="newP.category">
-                            <option v-for="cat in categories" :key="cat" :value="cat">{{cat}}</option>
-                        </select>
-                        <input type="file" @change="handleFileUpload" class="input-c" style="font-size: 11px;">
-                        <button class="buy-btn" @click="addProduct" :disabled="uploading" style="margin-top: 10px;">ОПУБЛИКОВАТЬ</button>
-                    </div>
+    <div v-if="isAdmin" style="margin-top: 20px; padding: 15px; border-top: 2px solid var(--light-pink);">
+        <h3 style="text-align: center; color: var(--accent); text-transform: uppercase; font-size: 16px;">Админ-панель</h3>
+        
+        <button class="buy-btn" @click="activeTab = 'catalog'; vibrate()" style="margin-bottom: 20px; background: #50b183;">
+            ⚙️ УПРАВЛЯТЬ ВИДИМОСТЬЮ В КАТАЛОГЕ
+        </button>
 
-                    <h4 style="margin-bottom: 15px;">Управление видимостью:</h4>
-                    <div v-for="p in products" :key="p.id" style="display: flex; align-items: center; justify-content: space-between; background: #fff; padding: 10px; border-radius: 12px; margin-bottom: 8px; border: 1px solid #eee;">
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <img :src="p.images ? p.images[0] : p.img" style="width: 40px; height: 50px; object-fit: cover; border-radius: 6px;">
-                            <span style="font-size: 12px; font-weight: 700; max-width: 100px; overflow: hidden;">{{p.name}}</span>
-                        </div>
-                        <button @click="toggleHide(p)" 
-                                :style="{ background: p.hidden ? '#ff4444' : '#44bb44' }"
-                                style="border:none; color:white; padding: 8px 12px; border-radius: 8px; font-size: 10px; font-weight:800;">
-                            {{ p.hidden ? 'СКРЫТ' : 'ПОКАЗАН' }}
-                        </button>
-                    </div>
-                </div>
+        <div style="background: #fff; padding: 15px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+            <h4 style="margin-top: 0;">Добавить товар</h4>
+            <input class="input-c" v-model="newP.name" placeholder="Название" style="margin-bottom: 10px;">
+            <textarea class="input-c" v-model="newP.desc" placeholder="Описание..." style="margin-bottom: 10px; height: 60px;"></textarea>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                <input class="input-c" v-model.number="newP.price" placeholder="Цена">
+                <select class="input-c" v-model="newP.category">
+                    <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
+                </select>
             </div>
+
+            <input class="input-c" v-model="newP.sizesInput" placeholder="Размеры (42, 44)" style="margin-bottom: 10px;">
+            <input type="file" @change="handleFileUpload" class="input-c" style="margin-bottom: 10px; font-size: 10px;">
+            
+            <button class="buy-btn" @click="addProduct" :disabled="uploading">
+                <span v-if="uploading">ЗАГРУЗКА...</span>
+                <span v-else>ОПУБЛИКОВАТЬ</span>
+            </button>
         </div>
+    </div>
+</div>
 
     <div v-if="selP" class="modal">
         <button class="close-m" @click="selP = null">✕</button>
@@ -375,11 +370,6 @@
         </button>
         <button @click="activeTab = 'profile'; vibrate()" :class="['nav-item', activeTab === 'profile' ? 'active' : '']">
             <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg><span>Профиль</span>
-        </button>
-
-        <button v-if="isAdmin" @click="activeTab = 'admin'; vibrate()" :class="['nav-item', activeTab === 'admin' ? 'active' : '']">
-            <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-            <span>Админ</span>
         </button>
     </nav>
 </div>
@@ -455,22 +445,10 @@
             }
         },
         computed: {
-            filteredProducts() {
-                const all = [...this.hardcodedProducts, ...this.products];
-                return all.filter(p => {
-                    const matchCat = p.category === this.currentCat;
-                    // Если ты админ — видишь всё. Если гость — только те, что НЕ скрыты.
-                    const isVisible = this.isAdmin ? true : !p.hidden;
-                    return matchCat && isVisible;
-                });
-            },
-            cartTotal() {
-                return this.cart.reduce((sum, item) => sum + item.price, 0);
-            },
-            isOrderValid() {
-                return this.form.name.length > 1 && this.form.phone.length > 5 && this.address;
-            }
-        },
+            filteredProducts() { 
+    if (this.activeTab === 'admin') return this.products.filter(p => p.category === this.currentCat);
+    return this.products.filter(p => p.category === this.currentCat && p.hidden !== true);
+},
             favItems() { 
                 return this.favs.map(f => {
                     const product = this.products.find(p => p.id === f.id);
@@ -555,22 +533,26 @@
         alert('Ошибка при сохранении. Проверьте соединение.');
     }
 },
-async toggleHide(product) {
-                this.vibrate();
-                if (!product.id) {
-                    alert("Этот товар встроен в код вручную. Скрывать можно только товары, добавленные через админку.");
-                    return;
-                }
-                try {
-                    const pRef = window.fbMethods.doc(window.db, "products", product.id);
-                    await window.fbMethods.updateDoc(pRef, {
-                        hidden: !product.hidden
-                    });
-                } catch (e) {
-                    console.error(e);
-                    alert("Ошибка при обновлении статуса в базе");
-                }
-            },
+async toggleHideProduct(p) {
+    this.vibrate();
+    try {
+        // Если это товар из Firebase (у него id — строка)
+        if (typeof p.id === 'string') {
+            const docRef = window.fbMethods.doc(window.db, "products", p.id);
+            await window.fbMethods.updateDoc(docRef, {
+                hidden: !p.hidden
+            });
+        } else {
+            // Если это локальный товар из массива в коде
+            p.hidden = !p.hidden;
+            // Чтобы сохранить состояние локальных товаров, нужно обновить localStorage
+            localStorage.setItem('naran_products', JSON.stringify(this.products));
+        }
+    } catch (e) {
+        console.error("Ошибка при скрытии товара:", e);
+        alert("Не удалось изменить видимость");
+    }
+},
             initMap() {
     this.$nextTick(() => {
         setTimeout(() => {
