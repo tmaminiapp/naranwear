@@ -192,20 +192,28 @@
                 <button v-for="c in categories" @click="currentCat = c; vibrate()" :class="['cat-tab', currentCat === c ? 'active' : '']">{{c}}</button>
             </div>
             <div class="products-grid">
-                <div v-for="p in filteredProducts" :key="p.id" class="card" style="position: relative;">
-                <button v-if="activeTab === 'admin'" 
-        @click.stop="toggleHideProduct(p)" 
-        style="position: absolute; top: 10px; left: 10px; z-index: 9999; background: #ff4444; border: 2px solid white; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3); cursor: pointer; padding: 0;">
-    <span style="font-size: 22px;">{{ p.hidden ? '👁️‍🗨️' : '👁️' }}</span>
-</button>
-
-<img :src="p.img" ... >
+                <div style="margin-top: 30px; border-top: 1px solid rgba(0,0,0,0.1); padding-top: 20px;">
+    <h3 style="text-align: center; font-size: 14px; color: var(--accent); margin-bottom: 15px;">УПРАВЛЕНИЕ ТОВАРАМИ</h3>
     
-    <div v-if="p.hidden && activeTab === 'admin'" 
-         style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 5; display: flex; align-items: center; justify-content: center; pointer-events: none; border-radius: 24px;">
-         <span style="color: rgb(231, 76, 76); font-weight: 800; font-size: 12px; background: rgba(0,0,0,0.6); padding: 5px 10px; border-radius: 10px;">СКРЫТО</span>
+    <div v-for="p in products" :key="p.id" class="card" style="position: relative; margin-bottom: 20px;">
+        <button v-if="isAdmin" 
+                @click.stop="toggleHideProduct(p)" 
+                style="position: absolute; top: 10px; left: 10px; z-index: 100; background: white; border: none; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.2); cursor: pointer;">
+            <span style="font-size: 20px;">{{ p.hidden ? '❌' : '👁️' }}</span>
+        </button>
+    
+    <div v-if="p.hidden" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.6); z-index: 10; display: flex; align-items: center; justify-content: center; border-radius: 24px; pointer-events: none;">
+            <span style="background: #ff4444; color: white; padding: 4px 12px; border-radius: 10px; font-size: 10px; font-weight: bold;">СКРЫТ</span>
     </div>
 
+    <img :src="p.images && p.images[0] ? p.images[0] : (p.img || '')" style="width: 100%; height: 200px; object-fit: cover; border-radius: 24px;">
+
+    <div class="card-content">
+            <div class="card-title">{{p.name}}</div>
+            <div class="card-price">{{p.price}} ₽</div>
+        </div>
+    </div>
+</div>
     <button class="fav-heart" @click.stop="toggleFav(p)" :class="{active: isFav(p)}">
         <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
     </button>
@@ -542,13 +550,19 @@
 },
 async toggleHideProduct(p) {
     try {
-        const docRef = window.fbMethods.doc(window.db, "products", p.id);
-        await window.fbMethods.updateDoc(docRef, {
-            hidden: !p.hidden
-        });
-        this.vibrate();
+        if (p && p.id) {
+            const newStatus = !p.hidden;
+            const docRef = window.fbMethods.doc(window.db, "products", p.id);
+            await window.fbMethods.updateDoc(docRef, { hidden: newStatus });
+            p.hidden = newStatus;
+            tg.HapticFeedback.notificationOccurred('success');
+        } else {
+            p.hidden = !p.hidden;
+            tg.HapticFeedback.impactOccurred('light');
+        }
     } catch (e) {
         console.error("Ошибка:", e);
+        alert("Ошибка Firebase: " + e.message);
     }
 },
             initMap() {
