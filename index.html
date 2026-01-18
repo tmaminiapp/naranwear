@@ -299,44 +299,70 @@
             </div>
         </div>
 
-        <div v-if="activeTab === 'profile'">
-            <div style="text-align: center; padding: 40px 0;">
-                <img :src="user.photo || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'" style="width: 100px; height: 100px; border-radius: 50%; border: 3px solid var(--accent); padding: 3px;">
-                <h2 style="margin-top: 15px;">{{user.first_name}}</h2>
-                <p style="font-size: 12px; color: var(--gray); margin-bottom: 25px;">Клиент NARAN</p>
-                <button class="cat-tab" @click="window.Telegram.WebApp.openTelegramLink('https://t.me/opttania')" style="margin-top: 20px;">Написать в поддержку</button>
-            </div>
+        <div v-if="activeTab === 'profile'" style="padding: 20px">
+    <div style="text-align:center; margin-bottom: 30px">
+        <img :src="user.photo || 'https://via.placeholder.com/100'" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; margin-bottom: 15px; border: 1px solid var(--border)">
+        <h2 style="font-weight: 800; margin: 0">{{ user.first_name }}</h2>
+        <div style="margin-top: 15px">
+            <button @click="contactSupport" style="background: #f0f0f0; border:none; border-radius:10px; padding: 10px 20px; font-weight:700; font-size: 12px">Поддержка</button>
         </div>
     </div>
 
-    <div v-if="activeTab === 'admin'" style="padding: 15px; background: #fff; border-radius: 20px; margin: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
-    <h3 style="font-size: 18px; margin-bottom: 15px; color: var(--accent); text-align: center;">Новый товар</h3>
-    
-    <input class="input-c" v-model="newP.name" placeholder="Название (например: Корсет атласный)" style="margin-bottom: 10px;">
-    
-    <textarea class="input-c" v-model="newP.desc" placeholder="Описание товара..." style="margin-bottom: 10px; height: 80px; font-family: inherit; padding: 10px;"></textarea>
+    <div v-if="isAdmin" class="admin-block">
+        <h3 style="font-weight: 800; margin-bottom: 20px; text-transform: uppercase; font-size: 16px">Управление магазином</h3>
+        
+        <div class="input-group">
+            <label>Название</label>
+            <input type="text" v-model="newProduct.name" placeholder="Напр: Кольцо AUNA">
+        </div>
+        <div class="input-group">
+            <label>Описание</label>
+            <textarea v-model="newProduct.description" placeholder="Опишите детали..."></textarea>
+        </div>
+        <div class="input-group">
+            <label>Цена (₽)</label>
+            <input type="number" v-model="newProduct.price">
+        </div>
+        <div class="input-group">
+            <label>Категория</label>
+            <select v-model="newProduct.category">
+                <option>Серьги</option>
+                <option>Цепочки</option>
+                <option>Кольца</option>
+            </select>
+        </div>
+        <div class="input-group">
+            <label>Размеры (через запятую)</label>
+            <input type="text" v-model="newProduct.sizes" placeholder="16, 17, 18">
+        </div>
+        <div class="input-group">
+            <label>Фотографии</label>
+            <input type="file" @change="uploadToImgBB" accept="image/*" multiple style="font-size: 12px">
+            <div style="display:flex; gap:8px; margin-top:10px; overflow-x: auto; padding-bottom: 5px">
+                <div v-for="(img, idx) in newProduct.images" :key="idx" style="position:relative; flex-shrink:0">
+                    <img :src="img" style="width:60px; height:60px; object-fit:cover; border-radius:10px">
+                    <div @click="newProduct.images.splice(idx, 1)" style="position:absolute; top:-5px; right:-5px; background:red; color:white; border-radius:50%; width:18px; height:18px; font-size:10px; display:flex; align-items:center; justify-content:center">✕</div>
+                </div>
+            </div>
+        </div>
+        
+        <button class="btn-main" @click="saveProductToFirebase" :disabled="isUploading" style="margin-top: 10px">
+            {{ isUploading ? 'Загрузка фото...' : 'Опубликовать товар' }}
+        </button>
 
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
-        <input class="input-c" v-model.number="newP.price" placeholder="Цена (только цифры)">
-        <select class="input-c" v-model="newP.category">
-            <option disabled value="">Категория</option>
-            <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
-        </select>
+        <h4 style="margin-top: 30px; font-size: 14px; font-weight: 800">Список товаров ({{ products.length }})</h4>
+        <div v-for="prod in products" :key="prod.id" class="admin-product-item">
+            <div style="display:flex; align-items:center; gap:10px">
+                <img :src="prod.images[0]" style="width:30px; height:30px; border-radius:5px; object-fit:cover">
+                <span style="font-size: 12px; font-weight: 600">{{ prod.name }}</span>
+            </div>
+            <button @click="toggleProductVisibility(prod); vibrate()" 
+                    :style="{background: prod.hidden ? '#ff3b30' : '#34c759'}"
+                    style="color: white; border: none; padding: 6px 12px; border-radius: 8px; font-size: 10px; font-weight: 700">
+                {{ prod.hidden ? 'Скрыт' : 'Активен' }}
+            </button>
+        </div>
     </div>
-
-    <input class="input-c" v-model="newP.sizesInput" placeholder="Размеры через запятую (42, 44, 46)" style="margin-bottom: 15px;">
-
-    <div style="border: 1px dashed var(--gray); padding: 12px; border-radius: 12px; margin-bottom: 15px; background: #f9f9f9;">
-        <label style="font-size: 11px; color: var(--gray); display: block; margin-bottom: 8px;">ФОТО ТОВАРА:</label>
-        <input type="file" @change="handleFileUpload" accept="image/*" class="input-c" style="font-size: 11px; margin-bottom: 10px;">
-        <p style="text-align: center; font-size: 10px; color: var(--gray); margin: 5px 0;">ИЛИ</p>
-        <input class="input-c" v-model="newP.img" placeholder="Ссылка на фото (например, с ImgBB)">
-    </div>
-
-    <button class="buy-btn" @click="addProduct" :disabled="uploading || !newP.img" style="padding: 15px;">
-        <span v-if="uploading">⏳ ЗАГРУЗКА...</span>
-        <span v-else>ОПУБЛИКОВАТЬ</span>
-    </button>
 </div>
 
     <div v-if="selP" class="modal">
