@@ -487,18 +487,25 @@
         },
         computed: {
             filteredProducts() {
-    // 1. Если выбрана вкладка "Новинки" (или "Все"), показываем всё из базы
+    // 1. Если товаров нет, возвращаем пустой массив
+    if (!this.products) return [];
+
+    // 2. Если выбрана вкладка "Новинки" (new), показываем вообще все товары
     if (this.currentCat === 'new') {
-        return this.products; 
+        return this.products.filter(p => this.isAdmin || p.hidden !== true);
     }
 
-    // 2. Фильтруем по категории
+    // 3. Фильтруем по категории с защитой от ошибок регистра
     return this.products.filter(p => {
-        // Приводим к нижнему регистру, чтобы 'Dress' и 'dress' совпадали
-        const productCat = String(p.category).toLowerCase();
-        const activeCat = String(this.currentCat).toLowerCase();
+        const pCat = String(p.category || '').toLowerCase().trim();
+        const activeCat = String(this.currentCat || '').toLowerCase().trim();
         
-        return productCat === activeCat;
+        const isSameCat = pCat === activeCat;
+
+        if (this.isAdmin || this.activeTab === 'admin') {
+            return isSameCat;
+        }
+        return isSameCat && p.hidden !== true;
     });
 },
             favItems() { 
@@ -783,7 +790,7 @@ locateMe() {
         }));
         
         // Объединяем товары из базы и те, что прописаны вручную (по желанию)
-        this.products = [...this.localProducts, ...fbProducts, ...this.products.filter(p => typeof p.id === 'number' && !fbProducts.find(f => f.name === p.name))];
+        this.products = [...fbProducts, ...this.products.filter(p => typeof p.id === 'number' && !fbProducts.find(f => f.name === p.name))];
     });
 }
     }).mount('#app');
