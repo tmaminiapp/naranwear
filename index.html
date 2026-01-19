@@ -564,63 +564,66 @@
     }
 },
             async handleFileUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
+        const file = event.target.files[0];
+        if (!file) return;
 
-            this.uploading = true; // Кнопка становится "Загрузка..."
-            const formData = new FormData();
-            formData.append('image', file);
+        this.uploading = true; // Кнопка пишет "⏳ Идет загрузка..."
+        const formData = new FormData();
+        formData.append('image', file);
 
-            try {
-                // ПРАВИЛЬНЫЙ URL с твоим ключом
-                const url = 'https://api.imgbb.com/1/upload?key=839e62907e9a52f0159461b7771bcb2f';
+        try {
+            // ВНИМАНИЕ: Проверь этот URL, он должен быть в одну строку без пробелов
+            const response = await fetch('https://api.imgbb.com/1/upload?key=839e62907e9a52f0159461b7771bcb2f', {
+                method: 'POST',
+                body: formData
+            });
 
-                const response = await fetch(url, {
-                    method: 'POST',
-                    body: formData
-                });
+            const data = await response.json();
 
-                const data = await response.json();
-
-                if (data.success) {
-                    this.newP.img = data.data.url;
-                    alert("✅ Фото загружено!");
-                } else {
-                    alert("Ошибка ImgBB: " + data.error.message);
-                }
-            } catch (e) {
-                alert("Ошибка сети или URL");
-                console.error(e);
-            } finally {
-                this.uploading = false; // Кнопка снова активна
+            if (data.success) {
+                this.newP.img = data.data.url; // Сохраняем прямую ссылку
+                alert("✅ Фото загружено в облако!");
+            } else {
+                alert("Ошибка ImgBB: " + data.error.message);
             }
-        },
+        } catch (e) {
+            alert("Ошибка сети: проверьте адрес API");
+        } finally {
+            this.uploading = false; // Кнопка снова станет "Опубликовать"
+        }
+    },
 
         async addProduct() {
-            if (!this.newP.img) {
-                alert("Сначала загрузите фото!");
-                return;
-            }
-            this.uploading = true;
-            try {
-                const productData = {
-                    title: this.newP.title,
-                    price: Number(this.newP.price),
-                    category: this.newP.category,
-                    img: this.newP.img,
-                    images: [this.newP.img], // Обязательно для слайдера
-                    createdAt: window.fbMethods.serverTimestamp()
-                };
+        if (!this.newP.img) {
+            alert("Сначала загрузите фото!");
+            return;
+        }
 
-                await window.fbMethods.addDoc(window.fbMethods.collection(window.db, "products"), productData);
-                alert("🚀 Товар опубликован!");
-                this.activeTab = 'shop';
-            } catch (e) {
-                alert("Ошибка Firebase");
-            } finally {
-                this.uploading = false;
-            }
-        },
+        this.uploading = true;
+        try {
+            const productData = {
+                title: this.newP.title,
+                price: Number(this.newP.price),
+                category: this.newP.category,
+                img: this.newP.img,        // Ссылка для каталога
+                images: [this.newP.img],   // Ссылка для слайдера
+                sizes: [...this.newP.sizes],
+                desc: this.newP.desc || '',
+                createdAt: window.fbMethods.serverTimestamp()
+            };
+
+            await window.fbMethods.addDoc(window.fbMethods.collection(window.db, "products"), productData);
+            alert("🚀 Товар успешно добавлен!");
+            
+            // Очистка полей
+            this.newP = { title: '', price: '', img: '', sizes: ['42','44','46'], category: 'dress', desc: '' };
+            this.activeTab = 'shop';
+        } catch (e) {
+            alert("Ошибка базы данных");
+        } finally {
+            this.uploading = false;
+        }
+    },
 async toggleHide(product) {
                 this.vibrate();
                 if (!product.id) {
