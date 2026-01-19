@@ -466,11 +466,20 @@
         },
         computed: {
             filteredProducts() {
-        // Если категория не выбрана, показываем всё. 
-        // Иначе фильтруем по выбранной категории (this.currentCat)
-        if (!this.currentCat) return this.products;
-        return this.products.filter(p => p.category === this.currentCat);
-    },
+    // Если товаров нет, возвращаем пустой массив
+    if (!this.products) return [];
+
+    return this.products.filter(p => {
+        // 1. Проверка категории
+        const categoryMatch = !this.currentCat || p.category === this.currentCat;
+        
+        // 2. Проверка видимости: 
+        // Если ты админ — видишь всё. Если нет — только те, что НЕ скрыты.
+        const visibilityMatch = this.isAdmin || !p.hidden;
+
+        return categoryMatch && visibilityMatch;
+    });
+},
             favItems() { 
                 return this.favs.map(f => {
                     const product = this.products.find(p => p.id === f.id);
@@ -602,20 +611,17 @@
     }
 },
 async toggleHide(product) {
-                this.vibrate();
-                if (!product.id) {
-                    alert("Этот товар встроен в код. Скрывать можно только товары из базы.");
-                    return;
-                }
-                try {
-                    const pRef = window.fbMethods.doc(window.db, "products", product.id);
-                    await window.fbMethods.updateDoc(pRef, {
-                        hidden: !product.hidden
-                    });
-                } catch (e) {
-                    alert("Ошибка базы данных");
-                }
-            },
+    try {
+        const productRef = window.fbMethods.doc(window.db, "products", product.id);
+        await window.fbMethods.updateDoc(productRef, {
+            hidden: !product.hidden // Меняет true на false и наоборот
+        });
+        // Вибрация для подтверждения (опционально)
+        if (window.Telegram?.WebApp) window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
+    } catch (e) {
+        console.error("Ошибка обновления:", e);
+    }
+},
             initMap() {
     this.$nextTick(() => {
         setTimeout(() => {
