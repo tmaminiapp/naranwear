@@ -593,42 +593,43 @@
     },
 
         async addProduct() {
-        if (!this.newP.img) {
-            alert("Сначала выберите и загрузите фото!");
-            return;
-        }
+    if (!this.newP.img) {
+        alert("Сначала загрузите фото!");
+        return;
+    }
 
-        this.uploading = true;
-        try {
-            // Подготавливаем чистые данные для Firebase
-            const productData = {
-                title: this.newP.title,
-                price: Number(this.newP.price) || 0,
-                category: this.newP.category,
-                img: this.newP.img,
-                images: [this.newP.img], // Обязательно массив для слайдера
-                sizes: Array.from(this.newP.sizes), // Очистка массива Vue
-                desc: this.newP.desc || '',
-                hidden: false,
-                createdAt: window.fbMethods.serverTimestamp()
-            };
+    this.uploading = true;
+    try {
+        // СОЗДАЕМ ЧИСТЫЙ ОБЪЕКТ БЕЗ ПРИВЯЗОК VUE
+        const productData = {
+            title: String(this.newP.title), // Превращаем в строку
+            price: Number(this.newP.price) || 0, // Превращаем в число
+            category: String(this.newP.category),
+            img: String(this.newP.img),
+            images: [String(this.newP.img)],
+            sizes: Array.from(this.newP.sizes), // Важно: делаем обычный массив из Proxy
+            desc: String(this.newP.desc || ''),
+            hidden: false,
+            createdAt: window.fbMethods.serverTimestamp()
+        };
 
-            // Отправка в Firebase
-            const colRef = window.fbMethods.collection(window.db, "products");
-            await window.fbMethods.addDoc(colRef, productData);
+        console.log("Отправляем чистые данные:", productData);
 
-            alert("🚀 Товар опубликован успешно!");
-            
-            // Сброс формы и переход в магазин
-            this.newP = { title: '', price: '', img: '', sizes: ['42','44','46'], category: 'dress', desc: '' };
-            this.activeTab = 'shop';
-        } catch (e) {
-            console.error(e);
-            alert("Ошибка базы данных: " + e.message);
-        } finally {
-            this.uploading = false;
-        }
-    },
+        const colRef = window.fbMethods.collection(window.db, "products");
+        await window.fbMethods.addDoc(colRef, productData);
+
+        alert("🚀 УРА! Товар опубликован!");
+        
+        this.newP = { title: '', price: '', img: '', sizes: ['42','44','46'], category: 'dress', desc: '' };
+        this.activeTab = 'shop';
+
+    } catch (e) {
+        console.error("Полная ошибка:", e);
+        alert("Ошибка базы данных: " + e.code);
+    } finally {
+        this.uploading = false;
+    }
+},
 async toggleHide(product) {
                 this.vibrate();
                 if (!product.id) {
