@@ -751,27 +751,23 @@ locateMe() {
     tg.ready();
     tg.expand();
 
-    // Даем базе полсекунды, чтобы прогрузиться, прежде чем запрашивать товары
-    setTimeout(() => {
+    // Проверяем наличие методов каждые 100мс, пока они не появятся
+    const checkFirebase = setInterval(() => {
         if (window.fbMethods && window.db) {
-            const productsRef = window.fbMethods.collection(window.db, "products");
-            // Слушаем изменения в реальном времени
-            window.fbMethods.onSnapshot(productsRef, (snapshot) => {
+            clearInterval(checkFirebase); // Останавливаем проверку
+            
+            const colRef = window.fbMethods.collection(window.db, "products");
+            window.fbMethods.onSnapshot(colRef, (snapshot) => {
                 this.products = snapshot.docs.map(doc => ({
                     id: doc.id,
                     ...doc.data()
                 }));
-                console.log("Успех! Товаров загружено:", this.products.length);
+                console.log("✅ База подключена, товаров:", this.products.length);
             });
-        } else {
-            console.error("Firebase всё еще не доступен. Проверь порядок подключения скриптов!");
         }
-    }, 500); 
-
-    // Твой старый код определения админа
-    if (tg.initDataUnsafe?.user) {
-        // ... (оставь как было)
-    }
+    }, 100);
+    
+    // Твой код для админа...
 }
 
     }).mount('#app');
