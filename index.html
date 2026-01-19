@@ -461,25 +461,7 @@
                 selectedPVZ: null,
                 user: { first_name: 'Покупатель', photo: '' },
                 form: { name: '', phone: '' },
-                products: JSON.parse(localStorage.getItem('naran_products')) || [
-                    { id: 1, category: 'ПИДЖАКИ', name: 'Пиджак с бантом черный', price: 2900, images: ['black1.jpg'], sizes: ['42','44'], selS: '42', aIdx: 0, desc: 'Пиджак с бантом.' },
-                    { id: 2, category: 'ПИДЖАКИ', name: 'Пиджак с бантом бордовый', price: 2900, images: ['red1.jpg'], sizes: ['42','44'], selS: '42', aIdx: 0, desc: 'Пиджак с бантом.' },
-                    { id: 3, category: 'СВИТЕРЫ', name: 'Свитер черный Турция', price: 1900, images: ['sviterblack1.jpg'], sizes: ['42-46'], selS: '42-46', aIdx: 0, desc: 'Свитер турция.' },
-                    { id: 4, category: 'СВИТЕРЫ', name: 'Свитер коричневый Турция', price: 1900, images: ['sviterbrown1.jpg'], sizes: ['42-46'], selS: '42-46', aIdx: 0, desc: 'Свитер турция.' },
-                    { id: 5, category: 'СВИТЕРЫ', name: 'Свитер серый Турция', price: 1900, images: ['svitergrey1.jpg'], sizes: ['42-46'], selS: '42-46', aIdx: 0, desc: 'Свитер турция.' },
-                    { id: 6, category: 'КАРДИГАНЫ', name: 'Кардиган', price: 2300, images: ['kardiganwhite1.jpg'], sizes: ['42-46'], selS: '42-46', aIdx: 0, desc: 'Кардиган.' },
-                    { id: 7, category: 'КАРДИГАНЫ', name: 'Кардиган', price: 2300, images: ['kardiganblack1.jpg'], sizes: ['42-46'], selS: '42-46', aIdx: 0, desc: 'Кардиган.' },
-                    { id: 8, category: 'ЛОНГСЛИВЫ', name: 'Лонгслив белый', price: 1800, images: ['longwhite1.jpg'], sizes: ['42-46'], selS: '42-46', aIdx: 0, desc: 'Лонгслив.' },
-                    { id: 9, category: 'ЛОНГСЛИВЫ', name: 'Лонгслив оливковый', price: 1800, images: ['longgreen1.jpg'], sizes: ['42-46'], selS: '42-46', aIdx: 0, desc: 'Лонгслив.' },
-                    { id: 10, category: 'ЛОНГСЛИВЫ', name: 'Лонгслив черный', price: 1800, images: ['longblack1.jpg'], sizes: ['42-46'], selS: '42-46', aIdx: 0, desc: 'Лонгслив.' },
-                    { id: 11, category: 'КОРСЕТЫ', name: 'Корсет', price: 2100, images: ['korsetwhite1.jpg'], sizes: ['42','44'], selS: '42', aIdx: 0, desc: 'Корсет.' },
-                    { id: 12, category: 'КОРСЕТЫ', name: 'Корсет', price: 2100, images: ['korsetred1.jpg'], sizes: ['42','44'], selS: '42', aIdx: 0, desc: 'Корсет.' },
-                    { id: 13, category: 'КОРСЕТЫ', name: 'Корсет', price: 2100, images: ['korsetblack11.jpg'], sizes: ['42','44'], selS: '42', aIdx: 0, desc: 'Корсет.' },
-                    { id: 14, category: 'КУРТКИ', name: 'Куртка', price: 3600, images: ['kurtkabrown1.jpg'], sizes: ['42','44'], selS: '42-44', aIdx: 0, desc: 'Куртка женская.' },
-                    { id: 15, category: 'КУРТКИ', name: 'Куртка', price: 3900, images: ['kurtkamehbrown1.jpg'], sizes: ['42','44'], selS: '42-44', aIdx: 0, desc: 'Куртка женская с искусственным мехом.' },                 
-                    { id: 16, category: 'ЭКОШУБЫ', name: 'Экошуба', price: 3900, images: ['ecoshuba2.jpg'], sizes: ['42','44'], selS: '42', aIdx: 0, desc: 'Экошуба.' },
-                    { id: 17, category: 'ЭКОШУБЫ', name: 'Экошуба', price: 3900, images: ['ecoshuba1.jpg'], sizes: ['42','44'], selS: '42', aIdx: 0, desc: 'Экошуба.' }
-                ],
+                products: [],
                 cart: JSON.parse(localStorage.getItem('mimi_cart') || '[]'),
                 favs: JSON.parse(localStorage.getItem('mimi_favs') || '[]')
             }
@@ -794,23 +776,18 @@ locateMe() {
     }
 
     // Слушаем базу данных Firebase в реальном времени
-    const q = window.fbMethods.query(
-        window.fbMethods.collection(window.db, "products"), 
-        window.fbMethods.orderBy("createdAt", "desc")
-    );
+    const colRef = window.fbMethods.collection(window.db, "products");
+    const q = window.fbMethods.query(colRef, window.fbMethods.orderBy("createdAt", "desc"));
 
     window.fbMethods.onSnapshot(q, (snapshot) => {
-        const fbProducts = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            aIdx: 0,
-            selS: doc.data().sizes ? doc.data().sizes[0] : '42'
-        }));
-        
-        // Объединяем товары из базы и те, что прописаны вручную (по желанию)
-        this.products = [...this.localProducts, ...fbProducts, ...this.products.filter(p => typeof p.id === 'number' && !fbProducts.find(f => f.name === p.name))];
-    });
+    this.products = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+    }));
+        console.log("Загружено товаров из базы:", this.products.length);
+});
 }
+
     }).mount('#app');
 
 </script>
