@@ -486,9 +486,20 @@
             }
         },
         computed: {
-            filteredProducts() { 
-    if (this.activeTab === 'admin') return this.products.filter(p => p.category === this.currentCat);
-    return this.products.filter(p => p.category === this.currentCat && p.hidden !== true);
+            filteredProducts() {
+    // 1. Если выбрана вкладка "Новинки" (или "Все"), показываем всё из базы
+    if (this.currentCat === 'new') {
+        return this.products; 
+    }
+
+    // 2. Фильтруем по категории
+    return this.products.filter(p => {
+        // Приводим к нижнему регистру, чтобы 'Dress' и 'dress' совпадали
+        const productCat = String(p.category).toLowerCase();
+        const activeCat = String(this.currentCat).toLowerCase();
+        
+        return productCat === activeCat;
+    });
 },
             favItems() { 
                 return this.favs.map(f => {
@@ -772,7 +783,7 @@ locateMe() {
         }));
         
         // Объединяем товары из базы и те, что прописаны вручную (по желанию)
-        this.products = [...fbProducts, ...this.products.filter(p => typeof p.id === 'number' && !fbProducts.find(f => f.name === p.name))];
+        this.products = [...this.localProducts, ...fbProducts, ...this.products.filter(p => typeof p.id === 'number' && !fbProducts.find(f => f.name === p.name))];
     });
 }
     }).mount('#app');
