@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -198,6 +199,8 @@
         style="position: absolute; top: 10px; left: 10px; z-index: 9999; background: #ff4444; border: 2px solid white; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3); cursor: pointer; padding: 0;">
     <span style="font-size: 22px;">{{ p.hidden ? '👁️‍🗨️' : '👁️' }}</span>
 </button>
+
+<img :src="p.img" ... >
     
     <div v-if="p.hidden && activeTab === 'admin'" 
          style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 5; display: flex; align-items: center; justify-content: center; pointer-events: none; border-radius: 24px;">
@@ -207,7 +210,14 @@
     <button class="fav-heart" @click.stop="toggleFav(p)" :class="{active: isFav(p)}">
         <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
     </button>
-                   
+                    <div class="slider-wrapper" @click="openP(p)">
+                        <div class="slider-inner" @scroll="e => handleScroll(e, p)">
+                            <img v-for="img in p.images" :src="img">
+                        </div>
+                        <div class="dots">
+                            <span v-for="(img, idx) in p.images" class="dot" :style="{ background: idx === p.aIdx ? 'var(--accent)' : 'rgba(0,0,0,0.1)' }"></span>
+                        </div>
+                    </div>
                     <div class="card-info">
     <div class="card-title">{{p.name}}</div> 
     <div class="card-price">{{p.price}} ₽</div>
@@ -478,25 +488,18 @@
         },
         computed: {
             filteredProducts() {
-    // 1. Если товаров нет, возвращаем пустой массив
-    if (!this.products) return [];
-
-    // 2. Если выбрана вкладка "Новинки" (new), показываем вообще все товары
+    // 1. Если выбрана вкладка "Новинки" (или "Все"), показываем всё из базы
     if (this.currentCat === 'new') {
-        return this.products.filter(p => this.isAdmin || p.hidden !== true);
+        return this.products; 
     }
 
-    // 3. Фильтруем по категории с защитой от ошибок регистра
+    // 2. Фильтруем по категории
     return this.products.filter(p => {
-        const pCat = String(p.category || '').toLowerCase().trim();
-        const activeCat = String(this.currentCat || '').toLowerCase().trim();
+        // Приводим к нижнему регистру, чтобы 'Dress' и 'dress' совпадали
+        const productCat = String(p.category).toLowerCase();
+        const activeCat = String(this.currentCat).toLowerCase();
         
-        const isSameCat = pCat === activeCat;
-
-        if (this.isAdmin || this.activeTab === 'admin') {
-            return isSameCat;
-        }
-        return isSameCat && p.hidden !== true;
+        return productCat === activeCat;
     });
 },
             favItems() { 
@@ -569,31 +572,35 @@
                 }
             },
             async addProduct() {
-                try {
-        if (!this.newP.img) {
-            alert("Сначала загрузите фото!");
-            return;
-        }
+                this.vibrate();
+    
+    // Проверка 1: Имя товара
+    if (!this.newP.name) return alert("Введите название товара!");
+    // Проверка 2: Фото
+    if (!this.newP.img) return alert("Сначала загрузите фото и дождитесь подтверждения!");
 
+    try {
         const productData = {
-            title: this.newP.title,
-            price: Number(this.newP.price),
+            name: this.newP.name,
+            price: Number(this.newP.price) || 0,
             category: this.newP.category,
-            desc: this.newP.desc || '',
-            // Важно: сохраняем ссылку и в img, и в массив images
-            img: this.newP.img, 
+            desc: this.newP.desc || "", // Если нет в data, будет ошибка!
             images: [this.newP.img],
-            sizes: [...this.newP.sizes],
+            sizes: this.newP.sizesInput ? this.newP.sizesInput.split(',').map(s => s.trim()) : ['42'],
             hidden: false,
-            createdAt: window.fbMethods.serverTimestamp()
+            createdAt: window.fbMethods.serverTimestamp() // Проверь, что добавила serverTimestamp в window.fbMethods
         };
 
-        await window.fbMethods.addDoc(window.fbMethods.collection(window.db, "products"), productData);
+        await window.fbMethods.addDoc(
+            window.fbMethods.collection(window.db, "products"), 
+            productData
+        );
+
+        alert("✅ ТОВАР ОПУБЛИКОВАН!");
         
-        alert("Товар успешно добавлен!");
-        // Очистка полей
-        this.newP = { title: '', price: '', img: '', sizes: ['42','44','46'], category: 'dress', desc: '' };
-        this.activeTab = 'shop';
+        // Очистка формы
+        this.newP = { name: '', price: '', category: 'ПИДЖАКИ', img: '', desc: '', sizesInput: '' };
+        
     } catch (e) {
         console.error(e);
         alert("Ошибка при сохранении: " + e.message);
@@ -777,7 +784,7 @@ locateMe() {
         }));
         
         // Объединяем товары из базы и те, что прописаны вручную (по желанию)
-        this.products = [...fbProducts, ...this.products.filter(p => typeof p.id === 'number' && !fbProducts.find(f => f.name === p.name))];
+        this.products = [...this.localProducts, ...fbProducts, ...this.products.filter(p => typeof p.id === 'number' && !fbProducts.find(f => f.name === p.name))];
     });
 }
     }).mount('#app');
