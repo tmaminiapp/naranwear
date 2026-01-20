@@ -772,8 +772,8 @@ locateMe() {
                 };
                 tg.sendData(JSON.stringify(orderData));
                 localStorage.removeItem('mimi_cart');
-                this.cart = this.cart.filter(item => item.cartId !== cartId);
-    this.saveCart();
+                this.cart = [];
+this.saveCart();
             }
         },
         
