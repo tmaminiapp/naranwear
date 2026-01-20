@@ -570,8 +570,8 @@
             },
 
             removeC(cartId) {
-                this.cart.splice(index, 1);
-                this.saveCart();
+    this.cart = this.cart.filter(item => item.cartId !== cartId);
+    this.saveCart();
             },
 
             // ЗАГРУЗКА ФОТО (ImgBB)
@@ -774,6 +774,7 @@ locateMe() {
                 localStorage.removeItem('mimi_cart');
                 this.cart = [];
 this.saveCart();
+setTimeout(() => { tg.close(); }, 150);
             }
         },
         
