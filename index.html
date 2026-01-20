@@ -364,7 +364,7 @@
                         {{ p.hidden ? '👁 СКРЫТ' : '👁 ПОКАЗАН' }}
                     </button>
                 </div>
-                <div v-if="filteredProducts.length === 0" style="text-align: center; color: #ccc; font-size: 12px; padding: 20px;">
+                <div v-if="!filteredProducts || filteredProducts.length === 0">
                     В базе еще нет товаров
                 </div>
             </div>
@@ -467,18 +467,19 @@
         computed: {
             computed: {
     filteredProducts() {
-        // Если товаров нет, возвращаем пустой массив, чтобы не ломать .length в HTML
-        if (!this.products) return [];
+        // Защита: если данных нет, возвращаем пустой массив, чтобы .length не выдавал ошибку
+        if (!this.products || !Array.isArray(this.products)) return [];
 
         return this.products.filter(p => {
-            // Сравниваем категорию (приводим к одному регистру для надежности)
-            const catMatch = !this.currentCat || 
-                             p.category.toUpperCase() === this.currentCat.toUpperCase();
+            // 1. Фильтр по категории (приводим к одному регистру)
+            const categoryMatch = !this.currentCat || 
+                p.category?.trim().toUpperCase() === this.currentCat.trim().toUpperCase();
             
-            // Скрываем от покупателей, но показываем админу
-            const visibleMatch = this.isAdmin || !p.hidden;
+            // 2. Фильтр по видимости: 
+            // Показываем всё админу, но только открытое (hidden: false) покупателям
+            const visibilityMatch = this.isAdmin || !p.hidden;
 
-            return catMatch && visibleMatch;
+            return categoryMatch && visibilityMatch;
         });
     }
 },
