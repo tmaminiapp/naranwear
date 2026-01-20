@@ -462,26 +462,30 @@
                 user: { first_name: 'Покупатель', photo: '' },
                 form: { name: '', phone: '' },
                 products: [],
-                favorites: []
+                favorites: JSON.parse(localStorage.getItem('mimi_favs')) || [],
+                cart: JSON.parse(localStorage.getItem('mimi_cart')) || []
             }
         },
-        computed: {
             computed: {
-    filteredProducts() {
+           filteredProducts() {
     if (!this.products) return []; // Обязательная защита!
     return this.products.filter(p => {
         const catMatch = !this.currentCat || p.category === this.currentCat;
         const visMatch = this.isAdmin || !p.hidden;
         return catMatch && visMatch;
     });
-}
 },
             favItems() { 
                 if (!this.favorites) return []; // Защита от ошибки 'map'
                 return this.products.filter(p => this.favorites.includes(p.id));
             },
-            total() { return this.cart.reduce((s, i) => s + i.price, 0) },
-            isValid() { return this.form.name.length > 2 && this.form.phone.length > 9 && this.address && this.cart.length > 0; }
+            total() { 
+                if (!this.cart || !Array.isArray(this.cart)) return 0;
+    return this.cart.reduce((sum, item) => sum + Number(item.price || 0), 0);
+            },
+            
+            isValid() { return this.form.name.length > 2 && this.form.phone.length > 9 && this.address && this.cart.length > 0; 
+            }
         },
         methods: {
             vibrate() { tg.HapticFeedback.impactOccurred('medium'); },
@@ -746,21 +750,27 @@ locateMe() {
     tg.ready();
     tg.expand();
 
-    // 1. Код загрузки товаров (который ты уже вставила)
     const checkFirebase = setInterval(() => {
         if (window.fbMethods && window.db) {
             clearInterval(checkFirebase);
-            // ... тут твой код onSnapshot ...
+            
+            // ВОТ ЭТОТ КУСОК ТЫ ПРОПУСТИЛА:
+            const colRef = window.fbMethods.collection(window.db, "products");
+            window.fbMethods.onSnapshot(colRef, (snapshot) => {
+                this.products = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data(),
+                    aIdx: 0 // для работы слайдера
+                }));
+                console.log("✅ Товаров загружено:", this.products.length);
+            });
         }
     }, 100);
 
-    // 2. КОД ОПРЕДЕЛЕНИЯ АДМИНА (Проверь, чтобы он был тут!)
     if (tg.initDataUnsafe?.user) {
-        const u = tg.initDataUnsafe.user;
-        // Твой ID должен совпадать с тем, что в adminId
-        if (Number(u.id) === Number(this.adminId)) {
+        this.user = tg.initDataUnsafe.user;
+        if (Number(this.user.id) === Number(this.adminId)) {
             this.isAdmin = true;
-            console.log("Админ авторизован!");
         }
     }
 }
