@@ -364,7 +364,7 @@
                         {{ p.hidden ? '👁 СКРЫТ' : '👁 ПОКАЗАН' }}
                     </button>
                 </div>
-                <div v-if="products.length === 0" style="text-align: center; color: #ccc; font-size: 12px; padding: 20px;">
+                <div v-if="filteredProducts.length === 0" style="text-align: center; color: #ccc; font-size: 12px; padding: 20px;">
                     В базе еще нет товаров
                 </div>
             </div>
@@ -450,8 +450,8 @@
                 showMenu: false,
                 activeInfo: null,
                 activeTab: 'catalog',
-                currentCat: 'ПИДЖАКИ',
-                categories: ['ПИДЖАКИ', 'СВИТЕРЫ','КАРДИГАНЫ', 'КОСТЮМЫ', 'ЛОНГСЛИВЫ', 'ФУТБОЛКИ', 'КОРСЕТЫ', 'КУРТКИ', 'ЭКОШУБЫ'],
+                currentCat: '',
+                categories: ['пиджаки', 'свитеры','кардиганы', 'костюмы', 'лонгсливы', 'футболки', 'корсеты', 'куртки', 'экошубы'],
                 uploading: false,
                 selP: null,
                 deliv: '',
@@ -465,20 +465,22 @@
             }
         },
         computed: {
-            filteredProducts() {
-    // Если товаров нет, возвращаем пустой массив
-    if (!this.products) return [];
+            computed: {
+    filteredProducts() {
+        // Если товаров нет, возвращаем пустой массив, чтобы не ломать .length в HTML
+        if (!this.products) return [];
 
-    return this.products.filter(p => {
-        // 1. Проверка категории
-        const categoryMatch = !this.currentCat || p.category === this.currentCat;
-        
-        // 2. Проверка видимости: 
-        // Если ты админ — видишь всё. Если нет — только те, что НЕ скрыты.
-        const visibilityMatch = this.isAdmin || !p.hidden;
+        return this.products.filter(p => {
+            // Сравниваем категорию (приводим к одному регистру для надежности)
+            const catMatch = !this.currentCat || 
+                             p.category.toUpperCase() === this.currentCat.toUpperCase();
+            
+            // Скрываем от покупателей, но показываем админу
+            const visibleMatch = this.isAdmin || !p.hidden;
 
-        return categoryMatch && visibilityMatch;
-    });
+            return catMatch && visibleMatch;
+        });
+    }
 },
             favItems() { 
                 return this.favs.map(f => {
