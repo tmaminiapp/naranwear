@@ -3,553 +3,586 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NARAN STORE</title>
+    <title>NARAN - Магазин одежды</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://mapgl.2gis.com/api/js/v1"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800&display=swap" rel="stylesheet">
     
     <style>
-        :root { --bg: #ffffff; --dark: #000000; --gray: #8e8e93; --light: #f2f2f7; --red: #ff3b30; }
+        :root { 
+            --accent: #e0dbda; 
+            --bg: #ffffff; 
+            --card-bg: #ffffff;
+            --dark: #000000; 
+            --gray: #775d5d; 
+            --red: #ff4444; 
+            --light-pink: rgba(224, 219, 218, 0.2); 
+        }
+
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
-        body { margin: 0; background: var(--bg); font-family: 'Montserrat', sans-serif; color: var(--dark); overflow-x: hidden; }
         
-        /* ШАПКА */
-        .header { background: #fff; padding: 15px; border-bottom: 1px solid var(--light); position: sticky; top: 0; z-index: 100; display: flex; align-items: center; justify-content: space-between; height: 60px; }
-        .brand-name { font-size: 18px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; }
-        .search-bar { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: #fff; display: flex; align-items: center; padding: 0 15px; z-index: 110; }
-        .search-input { flex: 1; border: none; font-size: 16px; font-family: inherit; }
+        body { 
+            margin: 0; 
+            background: var(--bg); 
+            font-family: 'Montserrat', sans-serif; 
+            color: var(--dark); 
+            overflow-x: hidden; 
+        }
 
-        /* БУРГЕР МЕНЮ (ПОГРУЖЕНИЕ) */
-        .full-screen-menu { position: fixed; inset: 0; background: #fff; z-index: 2500; padding: 20px; display: flex; flex-direction: column; }
-        .menu-item { padding: 20px 0; border-bottom: 1px solid #eee; font-weight: 700; font-size: 18px; display: flex; justify-content: space-between; }
+        /* АНИМАЦИИ */
+        .fade-enter-active, .fade-leave-active { transition: opacity 0.3s; }
+        .fade-enter-from, .fade-leave-to { opacity: 0; }
 
-        /* КАТАЛОГ */
-        .products-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px; padding-bottom: 120px; }
-        .card { background: #fff; display: flex; flex-direction: column; position: relative; }
-        .slider-wrapper { position: relative; width: 100%; aspect-ratio: 3/4; border-radius: 12px; overflow: hidden; background: #f9f9f9; }
-        .slider-inner { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; height: 100%; }
-        .slider-inner img { width: 100%; height: 100%; object-fit: cover; scroll-snap-align: start; flex-shrink: 0; }
+        /* ХЕДЕР */
+        .header { 
+            background: #fff; 
+            padding: 15px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between;
+            position: sticky; 
+            top: 0; 
+            z-index: 100; 
+            border-bottom: 1px solid var(--light-pink);
+        }
+
+        .brand-name { font-size: 20px; font-weight: 800; letter-spacing: 1px; }
+
+        /* ПОИСК */
+        .search-box {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: #fff;
+            display: flex;
+            align-items: center;
+            padding: 0 15px;
+            z-index: 110;
+        }
+
+        /* КАТАЛОГ ГРИД */
+        .container { padding: 15px; padding-bottom: 100px; }
+        .products-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         
-        .dots { position: absolute; bottom: 8px; width: 100%; text-align: center; }
-        .dot { display: inline-block; width: 4px; height: 4px; border-radius: 50%; margin: 0 2px; background: rgba(0,0,0,0.1); }
-        .dot.active { background: #000; width: 10px; border-radius: 2px; }
+        /* КАРТОЧКА */
+        .card { 
+            background: #fff; 
+            border-radius: 12px; 
+            overflow: hidden; 
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #f0f0f0;
+        }
+        
+        .card-img-wrap { position: relative; width: 100%; aspect-ratio: 3/4; overflow: hidden; }
+        .card-img-wrap img { width: 100%; height: 100%; object-fit: cover; }
 
-        .old-price { text-decoration: line-through; color: var(--gray); font-size: 12px; margin-right: 5px; }
-        .sale-badge { background: var(--red); color: #fff; font-size: 10px; padding: 2px 6px; border-radius: 4px; position: absolute; top: 10px; left: 10px; z-index: 5; font-weight: 800; }
-
-        /* ИЗБРАННОЕ И КОРЗИНА В ОДИН РЯД */
-        .card-actions { display: flex; gap: 5px; margin-top: 8px; }
-        .btn-action { flex: 1; padding: 10px; border: 1px solid #000; background: #fff; font-size: 10px; font-weight: 800; text-transform: uppercase; border-radius: 8px; }
-        .btn-action.black { background: #000; color: #fff; }
-
-        /* ТАББАР */
-        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; display: flex; justify-content: space-around; padding: 10px 0 25px; border-top: 1px solid var(--light); z-index: 1000; }
-        .nav-item { border: none; background: none; color: #a1a1a1; display: flex; flex-direction: column; align-items: center; font-size: 10px; gap: 4px; font-weight: 600; width: 25%; position: relative; }
-        .nav-item.active { color: #000; }
-        .nav-item svg { width: 22px; height: 22px; }
-        .cart-count { position: absolute; top: -2px; right: 20%; background: var(--red); color: #fff; font-size: 9px; min-width: 16px; height: 16px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; border: 2px solid #fff; }
+        .card-info { padding: 10px; }
+        .card-title { font-size: 11px; font-weight: 700; margin-bottom: 4px; color: #000; }
+        .card-price { font-size: 14px; font-weight: 800; color: #000; }
+        .old-price { font-size: 11px; text-decoration: line-through; color: var(--gray); margin-left: 5px; }
 
         /* КАТЕГОРИИ */
-        .cat-row { display: flex; gap: 8px; overflow-x: auto; padding: 10px 15px; scrollbar-width: none; }
-        .cat-btn { padding: 8px 16px; border-radius: 20px; border: 1px solid #eee; background: #fff; font-size: 11px; font-weight: 700; white-space: nowrap; }
-        .cat-btn.active { background: #000; color: #fff; border-color: #000; }
+        .cat-row { display: flex; gap: 8px; overflow-x: auto; padding: 5px 0 15px; scrollbar-width: none; }
+        .cat-tab { 
+            padding: 8px 16px; border-radius: 20px; border: 1px solid #eee; 
+            background: #fff; font-size: 11px; font-weight: 700; white-space: nowrap;
+        }
+        .cat-tab.active { background: #000; color: #fff; border-color: #000; }
 
-        /* КАРТА И АДРЕС */
-        #map { width: 100%; height: 200px; border-radius: 12px; margin: 10px 0; }
-        
-        .modal { position: fixed; inset: 0; background: #fff; z-index: 2000; overflow-y: auto; padding-bottom: 50px; }
-        .input-c { width: 100%; padding: 14px; border-radius: 10px; border: 1px solid #eee; margin-bottom: 10px; font-family: inherit; font-size: 14px; }
-        .btn-black { width: 100%; padding: 16px; background: #000; color: #fff; border: none; border-radius: 12px; font-weight: 800; text-transform: uppercase; }
-        
-        .admin-stat { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-        .stat-box { background: #f9f9f9; padding: 15px; border-radius: 12px; text-align: center; }
-        .stat-box span { display: block; font-size: 18px; font-weight: 800; }
+        /* КНОПКИ РАЗМЕРОВ */
+        .size-row { display: flex; gap: 5px; margin: 8px 0; flex-wrap: wrap; }
+        .size-chip { 
+            padding: 6px 10px; border: 1px solid #eee; border-radius: 6px; 
+            font-size: 10px; font-weight: 700; background: #fff;
+        }
+        .size-chip.active { border-color: #000; background: #f0f0f0; }
+
+        /* НАВИГАЦИЯ */
+        .bottom-nav { 
+            position: fixed; bottom: 0; left: 0; right: 0; 
+            background: #fff; display: flex; justify-content: space-around; 
+            padding: 10px 0 25px; border-top: 1px solid #eee; z-index: 1000; 
+        }
+        .nav-item { 
+            border: none; background: none; color: #888; 
+            display: flex; flex-direction: column; align-items: center; 
+            font-size: 10px; font-weight: 600; width: 25%;
+        }
+        .nav-item.active { color: #000; }
+        .nav-item svg { width: 22px; height: 22px; margin-bottom: 4px; }
+
+        /* МОДАЛЬНОЕ ОКНО ТОВАРА */
+        .product-modal { 
+            position: fixed; inset: 0; background: #fff; z-index: 2000; 
+            overflow-y: auto; padding-bottom: 80px; 
+        }
+
+        /* АДМИН ПАНЕЛЬ */
+        .admin-section { background: #f9f9f9; padding: 15px; border-radius: 15px; margin-top: 20px; }
+        .admin-input { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 8px; }
+
+        /* СТАТУС ТРЕКЕР */
+        .status-track { display: flex; justify-content: space-between; margin-top: 10px; position: relative; }
+        .status-step { font-size: 9px; text-align: center; color: #ccc; flex: 1; }
+        .status-step.active { color: #000; font-weight: 700; }
+
+        #map { width: 100%; height: 250px; border-radius: 12px; margin-top: 10px; }
+
+        .cart-badge {
+            position: absolute; top: -5px; right: -5px;
+            background: var(--red); color: #fff; font-size: 9px;
+            width: 16px; height: 16px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+        }
     </style>
 </head>
 <body>
 
 <div id="app">
-    <div v-if="isSearching" class="search-bar">
-        <input v-model="searchQuery" class="search-input" placeholder="Поиск товара..." autofocus>
-        <button @click="isSearching = false; searchQuery = ''; vibrate()" style="border:none; background:none; font-weight:700;">Отмена</button>
+    <transition name="fade">
+        <div v-if="showMenu" @click="showMenu = false" style="position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:3000;"></div>
+    </transition>
+    <div :style="{ transform: showMenu ? 'translateX(0)' : 'translateX(-100%)' }" 
+         style="position:fixed; top:0; left:0; bottom:0; width:80%; background:#fff; z-index:3001; transition:0.3s; padding:25px; box-shadow:5px 0 15px rgba(0,0,0,0.1);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:40px;">
+            <span class="brand-name">NARAN</span>
+            <button @click="showMenu = false" style="border:none; background:none; font-size:24px;">✕</button>
+        </div>
+        <nav style="display:flex; flex-direction:column; gap:20px;">
+            <div @click="openInfo('about')" style="font-weight:700; border-bottom:1px solid #f0f0f0; padding-bottom:10px;">О нас</div>
+            <div @click="openInfo('delivery')" style="font-weight:700; border-bottom:1px solid #f0f0f0; padding-bottom:10px;">Доставка</div>
+            <div @click="openInfo('returns')" style="font-weight:700; border-bottom:1px solid #f0f0f0; padding-bottom:10px;">Возврат</div>
+        </nav>
     </div>
 
-    <div v-if="activeMenuTab" class="full-screen-menu">
-        <div style="display:flex; align-items:center; margin-bottom:20px;">
-            <button @click="activeMenuTab = null; vibrate()" style="border:none; background:none; font-size:24px;">←</button>
-            <h2 style="margin:0 0 0 15px;">{{activeMenuTab}}</h2>
+    <transition name="fade">
+        <div v-if="infoPage" class="product-modal" style="z-index:3100; padding:20px;">
+            <button @click="infoPage = null" style="float:right; border:none; background:none; font-size:24px;">✕</button>
+            <h2 v-if="infoPage === 'about'">О нас</h2>
+            <h2 v-if="infoPage === 'delivery'">Доставка</h2>
+            <h2 v-if="infoPage === 'returns'">Возврат</h2>
+            <div style="line-height:1.6; color:var(--gray); margin-top:20px;">
+                <p v-if="infoPage === 'about'">NARAN — бренд качественной базовой одежды. Мы верим в простоту и комфорт.</p>
+                <p v-if="infoPage === 'delivery'">Доставка осуществляется по всей России: СДЭК, Почта России, 5Post.</p>
+                <p v-if="infoPage === 'returns'">Вернуть товар можно в течение 14 дней с момента получения при сохранении бирок.</p>
+            </div>
         </div>
-        <div v-if="activeMenuTab === 'Меню'">
-            <div class="menu-item" @click="activeMenuTab = 'О НАС'; vibrate()">О нас <span>→</span></div>
-            <div class="menu-item" @click="activeMenuTab = 'ВОЗВРАТ'; vibrate()">Возврат <span>→</span></div>
-            <div class="menu-item" @click="activeMenuTab = 'ДОСТАВКА'; vibrate()">Доставка <span>→</span></div>
-            <button @click="activeMenuTab = null; vibrate()" class="btn-black" style="margin-top:40px;">Закрыть</button>
-        </div>
-        <div v-else>
-            <p v-if="activeMenuTab === 'О НАС'">NARAN — это стиль и качество в каждой детали.</p>
-            <p v-if="activeMenuTab === 'ВОЗВРАТ'">Возврат товара возможен в течение 14 дней.</p>
-            <p v-if="activeMenuTab === 'ДОСТАВКА'">Мы доставляем по всей России через СДЭК, Почту и 5Post.</p>
-        </div>
-    </div>
+    </transition>
 
-    <header class="header" v-if="!isSearching">
-        <button @click="activeMenuTab = 'Меню'; vibrate()" style="border:none; background:none;">
+    <div class="header">
+        <button @click="showMenu = true; vibrate()" style="border:none; background:none; padding:5px;">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
         </button>
-        <div class="brand-name">NARAN</div>
-        <button @click="isSearching = true; vibrate()" style="border:none; background:none;">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <div v-if="!showSearch" class="brand-name">NARAN</div>
+        <div v-else class="search-box">
+            <input v-model="searchQuery" placeholder="Поиск по названию..." style="flex:1; border:none; font-family:inherit; font-size:16px;">
+            <button @click="showSearch = false; searchQuery=''" style="border:none; background:none; font-weight:700;">ЗАКРЫТЬ</button>
+        </div>
+        <button v-if="!showSearch" @click="showSearch = true; vibrate()" style="border:none; background:none; padding:5px;">
+            <svg width="22" height="22" fill="none" stroke="black" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
         </button>
-    </header>
+    </div>
 
-    <main>
-        <div v-if="activeTab === 'catalog'">
-            <div class="cat-row">
-                <button :class="['cat-btn', currentCat === '' ? 'active' : '']" @click="currentCat = ''; vibrate()">Все товары</button>
-                <button v-for="c in categories" :class="['cat-btn', currentCat === c ? 'active' : '']" @click="currentCat = c; vibrate()">{{c}}</button>
-            </div>
-            
-            <div class="products-grid">
-                <div v-for="p in filteredProducts" :key="p.id" class="card" @click="openProduct(p)">
-                    <div v-if="p.oldPrice" class="sale-badge">SALE</div>
-                    <div class="slider-wrapper">
-                        <div class="slider-inner" @scroll="e => handleScroll(e, p)">
-                            <img v-for="img in p.images" :src="img">
-                        </div>
-                        <div class="dots"><span v-for="(img, idx) in p.images" :class="['dot', idx === p.aIdx ? 'active' : '']"></span></div>
-                    </div>
-                    <div style="padding:10px 5px;">
-                        <div style="font-size:11px; font-weight:800; height:30px; overflow:hidden;">{{p.title}}</div>
-                        <div style="margin:5px 0;">
-                            <span v-if="p.oldPrice" class="old-price">{{p.oldPrice}} ₽</span>
-                            <span style="font-weight:800; font-size:14px;">{{p.price}} ₽</span>
-                        </div>
-                        <div style="font-size:10px; color:gray; margin-bottom:5px;">{{p.sizes.join(', ')}}</div>
-                        
-                        <div class="card-actions">
-                            <button class="btn-action" @click.stop="toggleFav(p)">
-                                <svg width="14" height="14" viewBox="0 0 24 24" :fill="isFav(p)?'black':'none'" stroke="black"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-                            </button>
-                            <button class="btn-action black" @click.stop="openProduct(p)">В КОРЗИНУ</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    <div v-if="activeTab === 'catalog'" class="container">
+        <div class="cat-row">
+            <button @click="currentCat = 'Все товары'; vibrate()" :class="['cat-tab', currentCat === 'Все товары' ? 'active' : '']">Все товары</button>
+            <button v-for="c in categories" @click="currentCat = c; vibrate()" :class="['cat-tab', currentCat === c ? 'active' : '']">{{c}}</button>
         </div>
-
-        <div v-if="activeTab === 'favs'" style="padding:15px;">
-            <h2 class="brand-name">Избранное</h2>
-            <div v-if="favItems.length === 0" style="text-align:center; padding:100px 0; color:gray;">Ваш список пуст</div>
-            <div class="products-grid">
-                <div v-for="p in favItems" :key="p.id" class="card" @click="openProduct(p)">
-                    <div class="slider-wrapper">
-                        <div class="slider-inner"><img :src="p.images[0]"></div>
-                    </div>
-                    <div style="padding:10px 5px;">
-                        <div style="font-weight:800;">{{p.price}} ₽</div>
-                        <div style="font-size:10px; color:gray;">Размер: {{p.selS}}</div>
-                    </div>
+        
+        <div class="products-grid">
+            <div v-for="p in filteredProducts" :key="p.id" class="card" @click="openProduct(p)">
+                <button @click.stop="toggleFav(p)" style="position:absolute; top:8px; right:8px; z-index:10; border:none; background:rgba(255,255,255,0.8); border-radius:50%; width:30px; height:30px; display:flex; align-items:center; justify-content:center;">
+                    <svg :fill="isFav(p) ? 'black' : 'none'" stroke="black" stroke-width="2" width="16" height="16" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                </button>
+                <div class="card-img-wrap">
+                    <img :src="p.images[0]">
                 </div>
-            </div>
-        </div>
-
-        <div v-if="activeTab === 'cart'" style="padding:20px;">
-            <h2 class="brand-name">Корзина</h2>
-            <div v-if="cart.length === 0" style="text-align:center; padding:100px 0; color:gray;">Корзина пуста</div>
-            <div v-else>
-                <div v-for="(item, idx) in cart" :key="item.cartId" style="display:flex; gap:15px; margin-bottom:20px; border-bottom:1px solid #f2f2f7; padding-bottom:15px;">
-                    <img :src="item.images[0]" style="width:70px; height:90px; object-fit:cover; border-radius:10px;" @click="openProduct(item)">
-                    <div style="flex:1;">
-                        <div style="font-weight:700; font-size:13px;">{{item.title}}</div>
-                        <div style="font-size:11px; color:gray; margin:4px 0;">{{item.selS}} • {{item.color}}</div>
-                        <div style="font-weight:800; margin-bottom:8px;">{{item.price}} ₽</div>
-                        <div style="display:flex; align-items:center; gap:12px;">
-                            <button @click="changeQty(idx, -1); vibrate()" style="border:none; background:#f2f2f7; width:28px; height:28px; border-radius:6px;">-</button>
-                            <span style="font-weight:800;">{{item.qty}}</span>
-                            <button @click="changeQty(idx, 1); vibrate()" style="border:none; background:#f2f2f7; width:28px; height:28px; border-radius:6px;">+</button>
-                        </div>
+                <div class="card-info">
+                    <div class="card-title">{{p.title}}</div>
+                    <div class="card-price">
+                        {{p.price}} ₽ <span v-if="p.oldPrice" class="old-price">{{p.oldPrice}} ₽</span>
                     </div>
-                    <button @click="removeCart(idx); vibrate()" style="border:none; background:none; font-size:20px; color:#ccc;">✕</button>
+                    <div style="font-size:9px; color:var(--gray); margin-top:5px;">Размеры: {{p.sizes.join(', ')}}</div>
                 </div>
-
-                <div style="margin-top:30px;">
-                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:15px;">
-                        <img :src="user.photo_url || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'" style="width:40px; height:40px; border-radius:50%;">
-                        <div style="font-weight:700;">{{user.first_name}}</div>
-                    </div>
-                    <input class="input-c" v-model="form.phone" placeholder="Ваш телефон (10-11 цифр)" type="tel">
-                    
-                    <div style="display:flex; gap:8px; margin:15px 0;">
-                        <button v-for="d in ['СДЭК', 'Почта', '5post']" @click="setDeliv(d); vibrate()" :class="['cat-btn', deliv === d ? 'active' : '']" style="flex:1;">{{d}}</button>
-                    </div>
-
-                    <div v-if="deliv">
-                        <div id="map"></div>
-                        <div style="font-size:12px; font-weight:700; padding:15px; background:#f2f2f7; border-radius:12px;">📍 {{address || 'Выберите ПВЗ на карте'}}</div>
-                    </div>
-
-                    <button class="btn-black" style="margin-top:20px;" @click="sendOrder">Оформить заказ • {{total}} ₽</button>
-                </div>
-            </div>
-        </div>
-
-        <div v-if="activeTab === 'profile'" style="padding:20px; padding-bottom:120px;">
-            <div style="text-align:center; margin-bottom:30px;">
-                <img :src="user.photo_url || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'" style="width:80px; height:80px; border-radius:50%; border:2px solid #000; padding:3px;">
-                <h2 style="margin:10px 0;">{{user.first_name || 'Покупатель'}}</h2>
-                <button @click="tg.openTelegramLink('https://t.me/opttania'); vibrate()" class="btn-action" style="width:auto; padding:8px 20px;">Написать в поддержку</button>
-            </div>
-
-            <div v-if="userOrders.length > 0" style="margin-bottom:30px;">
-                <h3 class="brand-name" style="font-size:14px;">Мои заказы</h3>
-                <div v-for="ord in userOrders" :key="ord.id" style="background:#f9f9f9; padding:15px; border-radius:12px; margin-bottom:10px; font-size:13px;">
-                    <div style="display:flex; justify-content:space-between; font-weight:800;">
-                        <span>Заказ №{{ord.order_id}}</span>
-                        <span :style="{color: ord.status === 'Доставлено' ? 'green' : 'orange'}">{{ord.status || 'В пути'}}</span>
-                    </div>
-                    <div style="margin-top:5px; color:gray;">{{ord.items_summary}}</div>
-                    <div style="margin-top:5px; font-weight:700;">{{ord.total}} ₽</div>
-                </div>
-            </div>
-
-            <div v-if="isAdmin" style="border-top:2px solid #f2f2f7; padding-top:20px;">
-                <h3 class="brand-name" style="font-size:14px;">Админ-панель</h3>
-                
-                <div class="admin-stat">
-                    <div class="stat-box">Всего заказов <span>{{orders.length}}</span></div>
-                    <div class="stat-box">Выручка <span>{{revenue}} ₽</span></div>
-                </div>
-
-                <div style="background:#f9f9f9; padding:15px; border-radius:15px;">
-                    <h4 style="margin:0 0 15px 0;">{{ editingId ? 'Изменить товар' : 'Добавить товар' }}</h4>
-                    <input class="input-c" v-model="newP.title" placeholder="Название">
-                    <textarea class="input-c" v-model="newP.desc" placeholder="Описание" style="height:70px;"></textarea>
-                    <div style="display:flex; gap:10px;">
-                        <input class="input-c" v-model="newP.price" placeholder="Цена" type="number" style="flex:1;">
-                        <input class="input-c" v-model="newP.oldPrice" placeholder="Старая цена (для скидки)" type="number" style="flex:1;">
-                    </div>
-                    <input class="input-c" v-model="newP.sizesStr" placeholder="Размеры (через запятую)">
-                    <input class="input-c" v-model="newP.color" placeholder="Цвет">
-                    
-                    <div style="margin-bottom:10px;">
-                        <select class="input-c" v-model="newP.category">
-                            <option v-for="c in categories" :value="c">{{c}}</option>
-                        </select>
-                        <div style="display:flex; gap:5px;">
-                            <input class="input-c" v-model="newCatName" placeholder="Новая категория" style="flex:1;">
-                            <button @click="addCategory" class="btn-action" style="height:48px;">+</button>
-                        </div>
-                    </div>
-
-                    <div style="font-size:11px; margin-bottom:10px;">Загрузить через: 
-                        <label><input type="radio" v-model="uploadMethod" value="imgbb"> ImgBB</label>
-                        <label style="margin-left:10px;"><input type="radio" v-model="uploadMethod" value="firebase"> Firebase</label>
-                    </div>
-
-                    <input type="file" id="adminFiles" multiple @change="uploadImages" style="display:none;">
-                    <label for="adminFiles" style="display:block; padding:15px; border:2px dashed #ccc; text-align:center; border-radius:10px;">
-                        {{ uploading ? 'Загрузка...' : '📸 Выбрать фото' }}
-                    </label>
-
-                    <div style="display:flex; gap:10px; margin-top:15px;">
-                        <button class="btn-black" @click="saveProduct" :disabled="uploading" style="flex:2;">{{ editingId ? 'Сохранить' : 'Опубликовать' }}</button>
-                        <button v-if="editingId" class="btn-black" @click="cancelEdit" style="flex:1; background:#eee; color:#000;">Отмена</button>
-                    </div>
-                </div>
-
-                <div style="margin-top:20px;">
-                    <div v-for="p in products" :key="p.id" style="display:flex; align-items:center; gap:10px; padding:10px; border-bottom:1px solid #eee;">
-                        <img :src="p.images[0]" style="width:40px; height:50px; object-fit:cover; border-radius:5px;">
-                        <div style="flex:1; font-size:12px; font-weight:700;">{{p.title}}</div>
-                        <button @click="editP(p); vibrate()" style="border:none; background:none;">✏️</button>
-                        <button @click="toggleHide(p); vibrate()" style="border:none; background:none;">{{p.hidden ? '🕶' : '👁'}}</button>
-                        <button @click="deleteP(p.id); vibrate()" style="border:none; background:none; color:red;">✕</button>
-                    </div>
-                </div>
-
-                <div style="margin-top:30px;">
-                    <h3 class="brand-name" style="font-size:14px;">Все заказы (Админ)</h3>
-                    <div v-for="ord in orders" :key="ord.id" style="background:#fff; border:1px solid #eee; padding:15px; border-radius:12px; margin-bottom:10px; font-size:12px;">
-                        <div style="font-weight:800;">№{{ord.order_id}} — {{ord.user_name}} ({{ord.user_phone}})</div>
-                        <div style="margin:5px 0;">{{ord.items_summary}}</div>
-                        <div style="color:gray;">{{ord.delivery_address}}</div>
-                        <div style="margin-top:10px; display:flex; justify-content:space-between; align-items:center;">
-                            <span style="font-weight:800;">{{ord.total}} ₽</span>
-                            <select :value="ord.status || 'В пути'" @change="updateOrderStatus(ord.id, $event.target.value)" style="padding:5px; border-radius:5px;">
-                                <option>В пути</option>
-                                <option>Оплачено</option>
-                                <option>Доставлено</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <nav class="bottom-nav" v-if="!activeMenuTab">
-        <button v-for="t in tabs" @click="activeTab = t.id; vibrate()" :class="['nav-item', activeTab === t.id ? 'active' : '']">
-            <svg v-html="t.icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>
-            <span v-if="t.id === 'cart' && cart.length > 0" class="cart-count">{{cart.length}}</span>
-            <span>{{t.name}}</span>
-        </button>
-    </nav>
-
-    <div v-if="selP" class="modal">
-        <button @click="selP = null; vibrate()" style="position:fixed; top:20px; right:20px; z-index:2100; border:none; background:rgba(0,0,0,0.05); width:40px; height:40px; border-radius:50%; font-size:20px;">✕</button>
-        <div class="slider-wrapper" style="aspect-ratio:1/1.2; border-radius:0;">
-            <div class="slider-inner" @scroll="e => handleScroll(e, selP)">
-                <img v-for="img in selP.images" :src="img">
-            </div>
-            <div class="dots"><span v-for="(img, idx) in selP.images" :class="['dot', idx === selP.aIdx ? 'active' : '']"></span></div>
-        </div>
-        <div style="padding:25px;">
-            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                <h1 class="brand-name" style="font-size:20px; margin:0;">{{selP.title}}</h1>
-                <div style="text-align:right;">
-                    <div v-if="selP.oldPrice" class="old-price" style="font-size:14px;">{{selP.oldPrice}} ₽</div>
-                    <div style="font-size:22px; font-weight:800;">{{selP.price}} ₽</div>
-                </div>
-            </div>
-            <p style="color:gray; font-size:14px; line-height:1.6; margin:20px 0;">{{selP.desc}}</p>
-            
-            <div style="margin-bottom:25px;">
-                <div style="font-size:11px; font-weight:800; margin-bottom:10px;">ВЫБЕРИТЕ РАЗМЕР:</div>
-                <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                    <button v-for="s in selP.sizes" @click="selP.selS = s; vibrate()" 
-                            :style="{background: selP.selS === s ? '#000' : '#fff', color: selP.selS === s ? '#fff' : '#000'}" 
-                            style="padding:12px 20px; border:1px solid #eee; border-radius:10px; font-weight:700;">{{s}}</button>
-                </div>
-            </div>
-
-            <div style="display:flex; gap:10px;">
-                <button class="btn-black" @click="toggleFav(selP)" style="flex:1; background:#fff; color:#000; border:1px solid #000;">В ИЗБРАННОЕ</button>
-                <button class="btn-black" @click="addToCart(selP)" style="flex:2;">В КОРЗИНУ</button>
             </div>
         </div>
     </div>
+
+    <transition name="fade">
+        <div v-if="selectedProduct" class="product-modal">
+            <button @click="selectedProduct = null" style="position:fixed; top:15px; left:15px; z-index:2100; border:none; background:#fff; border-radius:50%; width:40px; height:40px; box-shadow:0 2px 10px rgba(0,0,0,0.1);">✕</button>
+            
+            <div style="width:100%; aspect-ratio:3/4; overflow-x:auto; display:flex; scroll-snap-type:x mandatory; scrollbar-width:none;">
+                <img v-for="img in selectedProduct.images" :src="img" style="width:100%; flex-shrink:0; scroll-snap-align:start; object-fit:cover;">
+            </div>
+
+            <div style="padding:20px;">
+                <h1 style="font-size:18px; margin:0;">{{selectedProduct.title}}</h1>
+                <div style="font-size:20px; font-weight:800; margin:10px 0;">{{selectedProduct.price}} ₽</div>
+                
+                <p style="font-size:13px; color:var(--gray); line-height:1.5;">{{selectedProduct.description}}</p>
+                
+                <div style="margin:20px 0;">
+                    <div style="font-size:12px; font-weight:700; margin-bottom:10px;">ВЫБЕРИТЕ РАЗМЕР:</div>
+                    <div class="size-row">
+                        <button v-for="s in selectedProduct.sizes" @click="tempSize = s; vibrate()" :class="['size-chip', tempSize === s ? 'active' : '']">{{s}}</button>
+                    </div>
+                </div>
+
+                <div style="display:flex; gap:10px; margin-top:30px;">
+                    <button @click="toggleFav(selectedProduct, tempSize)" style="flex:1; padding:15px; border:1px solid #000; background:none; border-radius:10px; font-weight:700;">В ИЗБРАННОЕ</button>
+                    <button @click="addToCart(selectedProduct, tempSize)" style="flex:2; padding:15px; border:none; background:#000; color:#fff; border-radius:10px; font-weight:700;">В КОРЗИНУ</button>
+                </div>
+            </div>
+        </div>
+    </transition>
+
+    <div v-if="activeTab === 'cart'" class="container">
+        <h2 class="brand-name">КОРЗИНА</h2>
+        <div v-if="cart.length === 0" style="text-align:center; padding:50px; color:var(--gray);">Корзина пуста</div>
+        <div v-else>
+            <div v-for="item in cart" :key="item.cartId" style="display:flex; gap:15px; margin-bottom:20px; border-bottom:1px solid #eee; padding-bottom:15px;">
+                <img :src="item.images[0]" style="width:70px; height:90px; object-fit:cover; border-radius:8px;" @click="openProduct(item)">
+                <div style="flex:1;">
+                    <div style="font-size:12px; font-weight:700;">{{item.title}}</div>
+                    <div style="font-size:10px; color:var(--gray);">Размер: {{item.selectedSize}}</div>
+                    <div style="font-weight:800; margin-top:5px;">{{item.price}} ₽</div>
+                    <div style="display:flex; align-items:center; gap:10px; margin-top:8px;">
+                        <button @click="changeQty(item, -1)" style="border:1px solid #eee; background:none; width:24px; height:24px; border-radius:4px;">-</button>
+                        <span style="font-weight:700;">{{item.qty || 1}}</span>
+                        <button @click="changeQty(item, 1)" style="border:1px solid #eee; background:none; width:24px; height:24px; border-radius:4px;">+</button>
+                    </div>
+                </div>
+                <button @click="removeC(item.cartId)" style="border:none; background:none; color:var(--gray);">✕</button>
+            </div>
+
+            <div style="margin-top:30px;">
+                <input v-model="form.name" class="admin-input" placeholder="Имя">
+                <input v-model="form.phone" class="admin-input" placeholder="Номер телефона (10-11 цифр)" type="tel">
+                
+                <div style="display:flex; gap:10px; margin:15px 0;">
+                    <button v-for="d in ['СДЭК', 'Почта', '5post']" @click="setDelivery(d)" :class="['cat-tab', delivery === d ? 'active' : '']" style="flex:1;">{{d}}</button>
+                </div>
+
+                <div v-if="delivery">
+                    <div style="font-size:11px; margin-bottom:5px;">📍 {{address || 'Выберите адрес на карте'}}</div>
+                    <div id="map"></div>
+                </div>
+
+                <button @click="sendOrder" class="admin-input" style="background:#000; color:#fff; font-weight:800; margin-top:20px; padding:18px;" :disabled="!isValidOrder">ОФОРМИТЬ: {{total}} ₽</button>
+            </div>
+        </div>
+    </div>
+
+    <div v-if="activeTab === 'profile'" class="container">
+        <div style="text-align:center; padding:20px 0;">
+            <img :src="user.photo || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'" style="width:80px; height:80px; border-radius:50%; border:2px solid #000;">
+            <h3 style="margin:10px 0 5px;">{{user.first_name || 'Гость'}}</h3>
+            <button @click="window.Telegram.WebApp.openTelegramLink('https://t.me/opttania')" style="border:none; background:none; color:var(--gray); text-decoration:underline; font-size:12px;">Написать в поддержку</button>
+        </div>
+
+        <div style="margin-top:30px;">
+            <h3 class="brand-name" style="font-size:14px;">МОИ ЗАКАЗЫ</h3>
+            <div v-if="myOrders.length === 0" style="font-size:12px; color:var(--gray);">Заказов пока нет</div>
+            <div v-for="ord in myOrders" style="background:#f9f9f9; padding:15px; border-radius:12px; margin-bottom:10px; font-size:12px;">
+                <div style="display:flex; justify-content:space-between; font-weight:700;">
+                    <span>Заказ №{{ord.order_id}}</span>
+                    <span>{{ord.total}} ₽</span>
+                </div>
+                <div class="status-track">
+                    <div :class="['status-step', ord.status === 'new' ? 'active' : '']">Принят</div>
+                    <div :class="['status-step', ord.status === 'process' ? 'active' : '']">Сборка</div>
+                    <div :class="['status-step', ord.status === 'shipped' ? 'active' : '']">В пути</div>
+                    <div :class="['status-step', ord.status === 'done' ? 'active' : '']">Выдан</div>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="isAdmin" class="admin-section">
+            <h2 style="text-align:center; font-size:16px;">АДМИН-ПАНЕЛЬ</h2>
+            
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px;">
+                <div style="background:#fff; padding:10px; border-radius:8px; text-align:center;">
+                    <div style="font-size:10px;">Заказов</div>
+                    <div style="font-weight:800;">{{allOrders.length}}</div>
+                </div>
+                <div style="background:#fff; padding:10px; border-radius:8px; text-align:center;">
+                    <div style="font-size:10px;">Выручка</div>
+                    <div style="font-weight:800;">{{revenue}} ₽</div>
+                </div>
+            </div>
+
+            <div style="background:#fff; padding:15px; border-radius:12px; margin-bottom:20px;">
+                <h4>Добавить товар</h4>
+                <input v-model="newP.title" class="admin-input" placeholder="Название">
+                <textarea v-model="newP.description" class="admin-input" placeholder="Описание"></textarea>
+                <input v-model="newP.price" class="admin-input" type="number" placeholder="Цена">
+                <input v-model="newP.oldPrice" class="admin-input" type="number" placeholder="Старая цена (для скидки)">
+                <input v-model="newP.category" class="admin-input" placeholder="Категория">
+                <input v-model="newP.sizesStr" class="admin-input" placeholder="Размеры через запятую (42, 44, 46)">
+                
+                <div style="margin-bottom:10px;">
+                    <label style="font-size:11px;">Фото (можно несколько):</label>
+                    <input type="file" @change="uploadToImgBB" multiple style="margin-top:5px;">
+                </div>
+                
+                <button @click="addProduct" style="width:100%; padding:12px; background:#000; color:#fff; border-radius:8px; border:none; font-weight:800;">СОХРАНИТЬ ТОВАР</button>
+            </div>
+
+            <h4>Все заказы</h4>
+            <div v-for="o in allOrders" style="background:#fff; padding:10px; border-radius:8px; margin-bottom:10px; font-size:11px;">
+                <div>ID: {{o.order_id}} | {{o.user.name}}</div>
+                <div>{{o.total}} ₽ | {{o.delivery}}</div>
+                <select v-model="o.status" @change="updateOrderStatus(o)" style="margin-top:5px; width:100%;">
+                    <option value="new">Новый</option>
+                    <option value="process">В сборке</option>
+                    <option value="shipped">Отправлен</option>
+                    <option value="done">Завершен</option>
+                </select>
+                <button @click="printOrder(o)" style="margin-top:5px; width:100%; font-size:10px;">Печать накладной (PDF)</button>
+            </div>
+        </div>
+    </div>
+
+    <div v-if="activeTab === 'favs'" class="container">
+        <h2 class="brand-name">ИЗБРАННОЕ</h2>
+        <div v-if="favs.length === 0" style="text-align:center; padding:50px; color:var(--gray);">Ничего не добавлено</div>
+        <div class="products-grid">
+            <div v-for="p in favs" :key="p.id" class="card" @click="openProduct(p)">
+                <div class="card-img-wrap"><img :src="p.images[0]"></div>
+                <div class="card-info">
+                    <div class="card-title">{{p.title}}</div>
+                    <div class="card-price">{{p.price}} ₽</div>
+                    <button @click.stop="toggleFav(p)" style="width:100%; margin-top:8px; background:none; border:1px solid #eee; font-size:10px; padding:5px; border-radius:5px;">Удалить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bottom-nav">
+        <button class="nav-item" @click="activeTab = 'catalog'; vibrate()" :class="{active: activeTab === 'catalog'}">
+            <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+            КАТАЛОГ
+        </button>
+        <button class="nav-item" @click="activeTab = 'favs'; vibrate()" :class="{active: activeTab === 'favs'}">
+            <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+            ИЗБРАННОЕ
+        </button>
+        <button class="nav-item" @click="activeTab = 'cart'; vibrate()" :class="{active: activeTab === 'cart'}" style="position:relative;">
+            <svg viewBox="0 0 24 24"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/></svg>
+            КОРЗИНА
+            <div v-if="cart.length" class="cart-badge">{{cart.length}}</div>
+        </button>
+        <button class="nav-item" @click="activeTab = 'profile'; vibrate()" :class="{active: activeTab === 'profile'}">
+            <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+            ПРОФИЛЬ
+        </button>
+    </div>
+
 </div>
 
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-  import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, updateDoc, deleteDoc, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-  import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, onSnapshot, updateDoc, doc, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-  const firebaseConfig = { apiKey: "AIzaSyC6fihIMtOYZuPh-db3Tc6eiRgSikzydVw", authDomain: "naran-80077.firebaseapp.com", projectId: "naran-80077", storageBucket: "naran-80077.firebasestorage.app", appId: "IG-PR8PLCMF3C" };
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-  const storage = getStorage(app);
+    const firebaseConfig = { apiKey: "AIzaSyC6fihIMtOYZuPh-db3Tc6eiRgSikzydVw", projectId: "naran-clothes", appId: "1:806733250106:web:657193260c6d9959556157" };
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-  window.db = db;
-  window.fbMethods = { collection, addDoc, onSnapshot, query, orderBy, doc, updateDoc, deleteDoc, serverTimestamp, setDoc, ref, uploadBytes, getDownloadURL, storage };
-</script>
-
-<script>
     const tg = window.Telegram.WebApp;
+
     const { createApp } = Vue;
 
     createApp({
         data() {
             return {
-                adminId: 387881523, isAdmin: false,
-                activeTab: 'catalog', activeMenuTab: null, selP: null,
-                isSearching: false, searchQuery: '',
-                categories: ['пиджаки', 'свитеры', 'костюмы', 'футболки', 'куртки'], newCatName: '',
-                tabs: [
-                    {id:'catalog', name:'Каталог', icon:'<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>'},
-                    {id:'favs', name:'Избранное', icon:'<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>'},
-                    {id:'cart', name:'Корзина', icon:'<circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>'},
-                    {id:'profile', name:'Профиль', icon:'<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle>'}
-                ],
-                products: [], orders: [],
-                cart: JSON.parse(localStorage.getItem('naran_cart_v5')) || [],
-                favorites: JSON.parse(localStorage.getItem('naran_fav_v5')) || [],
-                user: {}, form: { phone: '' },
-                deliv: '', address: localStorage.getItem('last_naran_addr') || '', map: null,
-                currentCat: '',
-                newP: { title:'', desc:'', price:'', oldPrice:'', category:'пиджаки', sizesStr:'42, 44, 46', color:'', images:[] },
-                editingId: null, uploading: false, uploadMethod: 'imgbb'
+                activeTab: 'catalog',
+                products: [],
+                categories: [],
+                currentCat: 'Все товары',
+                searchQuery: '',
+                showSearch: false,
+                showMenu: false,
+                infoPage: null,
+                selectedProduct: null,
+                tempSize: null,
+                cart: JSON.parse(localStorage.getItem('naran_cart') || '[]'),
+                favs: JSON.parse(localStorage.getItem('naran_favs') || '[]'),
+                user: { first_name: 'Гость', photo: '' },
+                isAdmin: false,
+                adminId: 387881523,
+                form: { name: '', phone: '' },
+                delivery: '',
+                address: localStorage.getItem('naran_last_address') || '',
+                map: null,
+                myOrders: [],
+                allOrders: [],
+                newP: { title: '', description: '', price: '', category: '', sizesStr: '', images: [] },
+                imgbbKey: '839e62907e9a52f0159461b7771bcb2f'
             }
         },
         computed: {
             filteredProducts() {
-                return this.products.filter(p => {
-                    const matchCat = !this.currentCat || p.category === this.currentCat;
-                    const matchSearch = p.title.toLowerCase().includes(this.searchQuery.toLowerCase());
-                    return matchCat && matchSearch && (!p.hidden || this.isAdmin);
-                });
+                let res = this.products;
+                if (this.currentCat !== 'Все товары') res = res.filter(p => p.category === this.currentCat);
+                if (this.searchQuery) res = res.filter(p => p.title.toLowerCase().includes(this.searchQuery.toLowerCase()));
+                return res;
             },
-            favItems() {
-                return this.favorites.map(f => {
-                    const p = this.products.find(x => x.id === f.id);
-                    return p ? { ...p, selS: f.size } : null;
-                }).filter(x => x);
-            },
-            userOrders() { return this.orders.filter(o => o.user_id == this.user.id); },
-            revenue() { return this.orders.reduce((s, o) => s + (Number(o.total) || 0), 0); },
-            total() { return this.cart.reduce((s, i) => s + (i.price * i.qty), 0); }
+            total() { return this.cart.reduce((sum, i) => sum + (Number(i.price) * (i.qty || 1)), 0); },
+            revenue() { return this.allOrders.reduce((sum, o) => sum + Number(o.total), 0); },
+            isValidOrder() { return this.form.name && this.form.phone.length >= 10 && this.delivery && this.address; }
         },
         methods: {
             vibrate() { tg.HapticFeedback.impactOccurred('medium'); },
-            handleScroll(e, p) { if(p) p.aIdx = Math.round(e.target.scrollLeft / e.target.offsetWidth); },
-            openProduct(p) { this.vibrate(); this.selP = { ...p, selS: p.sizes[0], aIdx: 0 }; },
-
-            toggleFav(p) {
-                const idx = this.favorites.findIndex(f => f.id === p.id);
-                if(idx > -1) this.favorites.splice(idx, 1);
-                else this.favorites.push({ id: p.id, size: p.selS || p.sizes[0] });
-                localStorage.setItem('naran_fav_v5', JSON.stringify(this.favorites));
-                this.vibrate();
-            },
-            isFav(p) { return this.favorites.some(f => f.id === p.id); },
-
-            addToCart(p) {
-                this.cart.push({ ...p, cartId: Date.now(), qty: 1 });
-                localStorage.setItem('naran_cart_v5', JSON.stringify(this.cart));
-                this.selP = null;
-                this.vibrate();
-            },
-            changeQty(idx, delta) {
-                if(this.cart[idx].qty + delta > 0) {
-                    this.cart[idx].qty += delta;
-                    localStorage.setItem('naran_cart_v5', JSON.stringify(this.cart));
+            openProduct(p) { this.selectedProduct = p; this.tempSize = p.sizes[0]; },
+            openInfo(page) { this.infoPage = page; this.showMenu = false; },
+            
+            isFav(p) { return this.favs.some(f => f.id === p.id); },
+            toggleFav(p, size = null) {
+                const idx = this.favs.findIndex(f => f.id === p.id);
+                if (idx > -1) {
+                    this.favs.splice(idx, 1);
+                } else {
+                    this.favs.push({...p, selectedSize: size || p.sizes[0]});
                 }
-            },
-            removeCart(idx) { 
-                this.cart.splice(idx, 1); 
-                localStorage.setItem('naran_cart_v5', JSON.stringify(this.cart)); 
+                localStorage.setItem('naran_favs', JSON.stringify(this.favs));
+                this.vibrate();
             },
 
-            setDeliv(d) { this.deliv = d; this.$nextTick(() => this.initMap()); },
+            addToCart(p, size) {
+                const cartId = Date.now();
+                this.cart.push({...p, selectedSize: size, cartId, qty: 1});
+                localStorage.setItem('naran_cart', JSON.stringify(this.cart));
+                this.selectedProduct = null;
+                this.vibrate();
+            },
+            changeQty(item, delta) {
+                item.qty = (item.qty || 1) + delta;
+                if (item.qty < 1) this.removeC(item.cartId);
+                localStorage.setItem('naran_cart', JSON.stringify(this.cart));
+            },
+            removeC(cid) {
+                this.cart = this.cart.filter(i => i.cartId !== cid);
+                localStorage.setItem('naran_cart', JSON.stringify(this.cart));
+            },
+
+            setDelivery(d) {
+                this.delivery = d;
+                this.vibrate();
+                setTimeout(() => this.initMap(), 100);
+            },
+
             initMap() {
-                if (this.map) this.map.destroy();
-                this.map = new mapgl.Map('map', { center: [37.6175, 55.7558], zoom: 12, key: 'cab82c94-e619-42eb-9814-3361712feaf0' });
-                this.map.on('click', e => this.getAddress(e.lngLat[1], e.lngLat[0]));
-                if(navigator.geolocation) {
-                    navigator.geolocation.getCurrentPosition(pos => {
-                        const coords = [pos.coords.longitude, pos.coords.latitude];
-                        this.map.setCenter(coords);
-                        this.getAddress(coords[1], coords[0]);
-                    });
-                }
-            },
-            getAddress(lat, lon) {
-                fetch(`https://catalog.api.2gis.com/3.0/items/geocode?lat=${lat}&lon=${lon}&key=cab82c94-e619-42eb-9814-3361712feaf0`)
-                .then(r => r.json()).then(d => {
-                    if(d.result?.items?.length) {
-                        this.address = d.result.items[0].address_name || d.result.items[0].name;
-                        localStorage.setItem('last_naran_addr', this.address);
+                if (this.map) return;
+                this.map = new mapgl.Map('map', {
+                    center: [37.6176, 55.7558],
+                    zoom: 13,
+                    key: 'cab82c94-e619-42eb-9814-3361712feaf0'
+                });
+                this.map.on('click', (e) => {
+                    if (e.target.type === 'building') {
+                        this.address = e.target.address_name || 'Выбранное здание';
+                        localStorage.setItem('naran_last_address', this.address);
                     }
                 });
             },
 
-            async uploadImages(e) {
-                this.uploading = true;
-                try {
-                    for(let file of e.target.files) {
-                        if(this.uploadMethod === 'imgbb') {
-                            const fd = new FormData(); fd.append('image', file);
-                            const r = await fetch('https://api.imgbb.com/1/upload?key=839e62907e9a52f0159461b7771bcb2f', {method:'POST', body:fd});
-                            const d = await r.json();
-                            this.newP.images.push(d.data.url);
-                        } else {
-                            const sRef = window.fbMethods.ref(window.fbMethods.storage, `products/${Date.now()}_${file.name}`);
-                            await window.fbMethods.uploadBytes(sRef, file);
-                            const url = await window.fbMethods.getDownloadURL(sRef);
-                            this.newP.images.push(url);
-                        }
-                    }
-                } catch(err) {
-                    tg.showAlert("Вежливое уведомление: Ошибка загрузки фото. Попробуйте другой метод.");
-                }
-                this.uploading = false;
-            },
-            async saveProduct() {
-                const data = { 
-                    ...this.newP, 
-                    price: Number(this.newP.price), 
-                    oldPrice: this.newP.oldPrice ? Number(this.newP.oldPrice) : null,
-                    sizes: this.newP.sizesStr.split(',').map(s=>s.trim()), 
-                    updatedAt: window.fbMethods.serverTimestamp() 
-                };
-                if(this.editingId) {
-                    await window.fbMethods.updateDoc(window.fbMethods.doc(window.db, "products", this.editingId), data);
-                } else {
-                    data.createdAt = window.fbMethods.serverTimestamp();
-                    data.hidden = false;
-                    await window.fbMethods.addDoc(window.fbMethods.collection(window.db, "products"), data);
-                }
-                this.cancelEdit();
-                tg.showAlert("Готово!");
-            },
-            editP(p) {
-                this.editingId = p.id;
-                this.newP = { ...p, sizesStr: p.sizes.join(', ') };
-                window.scrollTo(0,0);
-            },
-            cancelEdit() {
-                this.editingId = null;
-                this.newP = { title:'', desc:'', price:'', oldPrice:'', category:'пиджаки', sizesStr:'42, 44, 46', color:'', images:[] };
-            },
-            async deleteP(id) { if(confirm("Удалить товар?")) await window.fbMethods.deleteDoc(window.fbMethods.doc(window.db, "products", id)); },
-            async toggleHide(p) { await window.fbMethods.updateDoc(window.fbMethods.doc(window.db, "products", p.id), { hidden: !p.hidden }); },
-            addCategory() { if(this.newCatName) { this.categories.push(this.newCatName); this.newCatName = ''; } },
-
             async sendOrder() {
-                const phone = this.form.phone.replace(/\D/g, '');
-                if(phone.length < 10 || ['000000','99999'].some(s => phone.includes(s))) return tg.showAlert("Некорректный номер");
-                
-                const orderId = `${new Date().getDate()}${new Date().getMonth()+1}-${Math.floor(10000 + Math.random() * 90000)}`;
-                const itemsSummary = this.cart.map(i => `${i.title} (${i.selS}) x${i.qty}`).join(', ');
-
-                const orderObj = {
+                const date = new Date();
+                const orderId = `${date.getDate()}${date.getMonth()+1}-${Math.floor(10000 + Math.random() * 90000)}`;
+                const orderData = {
                     order_id: orderId,
-                    user_id: this.user.id,
-                    user_name: this.user.username || this.user.first_name,
-                    user_phone: this.form.phone,
-                    items_summary: itemsSummary,
+                    user: { ...this.form, tg_id: this.user.id, nick: this.user.username },
+                    items: this.cart,
                     total: this.total,
-                    delivery_address: `${this.deliv}: ${this.address}`,
-                    status: 'В пути',
-                    createdAt: window.fbMethods.serverTimestamp()
+                    delivery: this.delivery,
+                    address: this.address,
+                    status: 'new',
+                    timestamp: Date.now()
                 };
 
-                // Сохранение в Firebase
-                await window.fbMethods.addDoc(window.fbMethods.collection(window.db, "orders"), orderObj);
-                
-                // Отправка боту
-                tg.sendData(JSON.stringify(orderObj));
-                
-                this.cart = [];
-                localStorage.removeItem('naran_cart_v5');
-                tg.showAlert("Заказ №" + orderId + " оформлен!");
-                setTimeout(() => tg.close(), 1000);
+                try {
+                    await addDoc(collection(db, "orders"), orderData);
+                    
+                    // Отправка в бот (через sendData)
+                    tg.sendData(JSON.stringify(orderData));
+                    
+                    this.cart = [];
+                    localStorage.removeItem('naran_cart');
+                    alert(`Заказ №${orderId} оформлен!`);
+                    this.activeTab = 'profile';
+                } catch (e) {
+                    alert("Ошибка сохранения заказа");
+                }
             },
-            async updateOrderStatus(id, newStatus) {
-                await window.fbMethods.updateDoc(window.fbMethods.doc(window.db, "orders", id), { status: newStatus });
+
+            async uploadToImgBB(e) {
+                const files = e.target.files;
+                for (let file of files) {
+                    let formData = new FormData();
+                    formData.append("image", file);
+                    try {
+                        const res = await fetch(`https://api.imgbb.com/1/upload?key=${this.imgbbKey}`, { method: "POST", body: formData });
+                        const data = await res.json();
+                        if (data.success) this.newP.images.push(data.data.url);
+                        else throw new Error();
+                    } catch (err) {
+                        alert("Ошибка загрузки фото");
+                    }
+                }
+            },
+
+            async addProduct() {
+                if (!this.newP.title || !this.newP.price) return alert("Заполни поля");
+                const productData = {
+                    title: this.newP.title,
+                    description: this.newP.description,
+                    price: this.newP.price,
+                    oldPrice: this.newP.oldPrice || null,
+                    category: this.newP.category,
+                    sizes: this.newP.sizesStr.split(',').map(s => s.trim()),
+                    images: this.newP.images,
+                    hidden: false
+                };
+                await addDoc(collection(db, "products"), productData);
+                alert("Товар добавлен!");
+                this.newP = { title: '', description: '', price: '', category: '', sizesStr: '', images: [] };
+            },
+
+            async updateOrderStatus(o) {
+                const docRef = doc(db, "orders", o.id);
+                await updateDoc(docRef, { status: o.status });
+            },
+
+            printOrder(o) {
+                const win = window.open('', '_blank');
+                win.document.write(`<h1>Заказ №${o.order_id}</h1><p>Клиент: ${o.user.name}</p><p>Адрес: ${o.address}</p><h3>Состав:</h3>`);
+                o.items.forEach(i => win.document.write(`<li>${i.title} - ${i.selectedSize} - ${i.price}р</li>`));
+                win.print();
             }
         },
         mounted() {
-            tg.ready(); tg.expand();
-            if(tg.initDataUnsafe?.user) {
+            tg.ready();
+            tg.expand();
+            if (tg.initDataUnsafe?.user) {
                 this.user = tg.initDataUnsafe.user;
-                if(Number(this.user.id) === this.adminId) this.isAdmin = true;
+                if (Number(this.user.id) === this.adminId) this.isAdmin = true;
             }
 
-            const check = setInterval(() => {
-                if(window.db) {
-                    clearInterval(check);
-                    // Загрузка товаров
-                    window.fbMethods.onSnapshot(window.fbMethods.query(window.fbMethods.collection(window.db, "products"), window.fbMethods.orderBy("createdAt", "desc")), s => {
-                        this.products = s.docs.map(d => ({ id: d.id, ...d.data(), aIdx: 0 }));
-                    });
-                    // Загрузка заказов
-                    window.fbMethods.onSnapshot(window.fbMethods.query(window.fbMethods.collection(window.db, "orders"), window.fbMethods.orderBy("createdAt", "desc")), s => {
-                        this.orders = s.docs.map(d => ({ id: d.id, ...d.data() }));
-                    });
-                }
-            }, 100);
+            // Загрузка товаров
+            onSnapshot(collection(db, "products"), (snap) => {
+                this.products = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                this.categories = [...new Set(this.products.map(p => p.category))];
+            });
+
+            // Загрузка заказов
+            onSnapshot(collection(db, "orders"), (snap) => {
+                const all = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                this.allOrders = all;
+                this.myOrders = all.filter(o => o.user.tg_id === this.user.id).sort((a,b) => b.timestamp - a.timestamp);
+            });
         }
     }).mount('#app');
 </script>
