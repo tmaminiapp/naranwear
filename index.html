@@ -758,71 +758,76 @@ Vue.createApp({
         },
 
         async checkout() {
-            // 1. Проверки
+            // 1. Проверки заполнения полей в корзине
             if (!this.form.name) return alert('Введите ваше имя');
             if (!this.form.phone || this.form.phone.length < 10) return alert('Введите корректный телефон');
             if (!this.address) return alert('Выберите адрес на карте');
 
-            // 2. ГЕНЕРАЦИЯ НОМЕРА ЗАКАЗА (Дата + 5 случайных чисел)
+            // 2. Генерация номера заказа (ДДММГГ-РАНДОМ)
             const date = new Date();
             const day = String(date.getDate()).padStart(2, '0');
             const month = String(date.getMonth() + 1).padStart(2, '0');
-            const year = String(date.getFullYear()).slice(-2); // Последние 2 цифры года
-            
-            const randomDigits = Math.floor(10000 + Math.random() * 90000); // 5 знаков
+            const year = String(date.getFullYear()).slice(-2);
+            const randomDigits = Math.floor(10000 + Math.random() * 90000);
             const orderId = `${day}${month}${year}-${randomDigits}`;
 
-            // 3. Сбор данных для базы
+            // 3. Сбор данных для базы данных Firebase
             const orderData = {
                 order_id: orderId,
                 user: { 
                     id: this.user.id,
-                    name: this.form.name,
-                    phone: this.form.phone,
-                    username: this.user.username || 'n/a'
+                    name: this.form.name, // Берем имя именно из инпута
+                    phone: this.form.phone, // Берем телефон из инпута
+                    username: this.user.username || ''
                 },
                 items: this.cart,
                 total: this.total,
                 address: this.address,
                 delivery: this.deliv,
-                status: 'Новый',
-                createdAt: Date.now()
+                status: 'В обработке',
+                createdAt: Date.now(),
+                date: date.toLocaleString()
             };
 
             try {
                 // Сохраняем в Firebase
                 await window.fb.addDoc(window.fb.collection(window.db, "orders"), orderData);
                 
-                // 4. ФОРМИРОВАНИЕ СООБЩЕНИЯ С НОМЕРОМ
+                // 4. Формируем текст для Telegram-бота
                 const itemsList = this.cart.map(i => `• ${i.title} (${i.selSize}) x${i.qty}`).join('\n');
                 
-                const msg = `📦 ЗАКАЗ № ${orderId}\n` +
+                const msg = `📦 НОВЫЙ ЗАКАЗ #${orderId}\n` +
                             `⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n` +
                             `👤 Клиент: ${this.form.name}\n` +
-                            `📞 Тел: ${this.form.phone}\n` +
+                            `📞 Телефон: ${this.form.phone}\n` +
                             `🚚 Доставка: ${this.deliv}\n` +
                             `📍 Адрес: ${this.address}\n\n` +
-                            `🛍 ТОВАРЫ:\n${itemsList}\n\n` +
-                            `💰 ИТОГО: ${this.total} ₽`;
+                            `🛍 СОСТАВ ЗАКАЗА:\n${itemsList}\n\n` +
+                            `💰 ИТОГО К ОПЛАТЕ: ${this.total} ₽`;
 
-                // Отправка в телеграм
-                if (window.Telegram?.WebApp) {
-                    window.Telegram.WebApp.sendData(JSON.stringify({ 
-                        message: msg, 
-                        order_id: orderId 
-                    }));
-                    
-                    window.Telegram.WebApp.showAlert(`Заказ №${orderId} оформлен!`);
-                }
+                // 5. Отправка данных боту через sendData
+                // Передаем и готовое сообщение, и отдельные поля для бота
+                tg.sendData(JSON.stringify({ 
+                    message: msg, 
+                    type: 'order',
+                    order_id: orderId,
+                    customer_name: this.form.name,
+                    customer_phone: this.form.phone,
+                    order_total: this.total
+                }));
 
-                // Очистка
+                // Сохраняем телефон в память телефона
                 localStorage.setItem('naran_phone', this.form.phone);
+                
+                // Очищаем корзину
                 this.cart = [];
                 this.saveCart();
+                
+                tg.showAlert(`Заказ №${orderId} успешно оформлен!`);
                 this.tab = 'profile';
                 
             } catch (e) { 
-                console.error("Ошибка оформления:", e);
+                console.error("Ошибка при заказе:", e);
                 alert('Ошибка: ' + e.message); 
             }
         },
