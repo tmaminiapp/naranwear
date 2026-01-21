@@ -613,96 +613,29 @@ Vue.createApp({
         },
 
         initMap() {
-    if (this.map) { this.map.destroy(); this.map = null; }
-    
-    this.map = new mapgl.Map('map', {
-        center: [37.6175, 55.7558],
-        zoom: 12,
-        key: this.key2gis
-    });
-
-    this.map.on('click', (e) => {
-        this.getAddress(e.lngLat[1], e.lngLat[0]);
-    });
-
-    // ОШИБКА БЫЛА ТУТ: Telegram требует проверку наличия метода
-    if (tg.requestLocation) {
-        tg.requestLocation((data) => {
-            // В Telegram координаты лежат в data.location
-            if (data && data.location) {
-                const lat = data.location.latitude;
-                const lon = data.location.longitude;
-                this.map.setCenter([lon, lat]);
-                this.map.setZoom(15);
-                this.getAddress(lat, lon);
-            } else {
-                // Если ТГ не вернул, пробуем браузер (запасной путь)
-                this.runBackupGeo();
-            }
-        });
-    } else {
-        this.runBackupGeo();
-    }
-},
-
-runBackupGeo() {
-    navigator.geolocation.getCurrentPosition(p => {
-        this.map.setCenter([p.coords.longitude, p.coords.latitude]);
-        this.getAddress(p.coords.latitude, p.coords.longitude);
-    }, (err) => {
-        console.log("Геопозиция совсем недоступна");
-    });
-},
-
-getAddress(lat, lon) {
-    // ВАЖНО: Убрали всё лишнее из запроса, оставили только координаты и ключ
-    fetch(`https://catalog.api.2gis.com/3.0/items/geocode?lat=${lat}&lon=${lon}&key=${this.key2gis}`)
-        .then(r => r.json())
-        .then(d => {
-            if (d.result && d.result.items && d.result.items.length > 0) {
-                // Берем поля точно как в твоем первом рабочем коде
-                const item = d.result.items[0];
-                this.address = item.address_name || item.name || "Адрес не определен";
+                if (this.map) { this.map.destroy(); this.map = null; }
+                this.map = new mapgl.Map('map', { center: [37.6175, 55.7558], zoom: 12, key: this.key2gis });
                 
-                // Чтобы Vue обновил интерфейс, иногда нужно подтолкнуть
-                this.$forceUpdate(); 
+                this.map.on('click', (e) => {
+                    this.getAddress(e.lngLat[1], e.lngLat[0]);
+                });
                 
-                if (this.haptic) this.haptic();
-            }
-        })
-        .catch(e => console.error("Ошибка 2GIS:", e));
-},
+                // Авто-позиция
+                navigator.geolocation.getCurrentPosition(p => {
+                    this.map.setCenter([p.coords.longitude, p.coords.latitude]);
+                    this.getAddress(p.coords.latitude, p.coords.longitude);
+                });
+            },
 
-        getAddress(lat, lon) {
-            const myKey = 'cab82c94-e619-42eb-9814-3361712feaf0';
-            const url = `https://catalog.api.2gis.com/3.0/items/geocode?lat=${lat}&lon=${lon}&radius=50&key=${myKey}`;
-
-            fetch(url)
+            getAddress(lat, lon) {
+                fetch(`https://catalog.api.2gis.com/3.0/items/geocode?lat=${lat}&lon=${lon}&key=${this.key2gis}`)
                 .then(r => r.json())
-                .then(res => {
-                    if (res.result?.items?.length) {
-                        const addrName = res.result.items[0].address_name || res.result.items[0].name;
-                        
-                        // ПРАВИЛЬНАЯ ЗАПИСЬ:
-                        // В вашем коде используется 'deliv' и 'address' отдельно
-                        const prefix = this.deliv ? this.deliv + ': ' : '';
-                        this.address = prefix + addrName;
-                        
-                        // Для надежности записываем в объект формы, если он будет расширен
-                        if (this.form) this.form.address = this.address;
-
-                        // Принудительно говорим Vue обновить экран
-                        this.$forceUpdate();
-                        
-                        localStorage.setItem('naran_last_addr', this.address);
-                        
-                        if (window.Telegram?.WebApp?.HapticFeedback) {
-                            window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
-                        }
+                .then(d => {
+                    if(d.result?.items?.length) {
+                        this.address = d.result.items[0].address_name || d.result.items[0].name;
                     }
-                })
-                .catch(err => console.error("Ошибка геокода:", err));
-        },
+                });
+            },
 
         openSupport() { window.open('https://t.me/opttania', '_blank'); },
 
