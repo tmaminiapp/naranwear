@@ -758,6 +758,8 @@ Vue.createApp({
         },
 
         async checkout() {
+            // Проверки заполнения
+            if (!this.form.name) return alert('Введите ваше имя');
             if (!this.form.phone || this.form.phone.length < 10) return alert('Введите корректный телефон');
             if (!this.address) return alert('Выберите адрес на карте');
 
@@ -765,9 +767,15 @@ Vue.createApp({
             const dateStr = `${date.getDate()}.${date.getMonth()+1}`;
             const orderId = `${dateStr}-${Math.floor(Math.random() * 90000 + 10000)}`;
 
+            // Собираем данные заказа
             const orderData = {
                 order_id: orderId,
-                user: { ...this.user, ...this.form },
+                user: { 
+                    id: this.user.id,
+                    name: this.form.name, // Берем имя из инпута
+                    phone: this.form.phone, // Берем телефон из инпута
+                    username: this.user.username || ''
+                },
                 items: this.cart,
                 total: this.total,
                 address: this.address,
@@ -778,18 +786,40 @@ Vue.createApp({
             };
 
             try {
+                // 1. Сохраняем в Firebase
                 await window.fb.addDoc(window.fb.collection(window.db, "orders"), orderData);
                 
-                // Сообщение боту
-                const msg = `📦 НОВЫЙ ЗАКАЗ: ${orderId}\n👤 ${this.form.name}\n📞 ${this.form.phone}\n📍 ${this.address}\n\nСостав:\n${this.cart.map(i => `- ${i.title} (${i.selSize}, ${i.selColor}) x${i.qty}`).join('\n')}\n\nИТОГО: ${this.total} ₽`;
-                tg.sendData(JSON.stringify({ message: msg, type: 'order', data: orderData }));
+                // 2. Формируем сообщение для Telegram бота
+                const itemsList = this.cart.map(i => `• ${i.title} (${i.selSize}) x${i.qty}`).join('\n');
+                
+                const msg = `📦 НОВЫЙ ЗАКАЗ #${orderId}\n` +
+                            `👤 Клиент: ${this.form.name}\n` +
+                            `📞 Телефон: ${this.form.phone}\n` +
+                            `🚚 Доставка: ${this.deliv}\n` +
+                            `📍 Адрес: ${this.address}\n\n` +
+                            `🛍 СОСТАВ ЗАКАЗА:\n${itemsList}\n\n` +
+                            `💰 ИТОГО: ${this.total} ₽`;
 
+                // Отправляем данные боту (это закроет WebApp и отправит текст)
+                tg.sendData(JSON.stringify({ 
+                    message: msg, 
+                    type: 'order', 
+                    order_id: orderId,
+                    customer_name: this.form.name 
+                }));
+
+                // Очистка и уведомление
                 localStorage.setItem('naran_phone', this.form.phone);
                 this.cart = [];
                 this.saveCart();
-                tg.showAlert('Заказ успешно оформлен! Номер заказа: ' + orderId);
+                
+                tg.showAlert('Заказ №' + orderId + ' успешно отправлен! Ожидайте звонка.');
                 this.tab = 'profile';
-            } catch (e) { alert('Ошибка: ' + e.message); }
+                
+            } catch (e) { 
+                console.error("Checkout error:", e);
+                alert('Ошибка при оформлении: ' + e.message); 
+            }
         },
 
         async updateStatus(order, status) {
