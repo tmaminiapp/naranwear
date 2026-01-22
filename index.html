@@ -5,7 +5,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NARAN</title>
+    <title>NARAN PREMIUM</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://mapgl.2gis.com/api/js/v1"></script>
@@ -142,10 +142,19 @@
         .field label { display: block; font-size: 10px; font-weight: 800; margin-bottom: 5px; text-transform: uppercase; }
         .input-admin { width: 100%; padding: 12px; border: 1px solid #ddd; font-family: inherit; font-size: 13px; border-radius: 2px; }
         
-        .order-card { background: #fff; border: 1px solid #eee; padding: 15px; margin-bottom: 10px; }
-        .status-badge { display: inline-block; padding: 4px 8px; font-size: 9px; font-weight: 800; text-transform: uppercase; margin-top: 5px; }
-        .status-ready { background: #e8f5e9; color: #2e7d32; }
-        .status-process { background: #fff3e0; color: #ef6c00; }
+        .order-card button {
+    cursor: pointer; /* Указатель при наведении */
+    transition: opacity 0.2s;
+    user-select: none;
+}
+
+.order-card button:active {
+    transform: scale(0.96); /* Эффект нажатия */
+    opacity: 0.7;
+}
+
+.status-ready { background: #e8f5e9; color: #2e7d32; border: 1px solid #2e7d32; }
+.status-process { background: #fff3e0; color: #ef6c00; border: 1px solid #ef6c00; }
 
         [v-cloak] { display: none; }
     </style>
@@ -822,48 +831,54 @@ Vue.createApp({
         },
 
         async checkout() {
-    // 1. Валидация
-    if (this.cart.length === 0) return alert('Ваша корзина пуста');
-    if (!this.form.name.trim()) return alert('Введите ваше имя');
-    if (!this.form.phone.trim() || this.form.phone.length < 10) return alert('Введите корректный номер телефона');
-    if (!this.deliv) return alert('Выберите способ доставки');
-    if (!this.address) return alert('Пожалуйста, выберите адрес на карте');
+    // 1. Предварительная проверка корзины
+    if (!this.cart || this.cart.length === 0) {
+        return alert('Ваша корзина пуста');
+    }
 
-    this.loading = true; // Блокируем кнопку на время отправки
+    // 2. Сбор данных с приоритетом (сначала из Vue, если пусто — из полей ввода напрямую)
+    const nameValue = this.form.name?.trim() || document.querySelector('input[placeholder="ИМЯ"]')?.value?.trim();
+    const phoneValue = this.form.phone?.trim() || document.querySelector('input[type="tel"]')?.value?.trim();
+    const deliveryValue = this.deliv;
+    const addressValue = this.address;
 
-    // 2. Генерация ID заказа
+    // 3. Валидация собранных данных
+    if (!nameValue) return alert('Введите ваше имя');
+    if (!phoneValue || phoneValue.length < 10) return alert('Введите корректный номер телефона');
+    if (!deliveryValue) return alert('Выберите способ доставки');
+    if (!addressValue) return alert('Пожалуйста, выберите адрес на карте');
+
+    this.loading = true;
+
+    // 4. Генерация ID и расчет суммы вручную (для надежности)
     const date = new Date();
     const orderId = `${String(date.getDate()).padStart(2, '0')}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getFullYear()).slice(-2)}-${Math.floor(10000 + Math.random() * 90000)}`;
-    const customerName = this.form.name || document.querySelector('input[placeholder="ИМЯ"]')?.value || 'Не указано';
-    const customerPhone = this.form.phone || document.querySelector('input[type="tel"]')?.value || 'Не указано';
-    const currentAddress = this.address || 'Адрес не выбран';
-    const currentDelivery = this.deliv || 'Не выбрана';
-
-    // 3. Формирование состава заказа для сообщения
+    
+    const calculatedTotal = this.cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
     const itemsList = this.cart.map(i => `• ${i.title} (${i.selSize}) x${i.qty} — ${i.price * i.qty} ₽`).join('\n');
 
-    // 4. Формирование итогового сообщения
+    // 5. Формирование итогового сообщения (используем только проверенные константы!)
     const msg = `📦 НОВЫЙ ЗАКАЗ #${orderId}\n` +
                 `⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n` +
-                `👤 Клиент: ${this.form.name}\n` +
-                `📞 Телефон: ${this.form.phone}\n` +
-                `🚚 Доставка: ${this.deliv}\n` +
-                `📍 Адрес: ${this.address}\n\n` +
+                `👤 Клиент: ${nameValue}\n` +
+                `📞 Телефон: ${phoneValue}\n` +
+                `🚚 Доставка: ${deliveryValue}\n` +
+                `📍 Адрес: ${addressValue}\n\n` +
                 `🛍 СОСТАВ ЗАКАЗА:\n${itemsList}\n\n` +
-                `💰 ИТОГО К ОПЛАТЕ: ${this.total} ₽`;
+                `💰 ИТОГО К ОПЛАТЕ: ${calculatedTotal} ₽`;
 
     const orderData = {
         order_id: orderId,
         user: { 
             id: this.user.id,
-            name: this.form.name,
-            phone: this.form.phone,
+            name: nameValue,
+            phone: phoneValue,
             username: this.user.username || 'n/a'
         },
-        items: [...this.cart], // Копируем массив корзины
-        total: this.total,
-        address: this.address,
-        delivery: this.deliv,
+        items: JSON.parse(JSON.stringify(this.cart)), // Глубокое копирование
+        total: calculatedTotal,
+        address: addressValue,
+        delivery: deliveryValue,
         status: 'В обработке',
         createdAt: Date.now(),
         date: date.toLocaleString()
@@ -873,16 +888,18 @@ Vue.createApp({
         // Сохранение в Firebase
         await window.fb.addDoc(window.fb.collection(window.db, "orders"), orderData);
         
-        // Отправка данных в Telegram
-        tg.sendData(JSON.stringify({ 
-            message: msg, 
-            type: 'order',
-            order_id: orderId,
-            customer_phone: this.form.phone
-        }));
+        // Отправка в Telegram
+        if (window.Telegram?.WebApp) {
+            window.Telegram.WebApp.sendData(JSON.stringify({ 
+                message: msg, 
+                type: 'order',
+                order_id: orderId,
+                customer_phone: phoneValue
+            }));
+        }
 
-        // Очистка и сохранение
-        localStorage.setItem('naran_phone', this.form.phone);
+        // Очистка
+        localStorage.setItem('naran_phone', phoneValue);
         this.cart = [];
         this.saveCart();
         
@@ -897,24 +914,51 @@ Vue.createApp({
     }
 },
 
-        async updateStatus(order, status) {
-            await window.fb.updateDoc(window.fb.doc(window.db, "orders", order.id), { status });
-        },
-
         printOrder(o) {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            doc.text(`NARAN PREMIUM - CHECK #${o.order_id}`, 10, 10);
-            doc.text(`Client: ${o.user.name} (${o.user.phone})`, 10, 20);
-            doc.text(`Address: ${o.address}`, 10, 30);
-            let y = 40;
-            o.items.forEach(i => {
-                doc.text(`${i.title} - ${i.selSize} - ${i.qty} pcs - ${i.price} RUB`, 10, y);
-                y += 10;
-            });
-            doc.text(`TOTAL: ${o.total} RUB`, 10, y + 10);
-            doc.save(`Order_${o.order_id}.pdf`);
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    // Заголовок чека
+    doc.setFontSize(18);
+    doc.text("NARAN PREMIUM - TOVARNIY CHEK", 10, 15); 
+    doc.setFontSize(10);
+    doc.text(`Nomer zakaza: ${o.order_id}`, 10, 25);
+    doc.text(`Data: ${o.date}`, 10, 30);
+    
+    doc.line(10, 35, 200, 35); // Разделительная линия
+
+    // Данные клиента
+    doc.text(`Klient: ${o.user.name}`, 10, 45);
+    doc.text(`Telefon: ${o.user.phone}`, 10, 50);
+    doc.text(`Dostavka: ${o.delivery}`, 10, 55);
+    doc.text(`Adres: ${o.address}`, 10, 60);
+
+    doc.line(10, 65, 200, 65);
+
+    // Список товаров
+    let y = 75;
+    doc.text("TOVARY:", 10, 70);
+    
+    o.items.forEach((item, index) => {
+        const itemInfo = `${index + 1}. ${item.title} | Razmer: ${item.selSize} | Kol-vo: ${item.qty}`;
+        const priceInfo = `${item.price * item.qty} RUB`;
+        
+        doc.text(itemInfo, 10, y);
+        doc.text(priceInfo, 170, y);
+        y += 10;
+        
+        if (y > 280) { // Переход на новую страницу
+            doc.addPage();
+            y = 20;
         }
+    });
+
+    doc.line(10, y, 200, y);
+    doc.setFontSize(14);
+    doc.text(`ITOGO: ${o.total} RUB`, 10, y + 10); // Итоговая сумма
+
+    doc.save(`Order_${o.order_id}.pdf`);
+}
     },
     mounted() {
         tg.ready();
