@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -56,6 +57,23 @@
             border-radius: 2px; transition: 0.2s;
         }
         .cat-tab.active { background: #000; color: #fff; }
+
+        /* Новые стили для карточек */
+.fav-overlay { 
+    position: absolute; top: 8px; right: 8px; z-index: 10; 
+    background: rgba(255,255,255,0.7); border-radius: 50%; 
+    width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
+    border: none; cursor: pointer; backdrop-filter: blur(2px);
+}
+.card-sizes { 
+    display: flex; gap: 5px; overflow-x: auto; padding: 5px 0; 
+    scrollbar-width: none; margin-bottom: 8px;
+}
+.size-chip { 
+    font-size: 9px; font-weight: 700; padding: 4px 8px; 
+    border: 1px solid #ddd; border-radius: 2px; white-space: nowrap;
+}
+.size-chip.active { background: #000; color: #fff; border-color: #000; }
 
         /* Grid */
         .products-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
@@ -150,231 +168,284 @@
         <input v-model="searchQuery" class="search-input" placeholder="ПОИСК ТОВАРА..." @input="vib()">
     </div>
 
-    <div v-if="burgerOpen" class="modal" style="padding: 40px; z-index: 3000;">
-        <button class="close-modal" @click="burgerOpen = false">✕</button>
-        <div class="brand-name" style="margin-bottom: 40px;">NARAN PREMIUM</div>
-        <div style="display: flex; flex-direction: column; gap: 25px; font-weight: 700; text-transform: uppercase;">
-            <a href="#" class="menu-item" @click="tab = 'about'; menu = false; haptic()">О НАС</a>
-            <a href="#" class="menu-item" @click="tab = 'catalog'; menu = false; haptic()">ДОСТАВКА</a>
-            <a href="#" class="menu-item" @click="tab = 'profile'; menu = false; haptic()">ВОЗВРАТ</a>
-        </div>
-    </div>
-
-    <main style="padding-bottom: 100px;">
+    <div v-if="burgerOpen" class="modal" style="padding: 40px; z-index: 3000; overflow-y: auto;">
+    <button class="close-modal" @click="burgerOpen = false">✕</button>
+    <div class="brand-name" style="margin-bottom: 40px;">NARAN</div>
     
-        <div v-if="tab === 'about'" style="padding: 40px 20px; animation: fadeIn 0.4s ease;">
-            <button @click="tab = 'catalog'; haptic()" style="background:none; border:none; font-weight:800; font-size:11px; letter-spacing:2px; margin-bottom:30px;">← НАЗАД К ПОКУПКАМ</button>
-            <h2 style="font-weight: 800; letter-spacing: 4px; font-size: 20px; margin-bottom: 25px;">O NARAN</h2>
-            <div style="line-height: 1.8; font-size: 14px; letter-spacing: 0.5px; color: #333;">
-                <p style="margin-bottom: 20px;">NARAN — это не просто магазин, это премиальная эстетика, воплощенная в каждой детали. Мы фокусируемся на минимализме, качественных материалах и идеальной посадке.</p>
-                <p style="margin-bottom: 20px;">Мы верим, что одежда — это отражение внутреннего состояния. Наш бренд создан для тех, кто выбирает комфорт, не жертвуя стилем.</p>
-                <div style="padding: 20px; background: #000; color: #fff; margin: 30px 0; font-size: 12px; letter-spacing: 1px; text-transform: uppercase;">
-                    Бесплатная доставка при заказе от 15 000 ₽. Скидка 10% на первый заказ.
-                </div>
-                <p>По вопросам сотрудничества: <b>@opttania</b></p>
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+        
+        <div class="menu-accordion">
+            <div class="menu-item" @click="activeInfo = activeInfo === 'about' ? null : 'about'; haptic()" 
+                 style="display: flex; justify-content: space-between; font-weight: 700; padding: 15px 0; border-bottom: 1px solid #eee;">
+                <span>О НАС</span>
+                <span>{{ activeInfo === 'about' ? '−' : '+' }}</span>
+            </div>
+            <div v-if="activeInfo === 'about'" style="padding: 15px 0; font-size: 13px; line-height: 1.6; color: #666; animation: fadeIn 0.3s ease;">
+                NARAN — это премиальная эстетика, воплощенная в каждой детали. Мы фокусируемся на минимализме, качественных материалах и идеальной посадке.
+                <p style="margin-top:10px;">По вопросам: <b>@opttania</b></p>
             </div>
         </div>
+
+        <div class="menu-accordion">
+            <div class="menu-item" @click="activeInfo = activeInfo === 'delivery' ? null : 'delivery'; haptic()" 
+                 style="display: flex; justify-content: space-between; font-weight: 700; padding: 15px 0; border-bottom: 1px solid #eee;">
+                <span>ДОСТАВКА</span>
+                <span>{{ activeInfo === 'delivery' ? '−' : '+' }}</span>
+            </div>
+            <div v-if="activeInfo === 'delivery'" style="padding: 15px 0; font-size: 13px; line-height: 1.6; color: #666; animation: fadeIn 0.3s ease;">
+                Доставка осуществляется СДЭК или Почтой России. <br>
+                <b>Бесплатная доставка</b> при заказе от 15 000 ₽.
+            </div>
+        </div>
+
+        <div class="menu-accordion">
+            <div class="menu-item" @click="activeInfo = activeInfo === 'return' ? null : 'return'; haptic()" 
+                 style="display: flex; justify-content: space-between; font-weight: 700; padding: 15px 0; border-bottom: 1px solid #eee;">
+                <span>ВОЗВРАТ</span>
+                <span>{{ activeInfo === 'return' ? '−' : '+' }}</span>
+            </div>
+            <div v-if="activeInfo === 'return'" style="padding: 15px 0; font-size: 13px; line-height: 1.6; color: #666; animation: fadeIn 0.3s ease;">
+                Возврат возможен в течение 7 дней после получения товара при сохранении всех бирок и товарного вида.
+            </div>
+        </div>
+
+    </div>
+</div>
 
     <main class="container">
+    <div v-if="tab === 'catalog'">
+        <div class="cat-row">
+            <button @click="setCategory('')" :class="['cat-tab', currentCat === '' ? 'active' : '']">ВСЕ ТОВАРЫ</button>
+            <button v-for="cat in categories" :key="cat.id" @click="setCategory(cat.name)" :class="['cat-tab', currentCat === cat.name ? 'active' : '']">
+                {{cat.name}}
+            </button>
+        </div>
+
+        <div class="products-grid">
+            <div v-for="p in filteredProducts" :key="p.id" class="card">
+                <div class="slider-wrapper">
+                    <button class="fav-overlay" @click.stop="toggleFav(p)">
+                        <svg :fill="isFav(p) ? '#ff3b30' : 'none'" viewBox="0 0 24 24" width="20" height="20" :stroke="isFav(p) ? '#ff3b30' : '#000'" stroke-width="2">
+                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                        </svg>
+                    </button>
+                    <div class="slider-inner" @scroll="e => handleScroll(e, p)" @click="openProduct(p)">
+                        <img v-for="img in p.images" :key="img" :src="img" loading="lazy">
+                    </div>
+                    <div class="dots" v-if="p.images && p.images.length > 1">
+                        <span v-for="(img, i) in p.images" :key="i" :class="['dot', {active: i === (p.aIdx || 0)}]"></span>
+                    </div>
+                    <div v-if="p.oldPrice" class="sale-badge" style="position:absolute; top:10px; left:10px;">SALE</div>
+                </div>
+
+                <div class="card-info">
+                    <div class="card-title" @click="openProduct(p)">{{p.title}}</div>
+                    <div class="price-row" @click="openProduct(p)">
+                        <span class="price">{{p.price}} ₽</span>
+                        <span v-if="p.oldPrice" class="old-price">{{p.oldPrice}} ₽</span>
+                    </div>
+                    
+                    <div class="card-sizes">
+    <div v-for="s in (String(p.sizes || '').split(','))" 
+         v-if="p.sizes"
+         :key="s" 
+         @click="p.tempSize = s.trim(); vib()" 
+         :class="['size-chip', {active: (p.tempSize || String(p.sizes).split(',')[0].trim()) === s.trim()}]">
+        {{s.trim()}}
+    </div>
+</div>
+                    <button class="btn-black" style="width: 100%;" @click.stop="quickAddToCart(p)">
+                        В КОРЗИНУ
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div v-if="filteredProducts.length === 0" style="text-align:center; padding: 50px; font-weight: 700;">ТОВАРОВ НЕ НАЙДЕНО</div>
+    </div>
+
+    <div v-if="tab === 'favs'">
+        <h2 class="brand-name" style="font-size: 16px; margin-bottom: 20px;">ИЗБРАННОЕ</h2>
+        <div v-if="favList.length === 0" style="text-align:center; padding: 50px;">Здесь пока пусто</div>
         
-        <div v-if="tab === 'catalog'">
-            <div class="cat-row">
-                <button @click="setCategory('')" :class="['cat-tab', currentCat === '' ? 'active' : '']">ВСЕ ТОВАРЫ</button>
-                <button v-for="cat in categories" :key="cat.id" @click="setCategory(cat.name)" :class="['cat-tab', currentCat === cat.name ? 'active' : '']">
-                    {{cat.name}}
-                </button>
-            </div>
-
-            <div class="products-grid">
-                <div v-for="p in filteredProducts" :key="p.id" class="card" @click="openProduct(p)">
-                    <div class="slider-wrapper">
-                        <div class="slider-inner" @scroll="e => handleScroll(e, p)">
-                            <img v-for="img in p.images" :key="img" :src="img" loading="lazy">
-                        </div>
-                        <div class="dots" v-if="p.images && p.images.length > 1">
-                            <span v-for="(img, i) in p.images" :key="i" :class="['dot', {active: i === (p.aIdx || 0)}]"></span>
-                        </div>
-                        <div v-if="p.oldPrice" class="sale-badge" style="position:absolute; top:10px; right:10px;">SALE</div>
+        <div class="products-grid">
+            <div v-for="p in favList" :key="p.id" class="card">
+                <div class="slider-wrapper">
+                    <button class="fav-overlay" @click.stop="toggleFav(p)">
+                        <svg :fill="isFav(p) ? '#ff3b30' : 'none'" viewBox="0 0 24 24" width="20" height="20" :stroke="isFav(p) ? '#ff3b30' : '#000'" stroke-width="2">
+                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                        </svg>
+                    </button>
+                    <div class="slider-inner" @scroll="e => handleScroll(e, p)" @click="openProduct(p)">
+                        <img v-for="img in p.images" :key="img" :src="img" loading="lazy">
                     </div>
-                    <div class="card-info">
-                        <div class="card-title">{{p.title}}</div>
-                        <div class="price-row">
-                            <span class="price">{{p.price}} ₽</span>
-                            <span v-if="p.oldPrice" class="old-price">{{p.oldPrice}} ₽</span>
-                        </div>
-                        <div class="btn-row">
-                            <button class="btn-fav" @click.stop="toggleFav(p)">
-                                <svg :fill="isFav(p) ? '#000' : 'none'" viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
-                            </button>
-                            <button class="btn-black" @click.stop="quickAddToCart(p)">В КОРЗИНУ</button>
-                        </div>
+                    <div class="dots" v-if="p.images.length > 1">
+                        <span v-for="(img, i) in p.images" :key="i" :class="['dot', {active: i === (p.aIdx || 0)}]"></span>
                     </div>
                 </div>
-            </div>
-            <div v-if="filteredProducts.length === 0" style="text-align:center; padding: 50px; font-weight: 700;">ТОВАРОВ НЕ НАЙДЕНО</div>
-        </div>
 
-        <div v-if="tab === 'favs'">
-            <h2 class="brand-name" style="font-size: 16px; margin-bottom: 20px;">ИЗБРАННОЕ</h2>
-            <div v-if="favList.length === 0" style="text-align:center; padding: 50px;">Здесь пока пусто</div>
-            <div class="products-grid">
-                <div v-for="p in favList" :key="p.id" class="card" @click="openProduct(p)">
-                    <div class="slider-wrapper">
-                        <img :src="p.images[0]" style="width:100%; height:100%; object-fit:cover;">
+                <div class="card-info">
+                    <div class="card-title" @click="openProduct(p)">{{p.title}}</div>
+                    <div class="price-row" @click="openProduct(p)">
+                        <span class="price">{{p.price}} ₽</span>
                     </div>
-                    <div class="card-info">
-                        <div class="card-title">{{p.title}}</div>
-                        <div class="price">{{p.price}} ₽</div>
-                        <button class="btn-black" @click.stop="toggleFav(p)" style="margin-top:10px;">УДАЛИТЬ</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div v-if="tab === 'cart'">
-            <h2 class="brand-name" style="font-size: 16px; margin-bottom: 20px;">КОРЗИНА</h2>
-            <div v-if="cart.length === 0" style="text-align:center; padding: 50px;">ВАША КОРЗИНА ПУСТА</div>
-            <div v-else>
-                <div v-for="item in cart" :key="item.cartId" class="cart-item">
-                    <img :src="item.images[0]" class="cart-img" @click="openProduct(item)">
-                    <div style="flex:1;">
+                    <div class="card-sizes">
+    <div v-for="s in (String(p.sizes || '').split(','))" 
+         v-if="p.sizes"
+         :key="s"
+         @click="p.tempSize = s.trim(); vib()"
+         :class="['size-chip', {active: (p.tempSize || String(p.sizes).split(',')[0].trim()) === s.trim()}]">
+        {{s.trim()}}
+    </div>
+</div>
+                    <button class="btn-black" style="width: 100%; margin-top: 5px;" @click.stop="quickAddToCart(p)">
+                        В КОРЗИНУ
+                    </button>
+                </div> </div> </div> </div> <div v-if="tab === 'cart'">
+        <h2 class="brand-name" style="font-size: 16px; margin-bottom: 20px;">КОРЗИНА</h2>
+        <div v-if="cart.length === 0" style="text-align:center; padding: 50px;">ВАША КОРЗИНА ПУСТА</div>
+        <div v-else>
+            <div v-for="item in cart" :key="item.cartId" class="cart-item">
+                <img :src="item.images[0]" class="cart-img" @click="openProduct(item)" style="cursor:pointer;">
+                <div style="flex:1;">
+                    <div @click="openProduct(item)" style="cursor:pointer;">
                         <div style="font-weight:700; font-size:12px; text-transform:uppercase;">{{item.title}}</div>
                         <div style="font-size:10px; color:gray; margin: 4px 0;">РАЗМЕР: {{item.selSize}} | ЦВЕТ: {{item.selColor}}</div>
                         <div style="font-weight:800;">{{item.price}} ₽</div>
-                        <div class="qty-controls">
-                            <button class="qty-btn" @click="changeQty(item, -1)">-</button>
-                            <span style="font-weight:700;">{{item.qty}}</span>
-                            <button class="qty-btn" @click="changeQty(item, 1)">+</button>
-                        </div>
                     </div>
-                    <button @click="removeFromCart(item.cartId)" style="border:none; background:none; font-size: 18px;">✕</button>
+                    <div class="qty-controls">
+                        <button class="qty-btn" @click="changeQty(item, -1)">-</button>
+                        <span style="font-weight:700;">{{item.qty}}</span>
+                        <button class="qty-btn" @click="changeQty(item, 1)">+</button>
+                    </div>
+                </div>
+                <button @click="removeFromCart(item.cartId)" style="border:none; background:none; font-size: 18px;">✕</button>
+            </div>
+
+            <div style="margin-top: 30px;">
+                <div class="field">
+                    <label>ВАШЕ ИМЯ</label>
+                    <input v-model="form.name" class="input-admin" placeholder="ИМЯ">
+                </div>
+                <div class="field">
+                    <label>ТЕЛЕФОН (10-11 ЦИФР)</label>
+                    <input v-model="form.phone" class="input-admin" type="tel" placeholder="89000000000">
                 </div>
 
-                <div style="margin-top: 30px;">
-                    <div class="field">
-                        <label>ВАШЕ ИМЯ</label>
-                        <input v-model="form.name" class="input-admin" placeholder="ИМЯ">
-                    </div>
-                    <div class="field">
-                        <label>ТЕЛЕФОН (10-11 ЦИФР)</label>
-                        <input v-model="form.phone" class="input-admin" type="tel" placeholder="89000000000">
-                    </div>
-
-                    <label style="font-size:10px; font-weight:800;">СПОСОБ ДОСТАВКИ</label>
-                    <div class="delivery-grid">
-                        <button v-for="d in ['СДЭК', 'ПОЧТА', '5POST']" :key="d" @click="setDelivery(d)" :class="['cat-tab', {active: deliv === d}]">{{d}}</button>
-                    </div>
-
-                    <div id="map" v-show="deliv"></div>
-                    <div v-if="address" style="font-size:12px; font-weight:700; margin-bottom: 20px;">📍 {{address}}</div>
-
-                    <button class="btn-black" style="width:100%; height:60px; font-size: 14px;" @click="checkout">ОФОРМИТЬ ЗАКАЗ • {{total}} ₽</button>
+                <label style="font-size:10px; font-weight:800;">СПОСОБ ДОСТАВКИ</label>
+                <div class="delivery-grid">
+                    <button v-for="d in ['СДЭК', 'ПОЧТА', '5POST']" :key="d" @click="setDelivery(d)" :class="['cat-tab', {active: deliv === d}]">{{d}}</button>
                 </div>
+
+                <div id="map" v-show="deliv"></div>
+                <div v-if="address" style="font-size:12px; font-weight:700; margin-bottom: 20px;">📍 {{address}}</div>
+
+                <button class="btn-black" style="width:100%; height:60px; font-size: 14px;" @click="checkout">ОФОРМИТЬ ЗАКАЗ • {{total}} ₽</button>
+            </div>
+        </div>
+    </div>
+
+    <div v-if="tab === 'profile'">
+        <div style="text-align:center; margin-bottom: 30px;">
+            <img :src="user.photo_url || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'" style="width:80px; height:80px; border-radius:50%; border: 1px solid #000; padding: 3px;">
+            <div style="font-weight:800; margin-top:10px; text-transform:uppercase;">{{user.first_name || 'Клиент'}}</div>
+            <button @click="openSupport" class="cat-tab" style="margin-top:15px; width:100%;">НАПИСАТЬ В ПОДДЕРЖКУ</button>
+        </div>
+
+        <div v-if="!isAdmin">
+            <h3 class="brand-name" style="font-size: 14px;">МОИ ЗАКАЗЫ</h3>
+            <div v-if="myOrders.length === 0" style="padding:20px; text-align:center; font-size:12px;">У вас пока нет заказов</div>
+            <div v-for="o in myOrders" :key="o.id" class="order-card">
+                <div style="display:flex; justify-content:space-between; font-weight:800; font-size:11px;">
+                    <span>ЗАКАЗ №{{o.order_id}}</span>
+                    <span>{{o.total}} ₽</span>
+                </div>
+                <div :class="['status-badge', o.status === 'Готов' ? 'status-ready' : 'status-process']">{{o.status || 'В обработке'}}</div>
+                <div style="font-size:9px; margin-top:8px; color:gray;">{{o.date}}</div>
             </div>
         </div>
 
-        <div v-if="tab === 'profile'">
-            <div style="text-align:center; margin-bottom: 30px;">
-                <img :src="user.photo_url || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'" style="width:80px; height:80px; border-radius:50%; border: 1px solid #000; padding: 3px;">
-                <div style="font-weight:800; margin-top:10px; text-transform:uppercase;">{{user.first_name || 'Клиент'}}</div>
-                <button @click="openSupport" class="cat-tab" style="margin-top:15px; width:100%;">НАПИСАТЬ В ПОДДЕРЖКУ</button>
-            </div>
-
-            <div v-if="!isAdmin">
-                <h3 class="brand-name" style="font-size: 14px;">МОИ ЗАКАЗЫ</h3>
-                <div v-if="myOrders.length === 0" style="padding:20px; text-align:center; font-size:12px;">У вас пока нет заказов</div>
-                <div v-for="o in myOrders" :key="o.id" class="order-card">
-                    <div style="display:flex; justify-content:space-between; font-weight:800; font-size:11px;">
-                        <span>ЗАКАЗ №{{o.order_id}}</span>
-                        <span>{{o.total}} ₽</span>
-                    </div>
-                    <div :class="['status-badge', o.status === 'Готов' ? 'status-ready' : 'status-process']">{{o.status || 'В обработке'}}</div>
-                    <div style="font-size:9px; margin-top:8px; color:gray;">{{o.date}}</div>
+        <div v-if="isAdmin" class="admin-section">
+            <h2 class="brand-name" style="font-size: 14px; margin-bottom: 20px;">АДМИН-ПАНЕЛЬ</h2>
+            
+            <div class="field">
+                <label>ДОБАВИТЬ КАТЕГОРИЮ</label>
+                <div style="display:flex; gap:10px;">
+                    <input v-model="newCat" class="input-admin" placeholder="НАЗВАНИЕ">
+                    <button class="btn-black" @click="manageCategory('add')" style="padding: 10px;">+</button>
+                </div>
+                <div style="display:flex; flex-wrap:wrap; gap:5px; margin-top:10px;">
+                    <span v-for="c in categories" :key="c.id" class="sale-badge" @click="manageCategory('del', c.id)">{{c.name}} ✕</span>
                 </div>
             </div>
 
-            <div v-if="isAdmin" class="admin-section">
-                <h2 class="brand-name" style="font-size: 14px; margin-bottom: 20px;">АДМИН-ПАНЕЛЬ</h2>
-                
-                <div class="field">
-                    <label>ДОБАВИТЬ КАТЕГОРИЮ</label>
-                    <div style="display:flex; gap:10px;">
-                        <input v-model="newCat" class="input-admin" placeholder="НАЗВАНИЕ">
-                        <button class="btn-black" @click="manageCategory('add')" style="padding: 10px;">+</button>
-                    </div>
-                    <div style="display:flex; flex-wrap:wrap; gap:5px; margin-top:10px;">
-                        <span v-for="c in categories" :key="c.id" class="sale-badge" @click="manageCategory('del', c.id)">{{c.name}} ✕</span>
-                    </div>
-                </div>
+            <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
 
-                <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+            <div class="field">
+                <label>ТОВАР: НАЗВАНИЕ</label>
+                <input v-model="newP.title" class="input-admin">
+            </div>
+            <div class="field">
+                <label>ОПИСАНИЕ</label>
+                <textarea v-model="newP.desc" class="input-admin" style="height:80px;"></textarea>
+            </div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                <div class="field">
+                    <label>ЦЕНА (₽)</label>
+                    <input v-model="newP.price" type="number" class="input-admin">
+                </div>
+                <div class="field">
+                    <label>СТАРАЯ ЦЕНА (SALE)</label>
+                    <input v-model="newP.oldPrice" type="number" class="input-admin">
+                </div>
+            </div>
+            <div class="field">
+                <label>КАТЕГОРИЯ</label>
+                <select v-model="newP.category" class="input-admin">
+                    <option v-for="c in categories" :value="c.name">{{c.name}}</option>
+                </select>
+            </div>
+            <div class="field">
+                <label>РАЗМЕРЫ (ЧЕРЕЗ ЗАПЯТУЮ)</label>
+                <input v-model="newP.sizes" class="input-admin" placeholder="42, 44, 46">
+            </div>
+            <div class="field">
+                <label>ЦВЕТ</label>
+                <input v-model="newP.color" class="input-admin">
+            </div>
+            <div class="field">
+                <label>ФОТО (МОЖНО НЕСКОЛЬКО)</label>
+                <input type="file" multiple @change="uploadImages" class="input-admin" style="padding: 8px;">
+            </div>
 
-                <div class="field">
-                    <label>ТОВАР: НАЗВАНИЕ</label>
-                    <input v-model="newP.title" class="input-admin">
-                </div>
-                <div class="field">
-                    <label>ОПИСАНИЕ</label>
-                    <textarea v-model="newP.desc" class="input-admin" style="height:80px;"></textarea>
-                </div>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                    <div class="field">
-                        <label>ЦЕНА (₽)</label>
-                        <input v-model="newP.price" type="number" class="input-admin">
-                    </div>
-                    <div class="field">
-                        <label>СТАРАЯ ЦЕНА (SALE)</label>
-                        <input v-model="newP.oldPrice" type="number" class="input-admin">
-                    </div>
-                </div>
-                <div class="field">
-                    <label>КАТЕГОРИЯ</label>
-                    <select v-model="newP.category" class="input-admin">
-                        <option v-for="c in categories" :value="c.name">{{c.name}}</option>
-                    </select>
-                </div>
-                <div class="field">
-                    <label>РАЗМЕРЫ (ЧЕРЕЗ ЗАПЯТУЮ)</label>
-                    <input v-model="newP.sizes" class="input-admin" placeholder="42, 44, 46">
-                </div>
-                <div class="field">
-                    <label>ЦВЕТ</label>
-                    <input v-model="newP.color" class="input-admin">
-                </div>
-                <div class="field">
-                    <label>ФОТО (МОЖНО НЕСКОЛЬКО)</label>
-                    <input type="file" multiple @change="uploadImages" class="input-admin" style="padding: 8px;">
-                </div>
+            <button class="btn-black" style="width:100%; margin-top:10px;" @click="saveProduct" :disabled="loading">
+                {{ loading ? 'ЗАГРУЗКА...' : (editId ? 'СОХРАНИТЬ ИЗМЕНЕНИЯ' : 'ОПУБЛИКОВАТЬ ТОВАР') }}
+            </button>
+            <button v-if="editId" class="cat-tab" style="width:100%; margin-top:5px;" @click="cancelEdit">ОТМЕНА</button>
 
-                <button class="btn-black" style="width:100%; margin-top:10px;" @click="saveProduct" :disabled="loading">
-                    {{ loading ? 'ЗАГРУЗКА...' : (editId ? 'СОХРАНИТЬ ИЗМЕНЕНИЯ' : 'ОПУБЛИКОВАТЬ ТОВАР') }}
-                </button>
-                <button v-if="editId" class="cat-tab" style="width:100%; margin-top:5px;" @click="cancelEdit">ОТМЕНА</button>
-
-                <h3 class="brand-name" style="font-size:12px; margin-top:40px;">ЗАКАЗЫ ({{allOrders.length}}) | ВЫРУЧКА: {{revenue}} ₽</h3>
-                <div v-for="o in allOrders" :key="o.id" class="order-card">
-                    <div style="font-size:11px;"><b>ЗАКАЗ:</b> {{o.order_id}} | <b>КЛИЕНТ:</b> {{o.user.name}}</div>
-                    <div style="font-size:10px; margin: 5px 0;">{{o.items.map(i => i.title).join(', ')}}</div>
-                    <div style="display:flex; gap:5px; margin-top:10px;">
-                        <button class="cat-tab" @click="updateStatus(o, 'В пути')" style="padding: 5px;">В ПУТИ</button>
-                        <button class="cat-tab" @click="updateStatus(o, 'Готов')" style="padding: 5px;">ГОТОВ</button>
-                        <button class="cat-tab" @click="printOrder(o)" style="padding: 5px;">🖨️ ЧЕК</button>
-                    </div>
+            <h3 class="brand-name" style="font-size:12px; margin-top:40px;">ЗАКАЗЫ ({{allOrders.length}}) | ВЫРУЧКА: {{revenue}} ₽</h3>
+            <div v-for="o in allOrders" :key="o.id" class="order-card">
+                <div style="font-size:11px;"><b>ЗАКАЗ:</b> {{o.order_id}} | <b>КЛИЕНТ:</b> {{o.user.name}}</div>
+                <div style="font-size:10px; margin: 5px 0;">{{o.items.map(i => i.title).join(', ')}}</div>
+                <div style="display:flex; gap:5px; margin-top:10px;">
+                    <button class="cat-tab" @click="updateStatus(o, 'В пути')" style="padding: 5px;">В ПУТИ</button>
+                    <button class="cat-tab" @click="updateStatus(o, 'Готов')" style="padding: 5px;">ГОТОВ</button>
+                    <button class="cat-tab" @click="printOrder(o)" style="padding: 5px;">🖨️ ЧЕК</button>
                 </div>
+            </div>
 
-                <h3 class="brand-name" style="font-size:12px; margin-top:40px;">УПРАВЛЕНИЕ ТОВАРАМИ</h3>
-                <div v-for="p in products" :key="p.id" class="order-card" style="display:flex; gap:10px; align-items:center;">
-                    <img :src="p.images[0]" style="width:40px; height:50px; object-fit:cover;">
-                    <div style="flex:1; font-size:10px; font-weight:700;">{{p.title}}</div>
-                    <div style="display:flex; gap:5px;">
-                        <button @click="editProduct(p)" style="border:none; background:none;">✏️</button>
-                        <button @click="toggleVisibility(p)" style="border:none; background:none;">{{p.hidden ? '👁️‍🗨️' : '👁️'}}</button>
-                        <button @click="deleteProduct(p.id)" style="border:none; background:none;">🗑️</button>
-                    </div>
+            <h3 class="brand-name" style="font-size:12px; margin-top:40px;">УПРАВЛЕНИЕ ТОВАРАМИ</h3>
+            <div v-for="p in products" :key="p.id" class="order-card" style="display:flex; gap:10px; align-items:center;">
+                <img :src="p.images[0]" style="width:40px; height:50px; object-fit:cover;">
+                <div style="flex:1; font-size:10px; font-weight:700;">{{p.title}}</div>
+                <div style="display:flex; gap:5px;">
+                    <button @click="editProduct(p)" style="border:none; background:none;">✏️</button>
+                    <button @click="toggleVisibility(p)" style="border:none; background:none;">{{p.hidden ? '👁️‍🗨️' : '👁️'}}</button>
+                    <button @click="deleteProduct(p.id)" style="border:none; background:none;">🗑️</button>
                 </div>
             </div>
         </div>
-    </main>
+    </div>
+</main>
 
     <div v-if="selP" class="modal" style="z-index: 5000;">
         <button class="close-modal" @click="selP = null">✕</button>
@@ -452,6 +523,7 @@ Vue.createApp({
             searchMode: false,
             burgerOpen: false,
             loading: false,
+            activeInfo: null,
             
             products: [], // Инициализация пустым массивом для защиты
             categories: [],
@@ -581,15 +653,18 @@ Vue.createApp({
         },
 
         quickAddToCart(p) {
-            this.vib();
-            const firstSize = p.sizes.split(',')[0].trim();
-            const cartId = p.id + firstSize + p.color;
-            const exist = this.cart.find(i => i.cartId === cartId);
-            if (exist) exist.qty++;
-            else this.cart.push({ ...p, cartId, selSize: firstSize, selColor: p.color, qty: 1 });
-            this.saveCart();
-            tg.HapticFeedback.notificationOccurred('success');
-        },
+    this.vib();
+    const selectedSize = p.tempSize || p.sizes.split(',')[0].trim();
+    const cartId = p.id + selectedSize + p.color;
+    const exist = this.cart.find(i => i.cartId === cartId);
+    if (exist) {
+        exist.qty++;
+    } else {
+        this.cart.push({ ...p, cartId, selSize: selectedSize, selColor: p.color, qty: 1 });
+    }
+    this.saveCart();
+    tg.HapticFeedback.notificationOccurred('success');
+},
 
         changeQty(item, delta) {
             item.qty += delta;
