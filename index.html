@@ -433,25 +433,13 @@
 
             <h3 class="brand-name" style="font-size:12px; margin-top:40px;">ЗАКАЗЫ ({{allOrders.length}}) | ВЫРУЧКА: {{revenue}} ₽</h3>
             <div v-for="o in allOrders" :key="o.id" class="order-card">
-                <div style="display:flex; gap:8px; margin-top:10px;">
-    <button class="cat-tab" 
-            @click="updateStatus(o, 'В пути')" 
-            style="padding: 8px; flex: 1; background: #fef3c7; color: #92400e; border: 1px solid #92400e;">
-        🚚 В ПУТИ
-    </button>
-
-    <button class="cat-tab" 
-            @click="updateStatus(o, 'Готов')" 
-            style="padding: 8px; flex: 1; background: #dcfce7; color: #166534; border: 1px solid #166534;">
-        ✅ ГОТОВ
-    </button>
-
-    <button class="cat-tab" 
-            @click="printOrder(o)" 
-            style="padding: 8px; flex: 1; background: #f3f4f6; border: 1px solid #374151;">
-        🖨️ ЧЕК
-    </button>
-</div>
+                <div style="font-size:11px;"><b>ЗАКАЗ:</b> {{o.order_id}} | <b>КЛИЕНТ:</b> {{o.user.name}}</div>
+                <div style="font-size:10px; margin: 5px 0;">{{o.items.map(i => i.title).join(', ')}}</div>
+                <div style="display:flex; gap:5px; margin-top:10px;">
+                    <button class="cat-tab" @click="updateStatus(o, 'В пути')" style="padding: 5px;">В ПУТИ</button>
+                    <button class="cat-tab" @click="updateStatus(o, 'Готов')" style="padding: 5px;">ГОТОВ</button>
+                    <button class="cat-tab" @click="printOrder(o)" style="padding: 5px;">🖨️ ЧЕК</button>
+                </div>
             </div>
 
             <h3 class="brand-name" style="font-size:12px; margin-top:40px;">УПРАВЛЕНИЕ ТОВАРАМИ</h3>
@@ -926,70 +914,52 @@ Vue.createApp({
     }
 },
 
-       async updateStatus(order, status) {
-    try {
-        // 1. Обновляем статус в базе данных Firebase
-        await window.fb.updateDoc(window.fb.doc(window.db, "orders", order.id), { status });
-        
-        // 2. Отправляем сигнал боту, чтобы он написал клиенту
-        const dataForBot = {
-            action: 'status_update',
-            order_id: order.order_id,
-            status: status,
-            client_id: order.user.id
-        };
-        
-        // Эта команда посылает данные в ваш Python-бот
-        window.Telegram.WebApp.sendData(JSON.stringify(dataForBot));
-        
-        // Вибрация для подтверждения
-        if (window.Telegram.WebApp.HapticFeedback) {
-            window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
-        }
-    } catch (e) {
-        alert("Ошибка обновления: " + e.message);
-    }
-},
-
-// Обновленная функция печати чека на РУССКОМ
-printOrder(o) {
+        printOrder(o) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
 
-    // Заголовок
+    // Заголовок чека
     doc.setFontSize(18);
-    doc.text("NARAN PREMIUM - TOVARNIY CHEK", 105, 15, { align: 'center' });
-    
+    doc.text("NARAN PREMIUM - TOVARNIY CHEK", 10, 15); 
     doc.setFontSize(10);
-    doc.text(`Nomer: ${o.order_id}`, 20, 30);
-    doc.text(`Data: ${o.date}`, 20, 35);
-    doc.text(`Klient: ${o.user.name}`, 20, 40);
-    doc.text(`Tel: ${o.user.phone}`, 20, 45);
-    doc.text(`Dostavka: ${o.delivery}`, 20, 50);
-    doc.text(`Adres: ${o.address}`, 20, 55);
+    doc.text(`Nomer zakaza: ${o.order_id}`, 10, 25);
+    doc.text(`Data: ${o.date}`, 10, 30);
     
-    doc.line(20, 60, 190, 60);
-    
+    doc.line(10, 35, 200, 35); // Разделительная линия
+
+    // Данные клиента
+    doc.text(`Klient: ${o.user.name}`, 10, 45);
+    doc.text(`Telefon: ${o.user.phone}`, 10, 50);
+    doc.text(`Dostavka: ${o.delivery}`, 10, 55);
+    doc.text(`Adres: ${o.address}`, 10, 60);
+
+    doc.line(10, 65, 200, 65);
+
     // Список товаров
-    let y = 70;
-    doc.text("TOVARY:", 20, 65);
+    let y = 75;
+    doc.text("TOVARY:", 10, 70);
     
     o.items.forEach((item, index) => {
-        // Выводим Название, Размер и Цвет
-        const info = `${index + 1}. ${item.title} (Razmer: ${item.selSize}, Cvet: ${item.selColor})`;
-        const price = `${item.qty} x ${item.price} = ${item.qty * item.price} RUB`;
+        const itemInfo = `${index + 1}. ${item.title} | Razmer: ${item.selSize} | Kol-vo: ${item.qty}`;
+        const priceInfo = `${item.price * item.qty} RUB`;
         
-        doc.text(info, 20, y);
-        doc.text(price, 20, y + 5);
-        y += 12;
+        doc.text(itemInfo, 10, y);
+        doc.text(priceInfo, 170, y);
+        y += 10;
+        
+        if (y > 280) { // Переход на новую страницу
+            doc.addPage();
+            y = 20;
+        }
     });
 
-    doc.line(20, y, 190, y);
+    doc.line(10, y, 200, y);
     doc.setFontSize(14);
-    doc.text(`ITOGO: ${o.total} RUB`, 20, y + 10);
+    doc.text(`ITOGO: ${o.total} RUB`, 10, y + 10); // Итоговая сумма
 
     doc.save(`Order_${o.order_id}.pdf`);
-},
+}
+    },
     mounted() {
         tg.ready();
         tg.expand();
