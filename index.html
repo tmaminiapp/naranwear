@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>NARAN PREMIUM</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://mapgl.2gis.com/api/js/v1"></script>
@@ -370,6 +371,35 @@
 
         <div v-if="isAdmin" class="admin-section">
             <h2 class="brand-name" style="font-size: 14px; margin-bottom: 20px;">АДМИН-ПАНЕЛЬ</h2>
+     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 25px;">
+            <div style="background: var(--dark); color: #fff; padding: 16px; border-radius: 15px;">
+            <div style="font-size: 9px; font-weight: 800; opacity: 0.6; letter-spacing: 1px; margin-bottom: 5px;">СЕГОДНЯ</div>
+            <div style="font-size: 18px; font-weight: 800;">{{ stats.todayRev.toLocaleString() }} ₽</div>
+            <div style="font-size: 10px; opacity: 0.8;">{{ stats.todayCount }} зак.</div>
+           </div>
+
+            <div style="background: var(--light); color: var(--dark); padding: 16px; border-radius: 15px;">
+             <div style="font-size: 9px; font-weight: 800; color: var(--gray); letter-spacing: 1px; margin-bottom: 5px;">МЕСЯЦ</div>
+            <div style="font-size: 18px; font-weight: 800;">{{ stats.monthRev.toLocaleString() }} ₽</div>
+            <div style="font-size: 10px; color: var(--gray);">{{ stats.monthCount }} зак.</div>
+            </div>
+
+            <div style="grid-column: span 2; background: #fff; padding: 16px; border-radius: 15px; border: 1px solid var(--light); display: flex; justify-content: space-between; align-items: center;">
+             <div>
+            <div style="font-size: 9px; font-weight: 800; color: var(--gray); letter-spacing: 1px;">ОБЩАЯ ВЫРУЧКА</div>
+            <div style="font-size: 20px; font-weight: 800;">{{ stats.allRev.toLocaleString() }} ₽</div>
+             </div>
+             <div style="text-align: right;">
+            <div style="font-size: 9px; font-weight: 800; color: var(--gray); letter-spacing: 1px;">ВСЕГО ЗАКАЗОВ</div>
+             <div style="font-size: 20px; font-weight: 800;">{{ stats.allCount }}</div>
+             </div>
+         </div>
+    </div>
+
+    <div style="background: #fff; padding: 15px; border-radius: 20px; border: 1px solid #eee; margin-bottom: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+         <div style="font-size: 10px; font-weight: 800; color: var(--gray); letter-spacing: 1px; margin-bottom: 15px;">ДИНАМИКА ЗАКАЗОВ (7 ДНЕЙ)</div>
+         <canvas id="salesChart" style="max-height: 200px;"></canvas>
+    </div>
             
             <div class="field">
                 <label>ДОБАВИТЬ КАТЕГОРИЮ</label>
@@ -427,29 +457,99 @@
             <button v-if="editId" class="cat-tab" style="width:100%; margin-top:5px;" @click="cancelEdit">ОТМЕНА</button>
 
             <h3 class="brand-name" style="font-size:12px; margin-top:40px;">ЗАКАЗЫ ({{allOrders.length}}) | ВЫРУЧКА: {{revenue}} ₽</h3>
-            <div v-for="o in allOrders" :key="o.id" class="order-card">
-                <div style="font-size:11px;"><b>ЗАКАЗ:</b> {{o.order_id}} | <b>КЛИЕНТ:</b> {{o.user.name}}</div>
-                <div style="font-size:10px; margin: 5px 0;">{{o.items.map(i => i.title).join(', ')}}</div>
-                <div style="display:flex; gap:5px; margin-top:10px;">
-                    <button class="cat-tab" 
-                      @click="updateStatus(o, 'В пути')" 
-                      :disabled="o.isUpdating"
-                      style="padding: 5px; flex: 1; min-height: 32px;">
-                      <span v-if="o.isUpdating && o.lastClickedStatus === 'В пути' && !o.statusUpdated">⏳...</span>
-                      <span v-else-if="o.statusUpdated && o.lastClickedStatus === 'В пути'">✅ УВЕДОМЛЕН</span>
-                     <span v-else>В ПУТИ</span>
-                    </button>
-                    <button class="cat-tab" 
-                       @click="updateStatus(o, 'Готов')" 
-                       :disabled="o.isUpdating"
-                       style="padding: 5px; flex: 1; min-height: 32px;">
-                       <span v-if="o.isUpdating && o.lastClickedStatus === 'Готов' && !o.statusUpdated">⏳...</span>
-                       <span v-else-if="o.statusUpdated && o.lastClickedStatus === 'Готов'">✅ ГОТОВО</span>
-                       <span v-else>ГОТОВ</span>
-                      </button>
-                    <button class="cat-tab" @click="printOrder(o)" style="padding: 5px; flex: 1; border: 1px solid #000;">ЧЕК</button>
-                </div>
+            <div v-for="o in allOrders" :key="o.id" 
+                class="order-card" 
+                 style="background: #ffffff; 
+                  border-radius: 20px; 
+                  padding: 16px; 
+                  margin-bottom: 20px; 
+                  box-shadow: 0 10px 25px rgba(0,0,0,0.05); 
+                  border: 1px solid rgba(0,0,0,0.03);">
+
+               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+               <span style="font-size: 10px; letter-spacing: 1px; color: #8e8e93; font-weight: 700;">
+                ЗАКАЗ #{{ o.order_id }}
+               </span>
+                <div :style="{
+            padding: '4px 10px',
+            borderRadius: '100px',
+            fontSize: '9px',
+            fontWeight: '800',
+            background: o.status === 'Новый' ? 'rgba(255,59,48,0.1)' : 'rgba(52,199,89,0.1)',
+            color: o.status === 'Новый' ? '#ff3b30' : '#34c759'
+           }">
+               {{ o.status.toUpperCase() }}
+               </div>
+               </div>
+
+            <div style="margin-bottom: 15px;">
+            <div style="font-size: 16px; font-weight: 700; color: #000; margin-bottom: 4px;">{{ o.customer_name }}</div>
+            <div style="font-size: 13px; color: #000; font-weight: 600;">
+            📞 <code>{{ o.customer_phone }}</code>
             </div>
+            </div>
+
+            <div style="background: #f8f8f8; border-radius: 12px; padding: 12px; margin-bottom: 15px; font-size: 12px;">
+            <div style="margin-bottom: 6px; display: flex; gap: 5px;">
+            <span style="color: #8e8e93;">🚚</span>
+            <span style="font-weight: 700; color: #000;">{{ o.delivery }}</span>
+            </div>
+            <div style="display: flex; gap: 5px; line-height: 1.3;">
+            <span style="color: #8e8e93;">📍</span>
+            <span style="color: #333;">{{ o.address }}</span>
+            </div>
+            </div>
+
+            <div style="margin-bottom: 15px; border-bottom: 1px solid #f0f0f0; padding-bottom: 10px;">
+            <div v-for="item in o.items" :key="item.id" 
+             style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px;">
+            <span style="color: #333;">▫️ {{ item.title }} <small style="color: #8e8e93;">({{ item.selSize }})</small></span>
+            <span style="font-weight: 700;">{{ item.price }}₽</span>
+             </div>
+            </div>
+
+             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+              <span style="font-size: 11px; font-weight: 700; color: #8e8e93;">ИТОГО К ОПЛАТЕ</span>
+              <span style="font-size: 18px; font-weight: 800; color: #000;">{{ o.order_total }} ₽</span>
+              </div>
+
+                 <div style="display: flex; gap: 8px;">
+                 <button @click="updateStatus(o, 'В пути')" 
+                :disabled="o.isUpdating"
+                :style="{
+                    flex: '2',
+                    height: '44px',
+                    borderRadius: '12px',
+                    border: 'none',
+                    fontSize: '11px',
+                    fontWeight: '800',
+                    background: o.status === 'В пути' ? '#000' : '#f0f0f0',
+                    color: o.status === 'В пути' ? '#fff' : '#000'
+                }">
+               {{ o.status === 'В пути' ? '✅ В ПУТИ' : 'В ПУТИ' }}
+               </button>
+
+               <button @click="updateStatus(o, 'Готов')" 
+                :disabled="o.isUpdating"
+                :style="{
+                    flex: '2',
+                    height: '44px',
+                    borderRadius: '12px',
+                    border: 'none',
+                    fontSize: '11px',
+                    fontWeight: '800',
+                    background: o.status === 'Готов' ? '#000' : '#f0f0f0',
+                    color: o.status === 'Готов' ? '#fff' : '#000'
+                    }">
+                 {{ o.status === 'Готов' ? '✅ ГОТОВ' : 'ГОТОВ' }}
+                 </button>
+
+                  <button @click="printOrder(o)" 
+                   style="width: 44px; height: 44px; border-radius: 12px; border: 1px solid #eee; background: #fff; font-size: 18px;">
+                   📄
+                 </button>
+                 </div>
+        </div>      
 
             <h3 class="brand-name" style="font-size:12px; margin-top:40px;">УПРАВЛЕНИЕ ТОВАРАМИ</h3>
             <div v-for="p in products" :key="p.id" class="order-card" style="display:flex; gap:10px; align-items:center;">
@@ -566,6 +666,7 @@ Vue.createApp({
             newCat: '',
             editId: null,
             allOrders: [],
+            chart: null,
             myOrders: [],
 
             nav: [
@@ -577,6 +678,36 @@ Vue.createApp({
         }
     },
     computed: {
+        stats() {
+        const now = new Date();
+        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+
+        let todayCount = 0, todayRev = 0;
+        let monthCount = 0, monthRev = 0;
+        let allCount = 0, allRev = 0;
+
+        this.allOrders.forEach(o => {
+            // Конвертируем дату из Firebase (Timestamp) в JavaScript Date
+            const orderDate = o.createdAt?.seconds ? o.createdAt.seconds * 1000 : 0;
+            const total = parseFloat(o.order_total) || 0;
+
+            allCount++;
+            allRev += total;
+
+            if (orderDate >= startOfMonth) {
+                monthCount++;
+                monthRev += total;
+            }
+
+            if (orderDate >= startOfDay) {
+                todayCount++;
+                todayRev += total;
+            }
+        });
+
+        return { todayCount, todayRev, monthCount, monthRev, allCount, allRev };
+    },
         filteredProducts() {
             // Защитное программирование: проверка на наличие продуктов
             if (!this.products || this.products.length === 0) return [];
@@ -879,6 +1010,7 @@ Vue.createApp({
             customer_name: name,
             customer_phone: phone,
             order_total: total,
+            createdAt: window.fb.serverTimestamp(),
             message: msg,
             items: JSON.parse(JSON.stringify(this.cart)), // Безопасное копирование корзины
             address: address,
@@ -945,21 +1077,91 @@ async updateStatus(order, status) {
 },
 
        printOrder(o) {
-    const checkText = `
-        ЧЕК ЗАКАЗА №${o.order_id}
-        --------------------------
-        Клиент: ${o.customer_name || 'Не указан'}
-        Телефон: ${o.customer_phone || 'Не указан'}
-        Адрес: ${o.address || 'Самовывоз'}
-        --------------------------
-        Товары:
-        ${o.items.map(i => `- ${i.title} (${i.selSize}): ${i.price}р`).join('\n')}
-        --------------------------
-        ИТОГО: ${o.order_total} руб.
-    `;
-    
-    // Показывает чек в красивом системном окне Telegram
-    tg.showAlert(checkText); 
+    try {
+        // Проверяем наличие товаров, чтобы map не выдал ошибку
+        const itemsList = (o.items && Array.isArray(o.items)) 
+            ? o.items.map(i => `▫️ ${i.title} (${i.selSize || '-'}): ${i.price}р`).join('\n') 
+            : 'Товары не найдены';
+
+        const checkText = `
+🧾 ЗАКАЗ №${o.order_id}
+━━━━━━━━━━━━━━━━━━━━
+👤 Клиент: ${o.customer_name || 'Не указан'}
+📞 Тел: ${o.customer_phone || 'Не указан'}
+🚚 Доставка: ${o.delivery || 'Не указано'}
+📍 Адрес: ${o.address || 'Не указан'}
+━━━━━━━━━━━━━━━━━━━━
+📦 СОСТАВ:
+${itemsList}
+
+💰 ИТОГО: ${o.order_total || 0} руб.
+━━━━━━━━━━━━━━━━━━━━
+📅 Дата: ${o.createdAt ? new Date(o.createdAt).toLocaleString() : 'Не указана'}
+        `;
+        
+        // Показываем в Telegram
+        tg.showAlert(checkText);
+
+        // Добавим вибрацию, чтобы чувствовать нажатие
+        if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+
+    } catch (e) {
+        console.error("Ошибка в ЧЕКЕ:", e);
+        tg.showAlert("Ошибка при формировании чека: " + e.message);
+    }
+},
+updateChart() {
+    const ctx = document.getElementById('salesChart');
+    if (!ctx) return;
+
+    // Генерируем даты последних 7 дней
+    const labels = [];
+    const counts = [];
+    const now = new Date();
+
+    for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(now.getDate() - i);
+        labels.push(d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }));
+        
+        // Считаем заказы за этот день
+        const dayStart = new Date(d.setHours(0,0,0,0)).getTime();
+        const dayEnd = new Date(d.setHours(23,59,59,999)).getTime();
+        
+        const dayOrders = this.allOrders.filter(o => {
+            const t = o.createdAt?.seconds ? o.createdAt.seconds * 1000 : 0;
+            return t >= dayStart && t <= dayEnd;
+        });
+        counts.push(dayOrders.length);
+    }
+
+    if (this.chart) this.chart.destroy();
+
+    this.chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Заказы',
+                data: counts,
+                borderColor: '#000',
+                backgroundColor: 'rgba(0,0,0,0.05)',
+                borderWidth: 3,
+                tension: 0.4, // Делает линию плавной (премиально)
+                fill: true,
+                pointRadius: 4,
+                pointBackgroundColor: '#000'
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, grid: { display: false }, ticks: { stepSize: 1 } },
+                x: { grid: { display: false } }
+            }
+        }
+    });
 }
     },
     mounted() {
@@ -989,6 +1191,7 @@ async updateStatus(order, status) {
                 if (this.isAdmin) {
                     window.fb.onSnapshot(window.fb.query(window.fb.collection(window.db, "orders"), window.fb.orderBy("createdAt", "desc")), snap => {
                         this.allOrders = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                        this.$nextTick(() => { this.updateChart(); });
                     });
                 }
 
