@@ -515,19 +515,24 @@
 
                  <div style="display: flex; gap: 8px;">
                  <button @click="updateStatus(o, 'Отправлен')" 
-                :disabled="o.isUpdating"
-                :style="{
-                    flex: '2',
-                    height: '44px',
-                    borderRadius: '12px',
-                    border: 'none',
-                    fontSize: '11px',
-                    fontWeight: '800',
-                    background: o.status === 'Отправлен' ? '#000' : '#f0f0f0',
-                    color: o.status === 'Отправлен' ? '#fff' : '#000'
-                }">
-               {{ o.status === 'Отправлен' ? '✅ Отправлен' : 'Отправлен' }}
-               </button>
+                      :disabled="o.isUpdating"
+                      :style="{
+                      flex: '2',
+                      height: '44px',
+                       borderRadius: '12px',
+                      border: 'none',
+                       fontSize: '11px',
+                       fontWeight: '800',
+                        transition: 'all 0.3s ease',
+                       /* Если статус 'Отправлен', делаем кнопку зеленоватой */
+                       background: o.status === 'Отправлен' ? '#e8f5e9' : '#f0f0f0',
+                       color: o.status === 'Отправлен' ? '#2e7d32' : '#000'
+                        }">
+    
+                        <span v-if="o.status === 'Отправлен'">✅ </span>
+    
+                         {{ o.status === 'Отправлен' ? 'ОТПРАВЛЕН' : 'ОТПРАВИТЬ' }}
+                 </button>
 
                <button @click="updateStatus(o, 'Доставлен')" 
                 :disabled="o.isUpdating"
