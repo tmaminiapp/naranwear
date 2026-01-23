@@ -364,7 +364,7 @@
                     <span>ЗАКАЗ №{{o.order_id}}</span>
                     <span>{{o.total}} ₽</span>
                 </div>
-                <div :class="['status-badge', o.status === 'Готов' ? 'status-ready' : 'status-process']">{{o.status || 'В обработке'}}</div>
+                <div :class="['status-badge', o.status === 'Доставлен' ? 'status-ready' : 'status-process']">{{o.status || 'В обработке'}}</div>
                 <div style="font-size:9px; margin-top:8px; color:gray;">{{o.date}}</div>
             </div>
         </div>
@@ -514,7 +514,7 @@
               </div>
 
                  <div style="display: flex; gap: 8px;">
-                 <button @click="updateStatus(o, 'В пути')" 
+                 <button @click="updateStatus(o, 'Отправлен')" 
                 :disabled="o.isUpdating"
                 :style="{
                     flex: '2',
@@ -523,13 +523,13 @@
                     border: 'none',
                     fontSize: '11px',
                     fontWeight: '800',
-                    background: o.status === 'В пути' ? '#000' : '#f0f0f0',
-                    color: o.status === 'В пути' ? '#fff' : '#000'
+                    background: o.status === 'Отправлен' ? '#000' : '#f0f0f0',
+                    color: o.status === 'Отправлен' ? '#fff' : '#000'
                 }">
-               {{ o.status === 'В пути' ? '✅ В ПУТИ' : 'В ПУТИ' }}
+               {{ o.status === 'Отправлен' ? '✅ Отправлен' : 'Отправлен' }}
                </button>
 
-               <button @click="updateStatus(o, 'Готов')" 
+               <button @click="updateStatus(o, 'Доставлен')" 
                 :disabled="o.isUpdating"
                 :style="{
                     flex: '2',
@@ -538,10 +538,10 @@
                     border: 'none',
                     fontSize: '11px',
                     fontWeight: '800',
-                    background: o.status === 'Готов' ? '#000' : '#f0f0f0',
-                    color: o.status === 'Готов' ? '#fff' : '#000'
+                    background: o.status === 'Доставлен' ? '#000' : '#f0f0f0',
+                    color: o.status === 'Доставлен' ? '#fff' : '#000'
                     }">
-                 {{ o.status === 'Готов' ? '✅ ГОТОВ' : 'ГОТОВ' }}
+                 {{ o.status === 'Доставлен' ? '✅ Доставлен' : 'Доставлен' }}
                  </button>
 
                   <button @click="printOrder(o)" 
@@ -612,7 +612,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, deleteDoc, updateDoc, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, deleteDoc, updateDoc, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyC6fihIMtOYZuPh-db3Tc6eiRgSikzydVw",
@@ -626,7 +626,7 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     window.db = db;
-    window.fb = { collection, addDoc, onSnapshot, query, orderBy, doc, deleteDoc, updateDoc, where };
+    window.fb = { collection, addDoc, onSnapshot, query, orderBy, doc, deleteDoc, updateDoc, where, serverTimestamp };
 </script>
 
 <script>
@@ -1099,7 +1099,7 @@ ${itemsList}
 📅 Дата: ${o.createdAt ? new Date(o.createdAt).toLocaleString() : 'Не указана'}
         `;
         
-        // Показываем в Telegram 
+        // Показываем в Telegram
         tg.showAlert(checkText);
 
         // Добавим вибрацию, чтобы чувствовать нажатие
