@@ -1101,78 +1101,38 @@ async updateStatus(order, status) {
 },
 
        printOrder(o) {
-    const printWindow = window.open('', '_blank');
-    // Форматируем дату
-    const date = o.createdAt ? new Date(o.createdAt.seconds * 1000).toLocaleString('ru-RU') : new Date().toLocaleString('ru-RU');
-    
-    printWindow.document.write(`
-        <html>
-        <head>
-            <title>Заказ #${o.order_id}</title>
-            <style>
-                body { font-family: 'Arial', sans-serif; padding: 40px; line-height: 1.6; }
-                .header { text-align: center; border-bottom: 2px solid #000; margin-bottom: 30px; }
-                .info-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-                .info-table td { padding: 10px; border: 1px solid #eee; }
-                .items-box { border: 1px solid #000; padding: 20px; min-height: 200px; }
-                .total { text-align: right; font-size: 24px; font-weight: bold; margin-top: 20px; }
-                .footer { margin-top: 50px; text-align: center; font-size: 12px; border-top: 1px solid #ccc; }
-                @media print {
-                    .no-print { display: none; }
-                }
-            </style>
-        </head>
-        <body>
-            <div class="no-print" style="text-align:center; padding: 20px;">
-                <button onclick="window.print()" style="background:#000; color:#fff; padding:10px 20px; border:none; cursor:pointer; border-radius:5px;">
-                    Скачать PDF или Напечатать
-                </button>
-            </div>
-            <div class="header">
-                <h1>ТОВАРНЫЙ ЧЕК №${o.order_id}</h1>
-                <p>Дата заказа: ${date}</p>
-            </div>
-            <table class="info-table">
-                <tr>
-                    <td><strong>ФИО покупателя:</strong></td>
-                    <td>${o.customer_name || 'Не указано'}</td>
-                </tr>
-                <tr>
-                    <td><strong>Телефон:</strong></td>
-                    <td>${o.customer_phone || 'Не указано'}</td>
-                </tr>
-                <tr>
-                    <td><strong>Способ доставки:</strong></td>
-                    <td>${o.delivery || 'Не указана'}</td>
-                </tr>
-                <tr>
-                    <td><strong>Адрес доставки:</strong></td>
-                    <td>${o.address || 'Не указан'}</td>
-                </tr>
-            </table>
-            
-            <h3>СОСТАВ ЗАКАЗА:</h3>
-            <div class="items-box">
-                <p style="white-space: pre-wrap;">${o.items_text || 'Список товаров пуст'}</p>
-            </div>
-            
-            <div class="total">ИТОГО К ОПЛАТЕ: ${o.order_total} ₽</div>
-            
-            <div class="footer">
-                <p>Магазин NARAN PREMIUM. Данный документ является подтверждением совершения заказа.</p>
-            </div>
-            
-            <script>
-                // Авто-вызов окна печати при открытии
-                window.onload = function() {
-                    // Даем небольшую паузу для рендеринга
-                    setTimeout(() => { window.print(); }, 500);
-                };
-            </script>
-        </body>
-        </html>
-    `);
-    printWindow.document.close();
+    try {
+        // Проверяем наличие товаров, чтобы map не выдал ошибку
+        const itemsList = (o.items && Array.isArray(o.items)) 
+            ? o.items.map(i => `▫️ ${i.title} (${i.selSize || '-'}): ${i.price}р`).join('\n') 
+            : 'Товары не найдены';
+
+        const checkText = `
+🧾 ЗАКАЗ №${o.order_id}
+━━━━━━━━━━━━━━━━━━━━
+👤 Клиент: ${o.customer_name || 'Не указан'}
+📞 Тел: ${o.customer_phone || 'Не указан'}
+🚚 Доставка: ${o.delivery || 'Не указано'}
+📍 Адрес: ${o.address || 'Не указан'}
+━━━━━━━━━━━━━━━━━━━━
+📦 СОСТАВ:
+${itemsList}
+
+💰 ИТОГО: ${o.order_total || 0} руб.
+━━━━━━━━━━━━━━━━━━━━
+📅 Дата: ${o.createdAt ? new Date(o.createdAt).toLocaleString() : 'Не указана'}
+        `;
+        
+        // Показываем в Telegram
+        tg.showAlert(checkText);
+
+        // Добавим вибрацию, чтобы чувствовать нажатие
+        if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+
+    } catch (e) {
+        console.error("Ошибка в ЧЕКЕ:", e);
+        tg.showAlert("Ошибка при формировании чека: " + e.message);
+    }
 },
 updateChart() {
     const ctx = document.getElementById('salesChart');
