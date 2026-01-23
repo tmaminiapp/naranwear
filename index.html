@@ -1000,59 +1000,63 @@ Vue.createApp({
         },
 
         async checkout() {
-    // 1. Валидация перед отправкой
+    // 1. Валидация
     if (this.cart.length === 0) return alert('Ваша корзина пуста');
     if (!this.form.name) return alert('Введите имя');
     if (!this.form.phone) return alert('Введите телефон');
 
-    this.loading = true; // Блокируем кнопку
+    this.loading = true;
 
     try {
         const orderId = Date.now().toString().slice(-6);
         
-        // Собираем данные, ПРОВЕРЯЯ каждое поле на undefined
-        const name = this.form.name || 'Не указано';
-        const phone = this.form.phone || 'Не указано';
-        const address = this.address || 'Адрес не выбран';
-        const delivery = this.deliv || 'Не выбран'; // Убедитесь, что у вас deliv или delivery
-        const total = this.total || 0;
+        // Берем данные из полей приложения
+        const name = this.form.name;
+        const phone = this.form.phone;
+        const address = this.address || 'Адрес не указан';
+        const delivery = this.deliveryType || 'Не выбран'; // Используем deliveryType из твоего шаблона
+        const totalAmount = this.total; // Наш исправленный total из computed
 
-        const msg = `👤 Клиент: ${name}\n📞 Тел: ${phone}\n📍 Адрес: ${address}\n🚚 Доставка: ${delivery}\n💰 Итого: ${total} ₽`;
+        // Формируем красивый список товаров для Telegram
+        const itemsText = this.cart.map(item => 
+            `▫️ ${item.title} ${item.selSize ? '('+item.selSize+')' : ''} x${item.qty} — ${item.price * item.qty} ₽`
+        ).join('\n');
 
+        // Данные для сохранения в базу Firebase
         const orderData = {
             order_id: orderId,
             customer_name: name,
             customer_phone: phone,
-            order_total: total,
-            createdAt: window.fb.serverTimestamp(),
-            message: msg,
-            items: JSON.parse(JSON.stringify(this.cart)), // Безопасное копирование корзины
+            order_total: totalAmount,
+            delivery: delivery,
             address: address,
-            delivery: delivery
-        };
-
-        // 2. Сохраняем в Firebase (используем только проверенные данные)
-        await window.fb.addDoc(window.fb.collection(window.db, "orders"), {
-            ...orderData,
+            items_text: itemsText, // Добавляем текст для бота
+            status: 'Новый',
             user: {
                 id: this.user.id || 0,
                 username: this.user.username || 'n/a'
             },
-            status: 'Новый',
-            createdAt: new Date()
-        });
+            createdAt: window.fb.serverTimestamp() // Правильное время для Firebase
+        };
 
-        // 3. Отправляем в Telegram
+        // 2. Сохраняем в Firebase
+        await window.fb.addDoc(window.fb.collection(window.db, "orders"), orderData);
+
+        // 3. Отправляем в Telegram (отправляем ВЕСЬ объект orderData)
+        // Бот должен уметь читать эти ключи: customer_name, customer_phone, items_text, order_total
         tg.sendData(JSON.stringify(orderData));
         
         tg.showAlert(`Заказ №${orderId} успешно оформлен!`);
+        
+        // Очистка
         this.cart = [];
         this.saveCart();
+        this.showCart = false;
         this.tab = 'profile';
 
     } catch (e) {
         console.error("Ошибка при оформлении:", e);
-        alert("Ошибка Firebase: " + e.message);
+        alert("Ошибка: " + e.message);
     } finally {
         this.loading = false;
     }
