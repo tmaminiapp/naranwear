@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -112,7 +110,8 @@
         
         .size-grid { display: flex; gap: 10px; margin: 15px 0; }
         .size-btn { flex: 1; padding: 12px; border: 1px solid #eee; background: #fff; font-size: 12px; font-weight: 700; border-radius: 2px; }
-        .size-btn.active { border-color: #000; background: #000; color: #fff; }
+        .size-btn.active, .deliv-btn.active { border-color: #000; background: #000; color: #fff; }
+    
 
         /* Bottom Nav */
         .bottom-nav { 
@@ -147,7 +146,7 @@
         .field label { display: block; font-size: 10px; font-weight: 800; margin-bottom: 5px; text-transform: uppercase; }
         .input-admin { width: 100%; padding: 12px; border: 1px solid #ddd; font-family: inherit; font-size: 13px; border-radius: 2px; }
         
-        .order-card { background: #fff; border: 1px solid #eee; padding: 15px; margin-bottom: 10px; }
+        .order-card { background: #fff; border: 1px solid #eee; padding: 15px; margin-bottom: 10px; color: #000; }
         .status-badge { display: inline-block; padding: 4px 8px; font-size: 9px; font-weight: 800; text-transform: uppercase; margin-top: 5px; }
         .status-ready { background: #e8f5e9; color: #2e7d32; }
         .status-process { background: #fff3e0; color: #ef6c00; }
@@ -598,11 +597,15 @@ Vue.createApp({
             return this.cart.reduce((sum, item) => sum + item.qty, 0);
         },
         total() {
-            return this.cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+            return this.allOrders
+        .filter(o => o.status !== 'Отменен')
+        .reduce((sum, o) => sum + (Number(o.order_total) || 0), 0);
         },
         revenue() {
-            return this.allOrders.reduce((sum, o) => sum + o.total, 0);
-        }
+            return this.allOrders.reduce((sum, order) => {
+                return sum + (Number(order.order_total) || 0);
+                }, 0);
+        },
     },
     methods: {
         vib() { tg.HapticFeedback.impactOccurred('light'); },
@@ -937,30 +940,31 @@ async updateStatus(order, status) {
         printOrder(o) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
+
+    // Настройка шрифта и стиля
+    doc.setFontSize(18);
+    doc.text(`CHEQUE: ${o.order_id}`, 20, 20); // Заголовок
     
-    // Заголовок (используем латиницу для надежности шрифтов)
-    doc.setFontSize(16);
-    doc.text("NARAN PREMIUM - CHECK", 105, 15, { align: 'center' });
+    doc.setFontSize(12);
+    doc.text(`Client: ${o.user?.name || 'Customer'}`, 20, 35);
+    doc.text(`Phone: ${o.user?.phone || 'n/a'}`, 20, 42);
+    doc.text(`Address: ${o.address || 'Self-pickup'}`, 20, 49);
     
-    doc.setFontSize(10);
-    doc.text(`ID: #${o.order_id}`, 20, 30);
-    doc.text(`Name: ${o.customer_name}`, 20, 37);
-    doc.text(`Phone: ${o.customer_phone}`, 20, 44);
-    doc.text(`Address: ${o.address}`, 20, 51);
+    doc.text('------------------------------------------', 20, 56);
     
-    doc.line(20, 55, 190, 55);
-    
+    // Вывод товаров
     let y = 65;
-    o.items.forEach((item, i) => {
-        doc.text(`${i+1}. ${item.title} (${item.selSize || '-'})`, 25, y);
-        doc.text(`${item.price} RUB`, 160, y);
-        y += 10;
+    o.items.forEach((item, index) => {
+        doc.text(`${index + 1}. ${item.title} - ${item.price} RUB`, 20, y);
+        y += 7;
     });
     
-    doc.line(20, y, 190, y);
-    doc.text(`TOTAL: ${o.order_total} RUB`, 20, y + 10);
-    
-    doc.save(`check_${o.order_id}.pdf`);
+    doc.text('------------------------------------------', 20, y + 5);
+    doc.setFontSize(14);
+    doc.text(`TOTAL: ${o.order_total} RUB`, 20, y + 15);
+
+    // Сохранение файла
+    doc.save(`Order_${o.order_id}.pdf`);
 }
     },
     mounted() {
