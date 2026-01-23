@@ -1101,76 +1101,77 @@ async updateStatus(order, status) {
 },
 
        printOrder(o) {
-    // Создаем содержимое чека
     const printWindow = window.open('', '_blank');
+    // Форматируем дату
     const date = o.createdAt ? new Date(o.createdAt.seconds * 1000).toLocaleString('ru-RU') : new Date().toLocaleString('ru-RU');
     
-    const html = `
-    <html>
-    <head>
-        <title>Чек по заказу #${o.order_id}</title>
-        <style>
-            body { font-family: 'Arial', sans-serif; padding: 20px; color: #333; }
-            .ticket { width: 100%; max-width: 800px; margin: 0 auto; border: 1px solid #eee; padding: 20px; }
-            h1 { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; }
-            .info { margin-bottom: 20px; display: flex; justify-content: space-between; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-            th { background-color: #f9f9f9; }
-            .total { text-align: right; font-size: 20px; font-weight: bold; margin-top: 20px; }
-            .footer { margin-top: 30px; text-align: center; font-size: 12px; color: #888; }
-            @media print {
-                .no-print { display: none; }
-            }
-        </style>
-    </head>
-    <body>
-        <div class="no-print" style="text-align: center; margin-bottom: 20px;">
-            <button onclick="window.print()" style="padding: 10px 20px; cursor: pointer;">Напечатать или Сохранить в PDF</button>
-        </div>
-        <div class="ticket">
-            <h1>ТОВАРНЫЙ ЧЕК №${o.order_id}</h1>
-            <div class="info">
-                <div>
-                    <p><strong>Покупатель:</strong> ${o.customer_name || 'Не указано'}</p>
-                    <p><strong>Телефон:</strong> ${o.customer_phone || 'Не указано'}</p>
-                    <p><strong>Дата:</strong> ${date}</p>
-                </div>
-                <div style="text-align: right;">
-                    <p><strong>Доставка:</strong> ${o.delivery || 'Не указана'}</p>
-                    <p><strong>Адрес:</strong> ${o.address || 'Не указан'}</p>
-                </div>
+    printWindow.document.write(`
+        <html>
+        <head>
+            <title>Заказ #${o.order_id}</title>
+            <style>
+                body { font-family: 'Arial', sans-serif; padding: 40px; line-height: 1.6; }
+                .header { text-align: center; border-bottom: 2px solid #000; margin-bottom: 30px; }
+                .info-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+                .info-table td { padding: 10px; border: 1px solid #eee; }
+                .items-box { border: 1px solid #000; padding: 20px; min-height: 200px; }
+                .total { text-align: right; font-size: 24px; font-weight: bold; margin-top: 20px; }
+                .footer { margin-top: 50px; text-align: center; font-size: 12px; border-top: 1px solid #ccc; }
+                @media print {
+                    .no-print { display: none; }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="no-print" style="text-align:center; padding: 20px;">
+                <button onclick="window.print()" style="background:#000; color:#fff; padding:10px 20px; border:none; cursor:pointer; border-radius:5px;">
+                    Скачать PDF или Напечатать
+                </button>
             </div>
-
-            <table>
-                <thead>
-                    <tr>
-                        <th>Наименование товара</th>
-                        <th>Детали</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>Состав заказа</td>
-                        <td style="white-space: pre-wrap;">${o.items_text || 'Информации о товарах нет'}</td>
-                    </tr>
-                </tbody>
+            <div class="header">
+                <h1>ТОВАРНЫЙ ЧЕК №${o.order_id}</h1>
+                <p>Дата заказа: ${date}</p>
+            </div>
+            <table class="info-table">
+                <tr>
+                    <td><strong>ФИО покупателя:</strong></td>
+                    <td>${o.customer_name || 'Не указано'}</td>
+                </tr>
+                <tr>
+                    <td><strong>Телефон:</strong></td>
+                    <td>${o.customer_phone || 'Не указано'}</td>
+                </tr>
+                <tr>
+                    <td><strong>Способ доставки:</strong></td>
+                    <td>${o.delivery || 'Не указана'}</td>
+                </tr>
+                <tr>
+                    <td><strong>Адрес доставки:</strong></td>
+                    <td>${o.address || 'Не указан'}</td>
+                </tr>
             </table>
-
+            
+            <h3>СОСТАВ ЗАКАЗА:</h3>
+            <div class="items-box">
+                <p style="white-space: pre-wrap;">${o.items_text || 'Список товаров пуст'}</p>
+            </div>
+            
             <div class="total">ИТОГО К ОПЛАТЕ: ${o.order_total} ₽</div>
             
             <div class="footer">
-                <p>Спасибо за покупку в NARAN PREMIUM!</p>
+                <p>Магазин NARAN PREMIUM. Данный документ является подтверждением совершения заказа.</p>
             </div>
-        </div>
-        <script>
-            // Автоматически открываем диалог печати
-            window.onload = function() { window.print(); }
-        </script>
-    </body>
-    </html>`;
-
-    printWindow.document.write(html);
+            
+            <script>
+                // Авто-вызов окна печати при открытии
+                window.onload = function() {
+                    // Даем небольшую паузу для рендеринга
+                    setTimeout(() => { window.print(); }, 500);
+                };
+            </script>
+        </body>
+        </html>
+    `);
     printWindow.document.close();
 },
 updateChart() {
