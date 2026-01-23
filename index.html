@@ -1136,8 +1136,9 @@ ${itemsList}
 },
 updateChart() {
     const ctx = document.getElementById('salesChart');
-    if (!ctx) return; 
+    if (!ctx) return;
 
+    // Генерируем даты последних 7 дней
     const labels = [];
     const counts = [];
     const now = new Date();
@@ -1147,6 +1148,7 @@ updateChart() {
         d.setDate(now.getDate() - i);
         labels.push(d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }));
         
+        // Считаем заказы за этот день
         const dayStart = new Date(d.setHours(0,0,0,0)).getTime();
         const dayEnd = new Date(d.setHours(23,59,59,999)).getTime();
         
@@ -1157,12 +1159,9 @@ updateChart() {
         counts.push(dayOrders.length);
     }
 
-    // ВАЖНО: Используем this.salesChart, как в твоем исходном файле
-    if (this.salesChart) { 
-        this.salesChart.destroy();
-    }
+    if (this.chart) this.chart.destroy();
 
-    this.salesChart = new Chart(ctx, {
+    this.chart = new Chart(ctx, {
         type: 'line',
         data: {
             labels: labels,
@@ -1172,7 +1171,7 @@ updateChart() {
                 borderColor: '#000',
                 backgroundColor: 'rgba(0,0,0,0.05)',
                 borderWidth: 3,
-                tension: 0.4, 
+                tension: 0.4, // Делает линию плавной (премиально)
                 fill: true,
                 pointRadius: 4,
                 pointBackgroundColor: '#000'
@@ -1180,7 +1179,6 @@ updateChart() {
         },
         options: {
             responsive: true,
-            maintainAspectRatio: false, // Чтобы график не "прыгал" по размеру
             plugins: { legend: { display: false } },
             scales: {
                 y: { beginAtZero: true, grid: { display: false }, ticks: { stepSize: 1 } },
