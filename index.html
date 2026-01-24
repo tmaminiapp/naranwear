@@ -457,6 +457,31 @@
             </button>
             <button v-if="editId" class="cat-tab" style="width:100%; margin-top:5px;" @click="cancelEdit">ОТМЕНА</button>
 
+            <div style="margin-top: 20px; border: 1px solid #eee; border-radius: 12px; overflow: hidden; background: #f9f9f9;">
+               <div @click="showProductList = !showProductList" 
+                  style="padding: 15px; background: #000; color: #fff; display: flex; justify-content: space-between; align-items: center; cursor: pointer;">
+                  <span style="font-weight: 800; font-size: 11px; letter-spacing: 1px;">📦 СПИСОК ТОВАРОВ ({{ products.length }})</span>
+                  <span style="font-size: 18px;">{{ showProductList ? '−' : '+' }}</span>
+             </div>
+
+             <div v-if="showProductList" style="padding: 5px; max-height: 400px; overflow-y: auto; background: #fff;">
+                <div v-for="p in products" :key="p.id" 
+                   style="display: flex; align-items: center; gap: 10px; padding: 10px; border-bottom: 1px solid #f2f2f7;">
+                  <img :src="p.images ? p.images[0] : ''" style="width: 40px; height: 50px; object-fit: cover; border-radius: 4px; background: #eee;">
+                  <div style="flex: 1; min-width: 0;">
+                       <div style="font-weight: 700; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ p.title }}</div>
+                       <div style="font-size: 11px; color: #8e8e93;">{{ p.price }} ₽</div>
+                      </div>
+                      <div style="display: flex; gap: 12px;">
+                        <button @click="editProduct(p)" style="border:none; background:none; font-size: 16px; cursor: pointer;">✏️</button>
+                        <button @click="deleteProduct(p.id)" style="border:none; background:none; font-size: 16px; cursor: pointer;">🗑</button>
+                     </div>
+                   </div>
+                 </div>
+             </div>
+
+           <hr style="margin: 30px 0; border: none; border-top: 2px solid #000;">.   
+
             <h3 class="brand-name" style="font-size:12px; margin-top:40px;">ЗАКАЗЫ ({{allOrders.length}}) | ВЫРУЧКА: {{revenue}} ₽</h3>
             <div v-for="o in allOrders" :key="o.id" 
                 class="order-card" 
@@ -467,107 +492,77 @@
                   box-shadow: 0 10px 25px rgba(0,0,0,0.05); 
                   border: 1px solid rgba(0,0,0,0.03);">
 
-               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-               <span style="font-size: 10px; letter-spacing: 1px; color: #8e8e93; font-weight: 700;">
-                ЗАКАЗ #{{ o.order_id }}
-               </span>
-                <div :style="{
-            padding: '4px 10px',
-            borderRadius: '100px',
-            fontSize: '9px',
-            fontWeight: '800',
-            background: o.status === 'Новый' ? 'rgba(255,59,48,0.1)' : 'rgba(52,199,89,0.1)',
-            color: o.status === 'Новый' ? '#ff3b30' : '#34c759'
-           }">
-               {{ o.status.toUpperCase() }}
-               </div>
-               </div>
+               
 
-            <div style="margin-bottom: 15px;">
-            <div style="font-size: 16px; font-weight: 700; color: #000; margin-bottom: 4px;">{{ o.customer_name }}</div>
-            <div style="font-size: 13px; color: #000; font-weight: 600;">
-            📞 <code>{{ o.customer_phone }}</code>
+
+            
+
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+        <div>
+            <div :class="'status-' + (o.status ? o.status.toLowerCase() : 'новый')" 
+                 style="display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 9px; font-weight: 800; text-transform: uppercase; background: #000; color: #fff; margin-bottom: 4px;">
+                {{ o.status || 'Новый' }}
             </div>
-            </div>
+            <div style="font-weight: 800; font-size: 16px; display: block;">#{{ o.order_id }}</div>
+        </div>
 
-            <div style="background: #f8f8f8; border-radius: 12px; padding: 12px; margin-bottom: 15px; font-size: 12px;">
-            <div style="margin-bottom: 6px; display: flex; gap: 5px;">
-            <span style="color: #8e8e93;">🚚</span>
-            <span style="font-weight: 700; color: #000;">{{ o.delivery }}</span>
-            </div>
-            <div style="display: flex; gap: 5px; line-height: 1.3;">
-            <span style="color: #8e8e93;">📍</span>
-            <span style="color: #333;">{{ o.address }}</span>
-            </div>
-            </div>
+        <div @click="deleteOrder(o.id)" 
+             style="color: #ff3b30; font-size: 10px; font-weight: 800; cursor: pointer; border: 1.5px solid #ff3b30; padding: 4px 8px; border-radius: 8px; text-transform: uppercase;">
+            УДАЛИТЬ 🗑
+        </div>
+    </div>
 
-            <div style="margin-bottom: 15px; border-bottom: 1px solid #f0f0f0; padding-bottom: 10px;">
-            <div v-for="item in o.items" :key="item.id" 
-             style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px;">
-            <span style="color: #333;">▫️ {{ item.title }} <small style="color: #8e8e93;">({{ item.selSize }})</small></span>
-            <span style="font-weight: 700;">{{ item.price }}₽</span>
-             </div>
-            </div>
+    <div style="font-size: 13px; color: #000; margin-bottom: 12px; line-height: 1.4;">
+        <div style="margin-bottom: 2px;">👤 <b>{{ o.customer_name }}</b></div>
+        <div style="margin-bottom: 2px;">📞 <span style="color: #007aff;">{{ o.customer_phone }}</span></div>
+        <div style="color: #8e8e93; font-size: 12px;">📍 {{ o.address }} ({{ o.delivery || o.delivery_type }})</div>
+    </div>
 
-             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-              <span style="font-size: 11px; font-weight: 700; color: #8e8e93;">ИТОГО К ОПЛАТЕ</span>
-              <span style="font-size: 18px; font-weight: 800; color: #000;">{{ o.order_total }} ₽</span>
-              </div>
-
-                 <div style="display: flex; gap: 8px;">
-                 <button @click="updateStatus(o, 'Отправлен')" 
-                      :disabled="o.isUpdating"
-                      :style="{
-                      flex: '2',
-                      height: '44px',
-                       borderRadius: '12px',
-                      border: 'none',
-                       fontSize: '11px',
-                       fontWeight: '800',
-                        transition: 'all 0.3s ease',
-                       /* Если статус 'Отправлен', делаем кнопку зеленоватой */
-                       background: o.status === 'Отправлен' ? '#e8f5e9' : '#f0f0f0',
-                       color: o.status === 'Отправлен' ? '#2e7d32' : '#000'
-                        }">
-    
-                        <span v-if="o.status === 'Отправлен'">✅ </span>
-    
-                         {{ o.status === 'Отправлен' ? 'ОТПРАВЛЕН' : 'ОТПРАВИТЬ' }}
-                 </button>
-
-               <button @click="updateStatus(o, 'Доставлен')" 
-                :disabled="o.isUpdating"
-                :style="{
-                    flex: '2',
-                    height: '44px',
-                    borderRadius: '12px',
-                    border: 'none',
-                    fontSize: '11px',
-                    fontWeight: '800',
-                    background: o.status === 'Доставлен' ? '#000' : '#f0f0f0',
-                    color: o.status === 'Доставлен' ? '#fff' : '#000'
-                    }">
-                 {{ o.status === 'Доставлен' ? '✅ Доставлен' : 'Доставлен' }}
-                 </button>
-
-                  <button @click="printOrder(o)" 
-                   style="width: 44px; height: 44px; border-radius: 12px; border: 1px solid #eee; background: #fff; font-size: 18px;">
-                   📄
-                 </button>
-                 </div>
-        </div>      
-
-            <h3 class="brand-name" style="font-size:12px; margin-top:40px;">УПРАВЛЕНИЕ ТОВАРАМИ</h3>
-            <div v-for="p in products" :key="p.id" class="order-card" style="display:flex; gap:10px; align-items:center;">
-                <img :src="p.images[0]" style="width:40px; height:50px; object-fit:cover;">
-                <div style="flex:1; font-size:10px; font-weight:700;">{{p.title}}</div>
-                <div style="display:flex; gap:5px;">
-                    <button @click="editProduct(p)" style="border:none; background:none;">✏️</button>
-                    <button @click="toggleVisibility(p)" style="border:none; background:none;">{{p.hidden ? '👁️‍🗨️' : '👁️'}}</button>
-                    <button @click="deleteProduct(p.id)" style="border:none; background:none;">🗑️</button>
+    <div style="background: #f2f2f7; padding: 10px; border-radius: 12px; margin-bottom: 15px;">
+        <div v-if="o.items && o.items.length > 0">
+            <div v-for="item in o.items" :key="item.id" style="font-size: 12px; margin-bottom: 6px; border-bottom: 1px solid #e5e5ea; padding-bottom: 4px; color: #000;">
+                <div style="font-weight: 700;">{{ item.title }} — {{ item.count || 1 }} шт.</div>
+                <div style="font-size: 11px; color: #8e8e93;">
+                    🎨 Цвет: {{ item.color || '-' }} | 📏 Разм: {{ item.size || item.selSize || '-' }}
                 </div>
             </div>
         </div>
+        <div v-else style="font-size: 12px; white-space: pre-wrap;">{{ o.items_text }}</div>
+    </div>
+
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <span style="font-size: 11px; font-weight: 700; color: #8e8e93;">ИТОГО К ОПЛАТЕ</span>
+        <span style="font-size: 18px; font-weight: 800;">{{ o.order_total }} ₽</span>
+    </div>
+
+    <div style="display: flex; gap: 8px;">
+        <button @click="updateStatus(o, 'Отправлен')" 
+                :disabled="o.status === 'Отправлен' || o.status === 'Доставлен' || o.isUpdating"
+                :style="{
+                    flex: '1', height: '46px', borderRadius: '12px', border: 'none', fontSize: '10px', fontWeight: '800',
+                    background: (o.status === 'Отправлен' || o.status === 'Доставлен') ? '#34c759' : '#ff3b30',
+                    color: '#fff'
+                }">
+            {{ (o.status === 'Отправлен' || o.status === 'Доставлен') ? 'ОТПРАВЛЕНО ✅' : 'ОТПРАВИТЬ' }}
+        </button>
+
+        <button @click="updateStatus(o, 'Доставлен')" 
+                :disabled="o.status === 'Доставлен' || o.isUpdating"
+                :style="{
+                    flex: '1', height: '46px', borderRadius: '12px', border: 'none', fontSize: '10px', fontWeight: '800',
+                    background: o.status === 'Доставлен' ? '#34c759' : '#ff3b30',
+                    color: '#fff'
+                }">
+            {{ o.status === 'Доставлен' ? 'ДОСТАВЛЕНО ✅' : 'ДОСТАВИТЬ' }}
+        </button>
+
+        <button @click="printOrder(o)" 
+                style="width: 46px; height: 46px; border-radius: 12px; border: 1px solid #eee; background: #fff; font-size: 20px; display: flex; align-items: center; justify-content: center;">
+            📄
+        </button>
+    </div>
+    </div>      
+    </div>
     </div>
 </main>
 
@@ -671,6 +666,7 @@ Vue.createApp({
             newP: { title: '', desc: '', price: '', oldPrice: '', category: '', sizes: '42, 44, 46', color: '', images: [] },
             newCat: '',
             editId: null,
+            showProductList: false,
             allOrders: [],
             chart: null,
             myOrders: [],
@@ -983,10 +979,27 @@ Vue.createApp({
         },
 
         async deleteProduct(id) {
-            if (confirm('Удалить товар навсегда?')) {
-                await window.fb.deleteDoc(window.fb.doc(window.db, "products", id));
-            }
-        },
+            const msg = "⚠️ Удалить заказ навсегда?";
+    
+    // Проверка: как спрашивать подтверждение
+    const runDelete = async () => {
+        try {
+            await window.fb.deleteDoc(window.fb.doc(window.db, "orders", docId));
+            if (window.tg && window.tg.HapticFeedback) window.tg.HapticFeedback.notificationOccurred('success');
+        } catch (e) {
+            console.error(e);
+            alert("Ошибка удаления: " + e.message);
+        }
+    };
+
+    if (window.tg && window.tg.showConfirm) {
+        // Если в телеграме
+        window.tg.showConfirm(msg, (yes) => { if (yes) runDelete(); });
+    } else {
+        // Если на компьютере
+        if (confirm(msg)) runDelete();
+    }
+},
 
         async toggleVisibility(p) {
             await window.fb.updateDoc(window.fb.doc(window.db, "products", p.id), { hidden: !p.hidden });
@@ -1069,81 +1082,165 @@ Vue.createApp({
 },
 
 // Метод для кнопок "В пути" и "Готов"
-async updateStatus(order, status) {
-    // 1. Включаем индикатор загрузки для этой кнопки
-    order.isUpdating = true;
-    order.lastClickedStatus = status; // Запоминаем, какая кнопка нажата
-
+async updateStatus(order, newStatus) {
     try {
-        // 2. Обновляем статус в Firebase
-        // Твой бот сам увидит это изменение и отправит сообщение клиенту
-        await window.fb.updateDoc(window.fb.doc(window.db, "orders", order.id), { status });
+        order.isUpdating = true;
+        const orderRef = window.fb.doc(window.db, "orders", order.id);
+        await window.fb.updateDoc(orderRef, { status: newStatus });
         
-        // 3. Вибрация для подтверждения
-        if (window.Telegram?.WebApp?.HapticFeedback) {
-            window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+        // Безопасная вибрация (проверяем версию API)
+        if (window.tg && window.tg.version && parseFloat(window.tg.version) >= 6.1) {
+            if (window.tg.HapticFeedback) window.tg.HapticFeedback.impactOccurred('medium');
         }
-
-        // 4. Показываем статус "Уведомлен" (галочку)
-        order.statusUpdated = true;
-
-        // 5. Через 3 секунды возвращаем кнопку в обычное состояние
-        setTimeout(() => {
-            order.statusUpdated = false;
-            order.isUpdating = false;
-        }, 3000);
-
     } catch (e) {
-        console.error('Ошибка обновления:', e);
-        alert('Ошибка: ' + e.message);
+        console.error("Ошибка обновления:", e);
+        alert("Ошибка связи с базой. Попробуйте обновить страницу.");
+    } finally {
         order.isUpdating = false;
+    }
+},
+
+async deleteOrder(docId) {
+    const confirmText = "⚠️ Удалить заказ навсегда?";
+    
+    const proceedDelete = async () => {
+        try {
+            await window.fb.deleteDoc(window.fb.doc(window.db, "orders", docId));
+            if (window.tg && window.tg.version && parseFloat(window.tg.version) >= 6.1) {
+                window.tg.HapticFeedback.notificationOccurred('success');
+            }
+        } catch (e) {
+            alert("Не удалось удалить: " + e.message);
+        }
+    };
+
+    // Универсальный запрос подтверждения (ПК + ТГ)
+    if (window.tg && window.tg.showConfirm && parseFloat(window.tg.version) >= 6.2) {
+        window.tg.showConfirm(confirmText, (yes) => { if (yes) proceedDelete(); });
+    } else {
+        if (confirm(confirmText)) proceedDelete();
     }
 },
 
        printOrder(o) {
     try {
-        let itemsList = "";
-
-        // 1. Проверяем, есть ли массив items
-        if (o.items && Array.isArray(o.items) && o.items.length > 0) {
-            itemsList = o.items.map(i => `▫️ ${i.title} (${i.size || i.selSize || '-'}) — ${i.price}₽`).join('\n');
-        } 
-        // 2. Проверяем, может быть массив называется cart
-        else if (o.cart && Array.isArray(o.cart) && o.cart.length > 0) {
-            itemsList = o.cart.map(i => `▫️ ${i.title} (${i.size || i.selSize || '-'}) — ${i.price}₽`).join('\n');
-        }
-        // 3. Проверяем, есть ли готовый текст заказа
-        else if (o.items_text) {
-            itemsList = o.items_text;
-        } 
-        // 4. Если ничего не нашли
-        else {
-            itemsList = "Состав заказа временно недоступен";
-        }
-
-        const checkText = `
-🧾 ЗАКАЗ №${o.order_id || '---'}
-━━━━━━━━━━━━━━━━━━━━
-👤 Клиент: ${o.customer_name || 'Не указан'}
-📞 Тел: ${o.customer_phone || 'Не указан'}
-🚚 Доставка: ${o.delivery || o.delivery_type || 'Не указана'}
-📍 Адрес: ${o.address || o.customer_address || 'Не указан'}
-━━━━━━━━━━━━━━━━━━━━
-📦 СОСТАВ:
-${itemsList}
-
-💰 ИТОГО: ${o.order_total || o.total_price || 0} ₽
-━━━━━━━━━━━━━━━━━━━━
-📅 Дата: ${o.createdAt ? (o.createdAt.seconds ? new Date(o.createdAt.seconds * 1000).toLocaleString() : new Date(o.createdAt).toLocaleString()) : 'Не указана'}
-        `;
-
-        tg.showAlert(checkText);
+        const date = o.createdAt ? (o.createdAt.seconds ? new Date(o.createdAt.seconds * 1000).toLocaleString('ru-RU') : new Date(o.createdAt).toLocaleString('ru-RU')) : '---';
         
-        if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+        // 1. Собираем товары (ищем во всех возможных полях базы)
+        const itemsList = o.items || o.cartItems || [];
+        let itemsHtml = "";
 
+        if (Array.isArray(itemsList) && itemsList.length > 0) {
+            itemsHtml = itemsList.map(i => `
+                <tr style="border-bottom: 2px solid #f0f0f0;">
+                    <td style="padding: 20px 0;">
+                        <div style="font-weight: 800; font-size: 20px; text-transform: uppercase; margin-bottom: 10px;">
+                            ${i.title || 'Товар без названия'}
+                        </div>
+                        
+                        <div style="display: flex; gap: 30px; font-size: 14px; color: #333;">
+                            <span><b>Цвет:</b> ${i.color || '-'}</span>
+                            <span><b>Размер:</b> ${i.size || i.selSize || '-'}</span>
+                            <span><b>Кол-во:</b> ${i.count || 1} шт.</span>
+                            <span><b>Цена за ед.:</b> ${i.price || 0} ₽</span>
+                        </div>
+                    </td>
+                    <td style="padding: 20px 0; text-align: right; vertical-align: middle;">
+                        <div style="font-weight: 800; font-size: 20px;">
+                            ${(i.price || 0) * (i.count || 1)} ₽
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        } else {
+            // Если товаров нет в массиве, выводим items_text
+            itemsHtml = `<tr><td colspan="2" style="padding: 40px 0; font-size: 16px; white-space: pre-wrap;">${o.items_text || 'Список товаров не найден'}</td></tr>`;
+        }
+
+        const win = window.open('', '_blank');
+        if (!win) {
+            alert("Пожалуйста, разрешите всплывающие окна в браузере.");
+            return;
+        }
+
+        win.document.write(`
+            <html>
+            <head>
+                <title>Накладная #${o.order_id}</title>
+                <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800&display=swap" rel="stylesheet">
+                <style>
+                    @page { size: A4 portrait; margin: 15mm; }
+                    body { font-family: 'Montserrat', sans-serif; margin: 0; padding: 0; color: #000; }
+                    .wrapper { width: 100%; max-width: 210mm; margin: auto; }
+                    .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 4px solid #000; padding-bottom: 20px; margin-bottom: 30px; }
+                    .brand h1 { margin: 0; font-size: 36px; font-weight: 800; }
+                    .order-info { text-align: right; }
+                    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 30px; }
+                    .address-box { border: 2px solid #000; padding: 20px; margin-bottom: 30px; }
+                    table { width: 100%; border-collapse: collapse; }
+                    th { text-align: left; text-transform: uppercase; font-size: 12px; color: #888; border-bottom: 1px solid #000; padding-bottom: 10px; }
+                    .total-section { margin-top: 50px; text-align: right; border-top: 4px solid #000; padding-top: 20px; }
+                    .total-section h2 { margin: 0; font-size: 45px; font-weight: 800; }
+                </style>
+            </head>
+            <body>
+                <div class="wrapper">
+                    <div class="header">
+                        <div class="brand"><h1>NARAN PREMIUM</h1><p>ОФИЦИАЛЬНЫЙ ЧЕК ЗАКАЗА</p></div>
+                        <div class="order-info"><h2>ЗАКАЗ #${o.order_id}</h2><p>Дата: ${date}</p></div>
+                    </div>
+
+                    <div class="info-grid">
+                        <div>
+                            <small style="color:#888; font-weight:700;">ПОКУПАТЕЛЬ</small>
+                            <p style="font-size: 18px; font-weight: 700; margin: 5px 0;">${o.customer_name || 'Не указан'}</p>
+                            <p>${o.customer_phone || '---'}</p>
+                        </div>
+                        <div style="text-align: right;">
+                            <small style="color:#888; font-weight:700;">СПОСОБ ДОСТАВКИ</small>
+                            <p style="font-size: 18px; font-weight: 700; margin: 5px 0;">${o.delivery || o.delivery_type || 'Стандарт'}</p>
+                        </div>
+                    </div>
+
+                    <div class="address-box">
+                        <small style="color:#888; font-weight:700;">АДРЕС ДОСТАВКИ:</small>
+                        <p style="font-size: 22px; font-weight: 800; margin: 10px 0 0 0;">${o.address || 'Самовывоз / Не указан'}</p>
+                    </div>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Описание товаров</th>
+                                <th style="text-align: right;">Сумма</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${itemsHtml}
+                        </tbody>
+                    </table>
+
+                    <div class="total-section">
+                        <div style="font-weight: 700; color: #888;">ИТОГО К ОПЛАТЕ</div>
+                        <h2>${o.order_total || o.total_price || 0} ₽</h2>
+                    </div>
+
+                    <div style="margin-top: 50px; text-align: center; color: #888; font-size: 12px;">
+                        Спасибо за ваш выбор! Будем рады видеть вас снова в NARAN PREMIUM.
+                    </div>
+                </div>
+                <script>
+                    window.onload = function() { 
+                        window.print(); 
+                        setTimeout(() => { window.close(); }, 500); 
+                    };
+                <\/script>
+            </body>
+            </html>
+        `);
+        win.document.close();
     } catch (e) {
-        console.error("Ошибка:", e);
-        tg.showAlert("Не удалось загрузить состав заказа");
+        console.error(e);
+        alert("Ошибка печати. Проверьте консоль браузера.");
     }
 },
 updateChart() {
