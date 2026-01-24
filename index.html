@@ -1101,21 +1101,27 @@ async updateStatus(order, status) {
 },
 
        printOrder(o) {
-            try {
-                let itemsList = "";
-                // 1. Проверяем массив items
-                if (o.items && Array.isArray(o.items) && o.items.length > 0) {
-                    itemsList = o.items.map(i => `▫️ ${i.title} (${i.size || i.selSize || '-'}) — ${i.price}₽`).join('\n');
-                } 
-                // 2. Проверяем текстовое поле (если массив пуст)
-                else if (o.items_text) {
-                    itemsList = o.items_text;
-                } 
-                else {
-                    itemsList = "Состав заказа не найден";
-                }
+    try {
+        let itemsList = "";
 
-                const checkText = `
+        // 1. Проверяем, есть ли массив items
+        if (o.items && Array.isArray(o.items) && o.items.length > 0) {
+            itemsList = o.items.map(i => `▫️ ${i.title} (${i.size || i.selSize || '-'}) — ${i.price}₽`).join('\n');
+        } 
+        // 2. Проверяем, может быть массив называется cart
+        else if (o.cart && Array.isArray(o.cart) && o.cart.length > 0) {
+            itemsList = o.cart.map(i => `▫️ ${i.title} (${i.size || i.selSize || '-'}) — ${i.price}₽`).join('\n');
+        }
+        // 3. Проверяем, есть ли готовый текст заказа
+        else if (o.items_text) {
+            itemsList = o.items_text;
+        } 
+        // 4. Если ничего не нашли
+        else {
+            itemsList = "Состав заказа временно недоступен";
+        }
+
+        const checkText = `
 🧾 ЗАКАЗ №${o.order_id || '---'}
 ━━━━━━━━━━━━━━━━━━━━
 👤 Клиент: ${o.customer_name || 'Не указан'}
@@ -1128,72 +1134,71 @@ ${itemsList}
 
 💰 ИТОГО: ${o.order_total || o.total_price || 0} ₽
 ━━━━━━━━━━━━━━━━━━━━
-📅 Дата: ${o.createdAt ? (o.createdAt.seconds ? new Date(o.createdAt.seconds * 1000).toLocaleString('ru-RU') : new Date(o.createdAt).toLocaleString('ru-RU')) : 'Не указана'}
-                `;
+📅 Дата: ${o.createdAt ? (o.createdAt.seconds ? new Date(o.createdAt.seconds * 1000).toLocaleString() : new Date(o.createdAt).toLocaleString()) : 'Не указана'}
+        `;
 
-                tg.showAlert(checkText);
-                if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
-            } catch (e) {
-                console.error("Ошибка в ЧЕКЕ:", e);
-                tg.showAlert("Не удалось загрузить чек");
+        tg.showAlert(checkText);
+        
+        if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+
+    } catch (e) {
+        console.error("Ошибка:", e);
+        tg.showAlert("Не удалось загрузить состав заказа");
+    }
+},
+updateChart() {
+    const ctx = document.getElementById('salesChart');
+    if (!ctx) return;
+
+    // Генерируем даты последних 7 дней
+    const labels = [];
+    const counts = [];
+    const now = new Date();
+
+    for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(now.getDate() - i);
+        labels.push(d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }));
+        
+        // Считаем заказы за этот день
+        const dayStart = new Date(d.setHours(0,0,0,0)).getTime();
+        const dayEnd = new Date(d.setHours(23,59,59,999)).getTime();
+        
+        const dayOrders = this.allOrders.filter(o => {
+            const t = o.createdAt?.seconds ? o.createdAt.seconds * 1000 : 0;
+            return t >= dayStart && t <= dayEnd;
+        });
+        counts.push(dayOrders.length);
+    }
+
+    if (this.chart) this.chart.destroy();
+
+    this.chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Заказы',
+                data: counts,
+                borderColor: '#000',
+                backgroundColor: 'rgba(0,0,0,0.05)',
+                borderWidth: 3,
+                tension: 0.4, // Делает линию плавной (премиально)
+                fill: true,
+                pointRadius: 4,
+                pointBackgroundColor: '#000'
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, grid: { display: false }, ticks: { stepSize: 1 } },
+                x: { grid: { display: false } }
             }
-        }, // Запятая обязательна!
-
-        updateChart() {
-            // ВАЖНО: Убедитесь, что в HTML у вас <canvas id="salesChart"></canvas>
-            const ctx = document.getElementById('salesChart');
-            if (!ctx) return;
-
-            const labels = [];
-            const counts = [];
-            const now = new Date();
-
-            for (let i = 6; i >= 0; i--) {
-                const d = new Date();
-                d.setDate(now.getDate() - i);
-                labels.push(d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }));
-                
-                const dayStart = new Date(d.setHours(0,0,0,0)).getTime();
-                const dayEnd = new Date(d.setHours(23,59,59,999)).getTime();
-                
-                const dayOrders = this.allOrders.filter(o => {
-                    let t = 0;
-                    if (o.createdAt?.seconds) t = o.createdAt.seconds * 1000;
-                    else if (o.createdAt) t = new Date(o.createdAt).getTime();
-                    return t >= dayStart && t <= dayEnd;
-                });
-                counts.push(dayOrders.length);
-            }
-
-            if (this.chart) this.chart.destroy();
-
-            this.chart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Заказы',
-                        data: counts,
-                        borderColor: '#000',
-                        backgroundColor: 'rgba(0,0,0,0.05)',
-                        borderWidth: 3,
-                        tension: 0.4,
-                        fill: true,
-                        pointRadius: 4,
-                        pointBackgroundColor: '#000'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        y: { beginAtZero: true, grid: { display: false }, ticks: { stepSize: 1, precision: 0 } },
-                        x: { grid: { display: false } }
-                    }
-                }
-            });
         }
+    });
+}
     },
     mounted() {
         tg.ready();
