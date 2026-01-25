@@ -1069,21 +1069,18 @@ async manageCategory(action, id) { // Добавь async здесь
 
         const orderData = {
             order_id: orderId,
-    customer_name: this.form.name || 'Не указано',
-    customer_phone: this.form.phone || 'Не указано',
-    // ВНИМАНИЕ: Проверь, чтобы было именно totalPrice
-    order_total: this.totalPrice || 0, 
-    delivery: this.deliv === 'courier' ? 'Курьер' : 'ПОЧТА',
-    address: this.address || 'Не указан',
-    // Мы отправляем И текст, И массив товаров на всякий случай
-    items_text: itemsText, 
-    items: this.cart, 
-    status: 'Новый',
-    user: {
-        id: this.user.id || 0,
-        username: this.user.username || 'n/a'
-    },
-    createdAt: window.fb.serverTimestamp()
+            customer_name: this.form.name,
+            customer_phone: this.form.phone,
+            order_total: this.total,
+            delivery: this.deliv, // Ключ для Python-бота
+            address: this.address,
+            items_text: itemsText,
+            status: 'Новый',
+            user: {
+                id: this.user.id || 0,
+                username: this.user.username || 'n/a'
+            },
+            createdAt: window.fb.serverTimestamp()
         };
 
         // Сохраняем в Firebase
