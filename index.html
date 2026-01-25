@@ -1389,51 +1389,61 @@ updateChart() {
 }
     },
     mounted() {
-        tg.ready();
-        tg.expand();
-        this.user = tg.initDataUnsafe?.user || { id: 387881523, first_name: 'Admin_Test' };
-        
-        // Принудительная проверка админа
-        this.isAdmin = Number(this.user.id) === this.adminId;
-        console.log("Admin Status:", this.isAdmin, "User ID:", this.user.id);
+    tg.ready();
+    tg.expand();
 
-        const checkFb = setInterval(() => {
-            if (window.db && window.fb) {
-                clearInterval(checkFb);
-                
-                // Загрузка товаров
-                window.fb.onSnapshot(window.fb.query(window.fb.collection(window.db, "products"), window.fb.orderBy("createdAt", "desc")), snap => {
-                    this.products = snap.docs.map(doc => ({ id: doc.id, ...doc.data(), aIdx: 0 }));
+    // 1. Получаем пользователя или оставляем null
+    this.user = tg.initDataUnsafe?.user || null;
+    
+    // 2. Проверяем: если пользователь есть, сравниваем ID. Если нет — isAdmin всегда false.
+    if (this.user && this.user.id) {
+        this.isAdmin = Number(this.user.id) === Number(this.adminId);
+    } else {
+        this.isAdmin = false;
+        // Опционально: создаем пустой объект для user, чтобы не было ошибок в шаблоне
+        this.user = { id: 0, first_name: 'Гость' }; 
+    }
+
+    console.log("Admin Status:", this.isAdmin, "User ID:", this.user.id);
+
+    const checkFb = setInterval(() => {
+        if (window.db && window.fb) {
+            clearInterval(checkFb);
+            
+            // Загрузка товаров
+            window.fb.onSnapshot(window.fb.query(window.fb.collection(window.db, "products"), window.fb.orderBy("createdAt", "desc")), snap => {
+                this.products = snap.docs.map(doc => ({ id: doc.id, ...doc.data(), aIdx: 0 }));
+            });
+
+            // Загрузка категорий
+            window.fb.onSnapshot(window.fb.collection(window.db, "categories"), snap => {
+                this.categories = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            });
+
+            // Загрузка отзывов
+            window.fb.onSnapshot(window.fb.collection(window.db, "reviews"), snap => {
+                this.allReviews = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            });
+
+            // Загрузка всех заказов (ДЛЯ АДМИНА)
+            // Теперь это сработает только если isAdmin действительно true
+            if (this.isAdmin) {
+                window.fb.onSnapshot(window.fb.query(window.fb.collection(window.db, "orders"), window.fb.orderBy("createdAt", "desc")), snap => {
+                    this.allOrders = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    this.$nextTick(() => { this.updateChart(); });
                 });
+            }
 
-                // Загрузка категорий
-                window.fb.onSnapshot(window.fb.collection(window.db, "categories"), snap => {
-                    this.categories = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                });
-                // Загрузка отзывов
-                 window.fb.onSnapshot(window.fb.collection(window.db, "reviews"), snap => {
-               this.allReviews = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                 });
-
-                // Загрузка всех заказов (для админа)
-                if (this.isAdmin) {
-                    window.fb.onSnapshot(window.fb.query(window.fb.collection(window.db, "orders"), window.fb.orderBy("createdAt", "desc")), snap => {
-                        this.allOrders = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                        this.$nextTick(() => { this.updateChart(); });
-                    });
-                }
-
-                // Загрузка личных заказов
+            // Загрузка личных заказов
+            if (this.user && this.user.id) {
                 const qMy = window.fb.query(window.fb.collection(window.db, "orders"), window.fb.where("user.id", "==", this.user.id));
                 window.fb.onSnapshot(qMy, snap => {
                     this.myOrders = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 });
             }
-        }, 100);
-
-        // Восстановление адреса
-        address = localStorage.getItem('naran_last_addr') || '';
-    }
+        }
+    }, 100);
+}
 }).mount('#app');
 </script>
 
