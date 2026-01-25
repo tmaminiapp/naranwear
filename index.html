@@ -153,23 +153,6 @@
         .status-ready { background: #e8f5e9; color: #2e7d32; }
         .status-process { background: #fff3e0; color: #ef6c00; }
 
-        .search-box i, .search-box svg {
-        color: #000000 !important;
-        fill: #000000 !important;
-        }
-
-        .header-burger span, 
-        .header-burger::before, 
-        .header-burger::after {
-         background-color: #000000 !important;
-         }
-
-         .btn-support {
-         background-color: #000000 !important;
-        color: #ffffff !important;
-        border: none;
-        }
-
         [v-cloak] { display: none; }
     </style>
 </head>
@@ -182,14 +165,16 @@
             <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
         </button>
         <div class="brand-name">NARAN</div>
-        <button @click="searchMode = !searchMode; vib()" style="border:none; background:none;">
+        <div class="header-side" style="justify-content: flex-end;">
+        <button v-if="tab === 'catalog'" @click="searchMode = !searchMode; vib()" style="border:none; background:none; padding:0;">
             <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2.5" fill="none"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
         </button>
+    </div>
     </header>
 
-    <div v-if="searchMode" class="search-container">
-        <input v-model="searchQuery" class="search-input" placeholder="ПОИСК ТОВАРА..." @input="vib()">
-    </div>
+    <div v-if="searchMode && tab === 'catalog'" class="search-container">
+    <input v-model="searchQuery" class="search-input" placeholder="ПОИСК ТОВАРА..." @input="vib()">
+</div>
 
     <div v-if="burgerOpen" class="modal" style="padding: 40px; z-index: 3000; overflow-y: auto;">
     <button class="close-modal" @click="burgerOpen = false">✕</button>
@@ -526,10 +511,7 @@
 
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
         <div>
-            <div :class="'status-' + (o.status ? o.status.toLowerCase() : 'новый')" 
-                 style="display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 9px; font-weight: 800; text-transform: uppercase; background: #000; color: #fff; margin-bottom: 4px;">
-                {{ o.status || 'Новый' }}
-            </div>
+            
             <div style="font-weight: 800; font-size: 16px; display: block;">#{{ o.order_id }}</div>
         </div>
 
@@ -1224,8 +1206,28 @@ async deleteOrder(docId) {
                     @page { size: A4 portrait; margin: 15mm; }
                     body { font-family: 'Montserrat', sans-serif; margin: 0; padding: 0; color: #000; }
                     .wrapper { width: 100%; max-width: 210mm; margin: auto; }
-                    .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 4px solid #000; padding-bottom: 20px; margin-bottom: 30px; }
-                    .brand h1 { margin: 0; font-size: 36px; font-weight: 800; }
+                    .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 16px;
+    height: 60px;
+    background: #ffffff;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    border-bottom: 1px solid #f2f2f7;
+}
+                   .brand-name {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    font-weight: 800;
+    font-size: 18px;
+    letter-spacing: 1px;
+    color: #000;
+    white-space: nowrap;
+}
                     .order-info { text-align: right; }
                     .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 30px; }
                     .address-box { border: 2px solid #000; padding: 20px; margin-bottom: 30px; }
