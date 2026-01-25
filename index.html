@@ -23,35 +23,36 @@
             --red: #ff3b30;
         }
         /* 1. Делаем все ссылки, иконки и меню черными */
+/* 1. Оставляем черными только ссылки и иконки. КНОПКИ (button) отсюда УБИРАЕМ */
 a, 
 .burger-menu, 
 .search-icon, 
-[onclick], 
-button {
+[onclick] {
     color: #000000 !important;
     text-decoration: none !important;
-    -webkit-text-fill-color: #000000 !important; /* Для Safari на iPhone */
+    -webkit-text-fill-color: #000000 !important;
 }
 
-/* 2. Убираем синее выделение при нажатии на мобильных */
+/* 2. Убираем синее выделение (это оставляем) */
 * {
     -webkit-tap-highlight-color: transparent !important;
 }
+
+/* 3. Стили для твоих черных кнопок */
+/* Добавим сюда твой класс .btn-black */
+.btn-black,
 .add-btn, 
-.checkout-btn, 
-button[style*="background: black"], 
-button[style*="background: #000"] {
+.checkout-btn {
+    background: #000000 !important;
     color: #ffffff !important;
     -webkit-text-fill-color: #ffffff !important;
 }
 
-/* 3. Если "Написать в поддержку" — это кнопка или ссылка внутри div */
-.support-button, 
-.support-link,
-a span {
+/* 4. На всякий случай: если есть ссылки внутри кнопок, они тоже должны быть белыми */
+button span, button a {
     color: inherit !important;
     -webkit-text-fill-color: inherit !important;
-     }
+}
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
         body { 
