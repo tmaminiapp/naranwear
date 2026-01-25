@@ -23,31 +23,35 @@
             --red: #ff3b30;
         }
         /* 1. Делаем все ссылки, иконки и меню черными */
-/* 1. Убираем синий цвет только у специфичных элементов (лупа, меню, телефон) */
 a, 
-a[href^="tel"], 
 .burger-menu, 
-.search-icon,
-.support-link {
+.search-icon, 
+[onclick], 
+button {
     color: #000000 !important;
     text-decoration: none !important;
-    -webkit-text-fill-color: #000000 !important; /* Для Safari */
+    -webkit-text-fill-color: #000000 !important; /* Для Safari на iPhone */
 }
 
-/* 2. ПРИНУДИТЕЛЬНО возвращаем кнопкам БЕЛЫЙ текст */
-/* Добавляем классы твоих основных кнопок */
+/* 2. Убираем синее выделение при нажатии на мобильных */
+* {
+    -webkit-tap-highlight-color: transparent !important;
+}
 .add-btn, 
 .checkout-btn, 
-.admin-btn,
-button {
+button[style*="background: black"], 
+button[style*="background: #000"] {
     color: #ffffff !important;
     -webkit-text-fill-color: #ffffff !important;
 }
 
-/* 3. Исключение: если кнопка сама по себе должна быть с черным текстом (например, в админке) */
-.delete-btn, .edit-btn {
-    -webkit-text-fill-color: initial !important; 
-}
+/* 3. Если "Написать в поддержку" — это кнопка или ссылка внутри div */
+.support-button, 
+.support-link,
+a span {
+    color: inherit !important;
+    -webkit-text-fill-color: inherit !important;
+     }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
         body { 
@@ -435,7 +439,7 @@ button {
                 <label>ДОБАВИТЬ КАТЕГОРИЮ</label>
                 <div style="display:flex; gap:10px;">
                     <input v-model="newCat" class="input-admin" placeholder="НАЗВАНИЕ">
-                    <button class="btn-black" @click="manageCategory('add')" style="padding: 10px; color: white !important;">+</button>
+                    <button class="btn-black" @click="manageCategory('add')" style="padding: 10px;">+</button>
                 </div>
                 <div style="display:flex; flex-wrap:wrap; gap:5px; margin-top:10px;">
                     <span v-for="c in categories" :key="c.id" class="sale-badge" @click="manageCategory('del', c.id)">{{c.name}} ✕</span>
