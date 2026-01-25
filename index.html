@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -371,7 +372,32 @@
                 <div :class="['status-badge', o.status === 'Доставлен' ? 'status-ready' : 'status-process']">{{o.status || 'В обработке'}}</div>
                 <div style="font-size:9px; margin-top:8px; color:gray;">{{o.date}}</div>
             </div>
-        </div>
+            
+            <div v-for="o in myOrders" :key="o.id" class="order-card">
+               <div style="display:flex; justify-content:space-between; font-weight:800; font-size:11px;">
+                <span>ЗАКАЗ №{{o.order_id}}</span>
+                <span>{{o.order_total || o.total}} ₽</span>
+              </div>
+              <div :class="['status-badge', o.status === 'Доставлен' ? 'status-ready' : 'status-process']">
+                  {{o.status || 'В обработке'}}
+              </div>
+        
+              <div style="margin-top: 10px; border-top: 1px solid #f2f2f7; padding-top: 8px;">
+                <div v-for="item in o.items" :key="item.id" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+                  <span style="font-size:10px;">{{item.title}} {{item.selSize ? '('+item.selSize+')' : ''}}</span>
+                
+                  <button 
+                    v-if="o.status === 'Доставлен'"
+                    @click="openReviewModal(o, item)"
+                    style="background: #000; color: #fff; border: none; font-size: 9px; padding: 4px 8px; border-radius: 4px; font-weight: 700;">
+                    ОТЗЫВ
+                </button>
+                  </div>
+                 </div>
+        
+                <div style="font-size:9px; margin-top:8px; color:gray;">{{o.date}}</div>
+               </div>
+            </div>
 
         <div v-if="isAdmin" class="admin-section">
             <h2 class="brand-name" style="font-size: 14px; margin-bottom: 20px;">АДМИН-ПАНЕЛЬ</h2>
@@ -584,6 +610,17 @@
             </div>
             
             <p style="font-size: 13px; line-height: 1.6; margin: 20px 0; color: #444;">{{selP.desc}}</p>
+
+            <div v-if="productReviews.length > 0" style="margin-top:20px; border-top:1px solid #f2f2f7; padding-top:15px;">
+              <div style="font-size:10px; font-weight:800; letter-spacing:1px; margin-bottom:15px;">ОТЗЫВЫ ПОКУПАТЕЛЕЙ</div>
+               <div v-for="rev in productReviews" :key="rev.id" style="margin-bottom:15px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-weight:700; font-size:11px;">{{rev.userName}}</span>
+                 <span style="font-size:10px;">⭐ {{rev.rating}}</span>
+              </div>
+              <p style="font-size:11px; margin-top:5px; color:#333; line-height:1.4;">{{rev.text}}</p>
+             </div>
+            </div>
             
             <div style="font-size: 10px; font-weight: 800; text-transform: uppercase;">ВЫБЕРИТЕ РАЗМЕР</div>
             <div class="size-grid">
@@ -647,6 +684,7 @@ Vue.createApp({
             
             products: [], // Инициализация пустым массивом для защиты
             categories: [],
+            allReviews: [],
             cart: JSON.parse(localStorage.getItem('naran_cart_v3') || '[]'),
             favorites: JSON.parse(localStorage.getItem('naran_favs_v3') || '[]'),
             
@@ -746,6 +784,10 @@ Vue.createApp({
         return [];
     }
 },
+productReviews() {
+        if (!this.selP) return [];
+        return this.allReviews.filter(rev => rev.productId === this.selP.id);
+    },
         favList() {
             if (!this.products) return [];
             return this.products.filter(p => this.favorites.includes(p.id));
@@ -861,6 +903,7 @@ Vue.createApp({
     // Если у тебя инициализируется карта при выборе:
     if (this.initMap) this.initMap();
         },
+        
 
         initMap() {
             try {
@@ -1149,21 +1192,10 @@ async deleteOrder(docId) {
 },
 
        printOrder(o) {
-    this.vib(); // Виброотклик
-
-    // УЛУЧШЕНИЕ 1: Открываем окно СРАЗУ (до try/catch). 
-    // На телефонах это единственный способ избежать блокировки popup.
-    const win = window.open('', '_blank');
-    
-    if (!win) {
-        alert("Пожалуйста, разрешите всплывающие окна в настройках браузера или смените браузер на Safari/Chrome.");
-        return;
-    }
-
     try {
         const date = o.createdAt ? (o.createdAt.seconds ? new Date(o.createdAt.seconds * 1000).toLocaleString('ru-RU') : new Date(o.createdAt).toLocaleString('ru-RU')) : '---';
         
-        // Твоя оригинальная логика сбора товаров
+        // 1. Собираем товары (ищем во всех возможных полях базы)
         const itemsList = o.items || o.cartItems || [];
         let itemsHtml = "";
 
@@ -1174,6 +1206,7 @@ async deleteOrder(docId) {
                         <div style="font-weight: 800; font-size: 20px; text-transform: uppercase; margin-bottom: 10px;">
                             ${i.title || 'Товар без названия'}
                         </div>
+                        
                         <div style="display: flex; gap: 30px; font-size: 14px; color: #333;">
                             <span><b>Цвет:</b> ${i.color || '-'}</span>
                             <span><b>Размер:</b> ${i.size || i.selSize || '-'}</span>
@@ -1189,10 +1222,16 @@ async deleteOrder(docId) {
                 </tr>
             `).join('');
         } else {
+            // Если товаров нет в массиве, выводим items_text
             itemsHtml = `<tr><td colspan="2" style="padding: 40px 0; font-size: 16px; white-space: pre-wrap;">${o.items_text || 'Список товаров не найден'}</td></tr>`;
         }
 
-        // Твой оригинальный дизайн с мобильными правками в шрифтах
+        const win = window.open('', '_blank');
+        if (!win) {
+            alert("Пожалуйста, разрешите всплывающие окна в браузере.");
+            return;
+        }
+
         win.document.write(`
             <html>
             <head>
@@ -1200,9 +1239,8 @@ async deleteOrder(docId) {
                 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800&display=swap" rel="stylesheet">
                 <style>
                     @page { size: A4 portrait; margin: 15mm; }
-                    /* УЛУЧШЕНИЕ 2: Добавлены системные шрифты, если Montserrat не успеет загрузиться на телефоне */
-                    body { font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; color: #000; }
-                    .wrapper { width: 100%; max-width: 210mm; margin: auto; padding: 10px; }
+                    body { font-family: 'Montserrat', sans-serif; margin: 0; padding: 0; color: #000; }
+                    .wrapper { width: 100%; max-width: 210mm; margin: auto; }
                     .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 4px solid #000; padding-bottom: 20px; margin-bottom: 30px; }
                     .brand h1 { margin: 0; font-size: 36px; font-weight: 800; }
                     .order-info { text-align: right; }
@@ -1259,25 +1297,10 @@ async deleteOrder(docId) {
                         Спасибо за ваш выбор! Будем рады видеть вас снова в NARAN.
                     </div>
                 </div>
-                
                 <script>
                     window.onload = function() { 
-                        // УЛУЧШЕНИЕ 3: Фокусировка и задержка перед печатью для мобильных браузеров
-                        setTimeout(() => {
-                            window.focus();
-                            window.print();
-                            
-                            // УЛУЧШЕНИЕ 4: Закрываем окно только после того, как пользователь 
-                            // завершит работу с диалогом печати (onafterprint)
-                            window.onafterprint = function() {
-                                window.close();
-                            };
-                            
-                            // Запасной вариант для браузеров, не поддерживающих onafterprint
-                            setTimeout(() => { 
-                                // window.close(); // Можно оставить закомментированным, если нужно видеть чек
-                            }, 1000);
-                        }, 500);
+                        window.print(); 
+                        setTimeout(() => { window.close(); }, 500); 
                     };
                 <\/script>
             </body>
@@ -1287,6 +1310,28 @@ async deleteOrder(docId) {
     } catch (e) {
         console.error(e);
         alert("Ошибка печати. Проверьте консоль браузера.");
+    }
+},
+async leaveReview(order, item) {
+    const rating = prompt("Оцените товар от 1 до 5:", "5");
+    const text = prompt("Напишите ваш отзыв:");
+    
+    if (rating && text) {
+        try {
+            await window.fb.addDoc(window.fb.collection(window.db, "reviews"), {
+                productId: item.id,
+                orderId: order.id,
+                userId: this.user.id,
+                userName: this.user.first_name || "Клиент",
+                rating: parseInt(rating),
+                text: text,
+                createdAt: window.fb.serverTimestamp()
+            });
+            alert("Спасибо за отзыв!");
+        } catch (e) {
+            console.error(e);
+            alert("Ошибка при сохранении отзыва");
+        }
     }
 },
 updateChart() {
@@ -1365,6 +1410,10 @@ updateChart() {
                 window.fb.onSnapshot(window.fb.collection(window.db, "categories"), snap => {
                     this.categories = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 });
+                // Загрузка отзывов
+                 window.fb.onSnapshot(window.fb.collection(window.db, "reviews"), snap => {
+               this.allReviews = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                 });
 
                 // Загрузка всех заказов (для админа)
                 if (this.isAdmin) {
