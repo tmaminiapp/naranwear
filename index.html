@@ -1068,17 +1068,20 @@ async manageCategory(action, id) { // Добавь async здесь
         ).join('\n');
 
         const orderData = {
-    order_id: orderId,
-    name: this.form.name || 'Не указано',       // Было customer_name
-    phone: this.form.phone || 'Не указано',     // Было customer_phone
-    total: this.totalPrice || 0,                // Сумма
-    delivery: this.deliv === 'courier' ? 'Курьер' : 'ПОЧТА',
-    address: this.address || 'Не указан',
-    items_list: itemsText,                      // Было items_text
-    user_id: this.user.id || 0,
-    status: 'Новый',
-    createdAt: window.fb.serverTimestamp()
-};
+            order_id: orderId,
+            customer_name: this.form.name,
+            customer_phone: this.form.phone,
+            order_total: this.total,
+            delivery: this.deliv, // Ключ для Python-бота
+            address: this.address,
+            items_text: itemsText,
+            status: 'Новый',
+            user: {
+                id: this.user.id || 0,
+                username: this.user.username || 'n/a'
+            },
+            createdAt: window.fb.serverTimestamp()
+        };
 
         // Сохраняем в Firebase
         await window.fb.addDoc(window.fb.collection(window.db, "orders"), orderData);
