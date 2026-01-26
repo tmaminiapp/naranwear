@@ -1041,7 +1041,7 @@ async manageCategory(action, id) { // Добавь async здесь
     }
 },
 
-        async checkout() {
+      async checkout() {
     // 1. Валидация контактов
     if (this.cart.length === 0) return alert('Ваша корзина пуста');
     if (!this.form.name) return alert('Введите имя');
@@ -1154,8 +1154,9 @@ async deleteOrder(docId) {
         const date = o.createdAt ? (o.createdAt.seconds ? new Date(o.createdAt.seconds * 1000).toLocaleString('ru-RU') : new Date(o.createdAt).toLocaleString('ru-RU')) : '---';
         
         // 1. Собираем товары (ищем во всех возможных полях базы)
-        const itemsList = o.items || o.cartItems || [];
-        let itemsHtml = "";
+        const itemsText = this.cart.map(item => 
+            `▫️ ${item.title} ${item.selSize ? '('+item.selSize+')' : ''} x${item.qty} — ${item.price * item.qty} ₽`
+        ).join('\n');
 
         if (Array.isArray(itemsList) && itemsList.length > 0) {
             itemsHtml = itemsList.map(i => `
@@ -1199,8 +1200,28 @@ async deleteOrder(docId) {
                     @page { size: A4 portrait; margin: 15mm; }
                     body { font-family: 'Montserrat', sans-serif; margin: 0; padding: 0; color: #000; }
                     .wrapper { width: 100%; max-width: 210mm; margin: auto; }
-                    .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 4px solid #000; padding-bottom: 20px; margin-bottom: 30px; }
-                    .brand h1 { margin: 0; font-size: 36px; font-weight: 800; }
+                    .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 16px;
+    height: 60px;
+    background: #ffffff;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    border-bottom: 1px solid #f2f2f7;
+}
+                   .brand-name {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    font-weight: 800;
+    font-size: 18px;
+    letter-spacing: 1px;
+    color: #000;
+    white-space: nowrap;
+}
                     .order-info { text-align: right; }
                     .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 30px; }
                     .address-box { border: 2px solid #000; padding: 20px; margin-bottom: 30px; }
@@ -1213,7 +1234,7 @@ async deleteOrder(docId) {
             <body>
                 <div class="wrapper">
                     <div class="header">
-                        <div class="brand"><h1>NARAN</h1><p>ОФИЦИАЛЬНЫЙ ЧЕК ЗАКАЗА</p></div>
+                        <div class="brand"><h1>NARAN PREMIUM</h1><p>ОФИЦИАЛЬНЫЙ ЧЕК ЗАКАЗА</p></div>
                         <div class="order-info"><h2>ЗАКАЗ #${o.order_id}</h2><p>Дата: ${date}</p></div>
                     </div>
 
@@ -1252,7 +1273,7 @@ async deleteOrder(docId) {
                     </div>
 
                     <div style="margin-top: 50px; text-align: center; color: #888; font-size: 12px;">
-                        Спасибо за ваш выбор! Будем рады видеть вас снова в NARAN.
+                        Спасибо за ваш выбор! Будем рады видеть вас снова в NARAN PREMIUM.
                     </div>
                 </div>
                 <script>
@@ -1324,73 +1345,48 @@ updateChart() {
     });
 }
     },
-   mounted() {
-    tg.ready();
-    tg.expand();
-    
-    // 1. ПОЛУЧЕНИЕ ПОЛЬЗОВАТЕЛЯ (Улучшено)
-    const tgData = tg.initDataUnsafe?.user;
-    if (tgData && tgData.id) {
-        this.user = {
-            id: Number(tgData.id), // Для бота важно число
-            first_name: tgData.first_name || 'Клиент',
-            username: tgData.username || '',
-            photo_url: tgData.photo_url || ''
-        };
-    } else {
-        // Чтобы для тестов админка работала и в браузере, 
-        // замените 0 на ваш реальный ID из старого кода (387881523)
-        this.user = { id: 387881523, first_name: 'Admin_Test' }; 
-    }
+     mounted() {
+        tg.ready();
+        tg.expand();
+        this.user = tg.initDataUnsafe?.user || { id: 482000977, first_name: 'Admin_Test' };
+        
+        // Принудительная проверка админа
+        this.isAdmin = Number(this.user.id) === this.adminId;
+        console.log("Admin Status:", this.isAdmin, "User ID:", this.user.id);
 
-    const checkFb = setInterval(() => {
-        if (window.db && window.fb) {
-            clearInterval(checkFb);
-            
-            // 2. ПРОВЕРКА АДМИНА (Строгое сравнение строк)
-            // Убедитесь, что в data у вас adminId = 387881523
-            if (this.user.id && this.adminId) {
-                this.isAdmin = String(this.user.id).trim() === String(this.adminId).trim();
-            }
-            console.log("Доступ админа:", this.isAdmin);
-
-            // 3. Загрузка товаров и категорий
-            window.fb.onSnapshot(window.fb.query(window.fb.collection(window.db, "products"), window.fb.orderBy("createdAt", "desc")), snap => {
-                this.products = snap.docs.map(doc => ({ id: doc.id, ...doc.data(), aIdx: 0 }));
-            });
-
-            window.fb.onSnapshot(window.fb.collection(window.db, "categories"), snap => {
-                this.categories = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            });
-
-            // 4. Загрузка ВСЕХ заказов (ТОЛЬКО ДЛЯ ВАС)
-            if (this.isAdmin) {
-                const qAll = window.fb.query(window.fb.collection(window.db, "orders"), window.fb.orderBy("createdAt", "desc"));
-                window.fb.onSnapshot(qAll, snap => {
-                    this.allOrders = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    this.$nextTick(() => { 
-                        if (typeof this.updateChart === 'function') this.updateChart(); 
-                    });
+        const checkFb = setInterval(() => {
+            if (window.db && window.fb) {
+                clearInterval(checkFb);
+                
+                // Загрузка товаров
+                window.fb.onSnapshot(window.fb.query(window.fb.collection(window.db, "products"), window.fb.orderBy("createdAt", "desc")), snap => {
+                    this.products = snap.docs.map(doc => ({ id: doc.id, ...doc.data(), aIdx: 0 }));
                 });
-            }
 
-            // 5. Загрузка ЛИЧНЫХ заказов (ДЛЯ УВЕДОМЛЕНИЙ И КЛИЕНТА)
-            // Используем массив для защиты от разницы типов (число/строка)
-            if (this.user.id !== 0) {
-                const qMy = window.fb.query(
-                    window.fb.collection(window.db, "orders"), 
-                    window.fb.where("user.id", "in", [Number(this.user.id), String(this.user.id)])
-                );
+                // Загрузка категорий
+                window.fb.onSnapshot(window.fb.collection(window.db, "categories"), snap => {
+                    this.categories = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                });
+
+                // Загрузка всех заказов (для админа)
+                if (this.isAdmin) {
+                    window.fb.onSnapshot(window.fb.query(window.fb.collection(window.db, "orders"), window.fb.orderBy("createdAt", "desc")), snap => {
+                        this.allOrders = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                        this.$nextTick(() => { this.updateChart(); });
+                    });
+                }
+
+                // Загрузка личных заказов
+                const qMy = window.fb.query(window.fb.collection(window.db, "orders"), window.fb.where("user.id", "==", this.user.id));
                 window.fb.onSnapshot(qMy, snap => {
                     this.myOrders = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 });
             }
-        }
-    }, 100);
+        }, 100);
 
-    const savedAddr = localStorage.getItem('naran_last_addr');
-    if (savedAddr) this.address = savedAddr; 
-}
+        // Восстановление адреса
+        address = localStorage.getItem('naran_last_addr') || '';
+    }
 }).mount('#app');
 </script>
 
