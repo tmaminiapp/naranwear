@@ -1042,67 +1042,70 @@ async manageCategory(action, id) { // Добавь async здесь
 },
 
         async checkout() {
-    // 1. Валидация контактов
-    if (this.cart.length === 0) return alert('Ваша корзина пуста');
-    if (!this.form.name) return alert('Введите имя');
-    if (!this.form.phone) return alert('Введите телефон');
-
-    // 2. ПРОВЕРКА ДОСТАВКИ (Синхронизировано с твоим data.deliv)
-    if (!this.deliv || this.deliv === '' || this.deliv === 'Не выбран') {
-        alert('Пожалуйста, выберите способ доставки: СДЭК, ПОЧТА или 5POST');
-        return; 
+    // 1. Проверки перед отправкой
+    if (this.cart.length === 0) return;
+    if (!this.form.name || !this.form.phone) {
+        alert("Пожалуйста, заполните имя и телефон");
+        return;
     }
-
-    // 3. Проверка адреса
-    if (!this.address || this.address.trim() === '' || this.address.includes('Адрес не выбран')) {
-        alert('Пожалуйста, укажите адрес доставки');
+    if (!this.deliv || this.deliv === 'Не выбран') {
+        alert("Выберите способ доставки");
         return;
     }
 
     this.loading = true;
 
     try {
-        const orderId = Date.now().toString().slice(-6);
+        const orderId = Math.floor(Math.random() * 900000) + 100000;
         
-        // Формируем текст состава заказа
+        // Формируем красивый текст товаров для сообщения в Telegram
         const itemsText = this.cart.map(item => 
-            `▫️ ${item.title} ${item.selSize ? '('+item.selSize+')' : ''} x${item.qty} — ${item.price * item.qty} ₽`
+            `▫️ ${item.title} ${item.selSize ? '(' + item.selSize + ')' : ''} — ${item.price} ₽`
         ).join('\n');
 
+        // Создаем объект заказа
+        // Мы дублируем ключи (name и customer_name), чтобы Python-бот точно их нашел
         const orderData = {
             order_id: orderId,
+            name: this.form.name,
             customer_name: this.form.name,
+            phone: this.form.phone,
             customer_phone: this.form.phone,
+            address: this.address || "Адрес не указан",
+            delivery: this.deliv,
+            total: this.total, // Убедитесь, что у вас есть computed свойство или переменная total
             order_total: this.total,
-            delivery: this.deliv, // Ключ для Python-бота
-            address: this.address,
             items_text: itemsText,
             status: 'Новый',
             user: {
-                id: this.user.id || 0,
+                id: Number(this.user.id), // Обязательно число для уведомлений от бота
                 username: this.user.username || 'n/a'
-            },
-            createdAt: window.fb.serverTimestamp()
+            }
         };
 
-        // Сохраняем в Firebase
-        await window.fb.addDoc(window.fb.collection(window.db, "orders"), orderData);
-
-        // Отправляем в Telegram
+        // 1. ОТПРАВЛЯЕМ В ТЕЛЕГРАМ (для СМС админу)
+        // Это вызывает функцию web_app_data в вашем Python скрипте
         tg.sendData(JSON.stringify(orderData));
+
+        // 2. СОХРАНЯЕМ В FIREBASE (для админки и вашей статистики)
+        // В зависимости от версии Firebase используйте add или addDoc
+        const ordersRef = window.fb.collection(window.db, "orders");
+        await window.fb.addDoc(ordersRef, {
+            ...orderData,
+            createdAt: window.fb.serverTimestamp()
+        });
+
+        tg.showAlert(`✅ Заказ №${orderId} успешно оформлен!`);
         
-        tg.showAlert(`Заказ №${orderId} успешно оформлен!`);
-        
-        // Полная очистка после успеха
+        // Очистка корзины и состояния
         this.cart = [];
         this.saveCart();
-        this.deliv = ''; // Сбрасываем выбор доставки
-        this.showCart = false;
-        this.tab = 'profile';
+        this.showCart = false; // Закрыть корзину
+        this.tab = 'profile';  // Переключить на вкладку профиля, чтобы клиент видел историю
 
     } catch (e) {
-        console.error("Ошибка при оформлении:", e);
-        alert("Ошибка Firebase: " + e.message);
+        console.error("Ошибка оформления:", e);
+        alert("Произошла ошибка: " + e.message);
     } finally {
         this.loading = false;
     }
