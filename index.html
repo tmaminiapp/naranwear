@@ -1328,38 +1328,33 @@ updateChart() {
     tg.ready();
     tg.expand();
     
-    
-    // Получаем пользователя сразу
-    this.user = tg.initDataUnsafe?.user || { id: 0, first_name: 'Гость' };
-
+    // 1. ПОЛУЧЕНИЕ ПОЛЬЗОВАТЕЛЯ (Улучшено)
     const tgData = tg.initDataUnsafe?.user;
     if (tgData && tgData.id) {
         this.user = {
-            id: Number(tgData.id), // Всегда приводим к числу для бота
+            id: Number(tgData.id), // Для бота важно число
             first_name: tgData.first_name || 'Клиент',
-            last_name: tgData.last_name || '',
             username: tgData.username || '',
             photo_url: tgData.photo_url || ''
         };
     } else {
-        // Если открыли в браузере, а не в TG
-        this.user = { id: 0, first_name: 'Гость' };
+        // Чтобы для тестов админка работала и в браузере, 
+        // замените 0 на ваш реальный ID из старого кода (387881523)
+        this.user = { id: 387881523, first_name: 'Admin_Test' }; 
     }
 
     const checkFb = setInterval(() => {
         if (window.db && window.fb) {
             clearInterval(checkFb);
             
-            // 1. ПЕРЕПРОВЕРЯЕМ ПРАВА АДМИНА ВНУТРИ (когда FB и данные готовы)
+            // 2. ПРОВЕРКА АДМИНА (Строгое сравнение строк)
+            // Убедитесь, что в data у вас adminId = 387881523
             if (this.user.id && this.adminId) {
-                const currentId = String(this.user.id).trim();
-                const masterId = String(this.adminId).trim();
-                this.isAdmin = (currentId === masterId);
+                this.isAdmin = String(this.user.id).trim() === String(this.adminId).trim();
             }
+            console.log("Доступ админа:", this.isAdmin);
 
-            console.log("Доступ разрешен:", this.isAdmin);
-
-            // 2. Загрузка товаров и категорий
+            // 3. Загрузка товаров и категорий
             window.fb.onSnapshot(window.fb.query(window.fb.collection(window.db, "products"), window.fb.orderBy("createdAt", "desc")), snap => {
                 this.products = snap.docs.map(doc => ({ id: doc.id, ...doc.data(), aIdx: 0 }));
             });
@@ -1368,7 +1363,7 @@ updateChart() {
                 this.categories = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             });
 
-            // 3. Загрузка ВСЕХ заказов (ТОЛЬКО ДЛЯ АДМИНА)
+            // 4. Загрузка ВСЕХ заказов (ТОЛЬКО ДЛЯ ВАС)
             if (this.isAdmin) {
                 const qAll = window.fb.query(window.fb.collection(window.db, "orders"), window.fb.orderBy("createdAt", "desc"));
                 window.fb.onSnapshot(qAll, snap => {
@@ -1379,11 +1374,12 @@ updateChart() {
                 });
             }
 
-            // 4. Загрузка ЛИЧНЫХ заказов (ДЛЯ КЛИЕНТА)
+            // 5. Загрузка ЛИЧНЫХ заказов (ДЛЯ УВЕДОМЛЕНИЙ И КЛИЕНТА)
+            // Используем массив для защиты от разницы типов (число/строка)
             if (this.user.id !== 0) {
                 const qMy = window.fb.query(
                     window.fb.collection(window.db, "orders"), 
-                    window.fb.where("user.id", "==", Number(this.user.id))
+                    window.fb.where("user.id", "in", [Number(this.user.id), String(this.user.id)])
                 );
                 window.fb.onSnapshot(qMy, snap => {
                     this.myOrders = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -1392,7 +1388,6 @@ updateChart() {
         }
     }, 100);
 
-    // Восстановление адреса
     const savedAddr = localStorage.getItem('naran_last_addr');
     if (savedAddr) this.address = savedAddr; 
 }
