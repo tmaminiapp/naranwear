@@ -386,33 +386,22 @@
         <span :style="{color: o.status === 'Доставлен' ? '#34c759' : '#007aff'}">{{ o.status || 'В обработке' }}</span>
     </div>
 
-    <div v-for="item in o.items" :key="item.id" style="display: flex; align-items: center; gap: 10px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #f9f9f9; position: relative;">
-        <img :src="item.image" style="width: 45px; height: 45px; border-radius: 8px; object-fit: cover;">
-        
-        <div style="flex: 1;">
-            <div style="font-size: 12px; font-weight: 700;">{{ item.title }}</div>
-            <div style="font-size: 10px; color: var(--gray);">Размер: {{ item.selSize || item.size || '—' }}</div>
-        </div>
-
-        <button v-if="o.status === 'Доставлен' && !o.reviewed" 
-            @click.stop="openReviewModal(o, item)" 
-            style="
-                position: relative; 
-                z-index: 99; 
-                cursor: pointer;
-                background: #000; 
-                color: #fff; 
-                border: none; 
-                padding: 8px 14px; 
-                border-radius: 10px; 
-                font-size: 10px; 
-                font-weight: 800;
-                -webkit-appearance: none;
-                pointer-events: auto;
-            ">
-            ОТЗЫВ
-        </button>
-    </div>
+    <div v-for="item in o.items" :key="item.id" style="position: relative;">
+    <button v-if="o.status === 'Доставлен' && !o.reviewed" 
+        @click.stop="openReviewModal(o, item)" 
+        style="
+            position: absolute; /* Или relative, но с z-index */
+            right: 0;
+            z-index: 100; 
+            pointer-events: auto; 
+            background: #000; 
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 10px;
+        ">
+        ОТЗЫВ
+    </button>
+</div>
 
     <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 8px; border-top: 1px dashed #eee;">
         <div style="font-size: 9px; color: gray;">{{ o.date }}</div>
