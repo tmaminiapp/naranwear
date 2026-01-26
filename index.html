@@ -1041,20 +1041,24 @@ async manageCategory(action, id) { // Добавь async здесь
     }
 },
 
-        async checkout() {
-    // 1. Валидация контактов
-    if (this.cart.length === 0) return alert('Ваша корзина пуста');
-    if (!this.form.name) return alert('Введите имя');
-    if (!this.form.phone) return alert('Введите телефон');
+       async checkout() {
+    // 1. Валидация контактов (убираем лишние пробелы через trim())
+    const name = this.form?.name?.trim();
+    const phone = this.form?.phone?.trim();
 
-    // 2. ПРОВЕРКА ДОСТАВКИ (Синхронизировано с твоим data.deliv)
-    if (!this.deliv || this.deliv === '' || this.deliv === 'Не выбран') {
+    if (this.cart.length === 0) return alert('Ваша корзина пуста');
+    if (!name) return alert('Введите имя');
+    if (!phone) return alert('Введите телефон');
+
+    // 2. ПРОВЕРКА ДОСТАВКИ
+    if (!this.deliv || this.deliv === 'Не выбран') {
         alert('Пожалуйста, выберите способ доставки: СДЭК, ПОЧТА или 5POST');
         return; 
     }
 
     // 3. Проверка адреса
-    if (!this.address || this.address.trim() === '' || this.address.includes('Адрес не выбран')) {
+    const address = this.address?.trim();
+    if (!address || address.includes('Адрес не выбран')) {
         alert('Пожалуйста, укажите адрес доставки');
         return;
     }
@@ -1064,45 +1068,62 @@ async manageCategory(action, id) { // Добавь async здесь
     try {
         const orderId = Date.now().toString().slice(-6);
         
+        // Считаем итоговую сумму явно, если this.total вдруг подводит
+        const calculatedTotal = this.cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+
         // Формируем текст состава заказа
         const itemsText = this.cart.map(item => 
-            `▫️ ${item.title} ${item.selSize ? '('+item.selSize+')' : ''} x${item.qty} — ${item.price * item.qty} ₽`
+            `▫️ ${item.title} ${item.selSize ? '(' + item.selSize + ')' : ''} x${item.qty} — ${item.price * item.qty} ₽`
         ).join('\n');
 
+        // Создаем чистый объект данных
         const orderData = {
             order_id: orderId,
-            customer_name: this.form.name,
-            customer_phone: this.form.phone,
-            order_total: this.total,
-            delivery: this.deliv, // Ключ для Python-бота
-            address: this.address,
+            customer_name: name,
+            customer_phone: phone,
+            order_total: calculatedTotal || this.total,
+            delivery: this.deliv,
+            address: address,
             items_text: itemsText,
+            // Добавляем массив объектов для Firebase, чтобы в админке было удобнее
+            items: this.cart.map(item => ({
+                title: item.title,
+                price: item.price,
+                qty: item.qty,
+                size: item.selSize || '-'
+            })),
             status: 'Новый',
             user: {
-                id: this.user.id || 0,
-                username: this.user.username || 'n/a'
+                id: this.user?.id || 0,
+                username: this.user?.username || 'n/a'
             },
             createdAt: window.fb.serverTimestamp()
         };
 
-        // Сохраняем в Firebase
+        // Отладка: Посмотрите в консоль браузера перед отправкой!
+        console.log("Данные для отправки:", orderData);
+
+        // 1. Сохраняем в Firebase
         await window.fb.addDoc(window.fb.collection(window.db, "orders"), orderData);
 
-        // Отправляем в Telegram
-        tg.sendData(JSON.stringify(orderData));
+        // 2. Отправляем в Telegram (JSON строка)
+        // ВАЖНО: tg.sendData работает только в Mini App, запущенных через KeyboardButton
+        if (window.Telegram?.WebApp) {
+            window.Telegram.WebApp.sendData(JSON.stringify(orderData));
+        }
         
         tg.showAlert(`Заказ №${orderId} успешно оформлен!`);
         
-        // Полная очистка после успеха
+        // Полная очистка
         this.cart = [];
         this.saveCart();
-        this.deliv = ''; // Сбрасываем выбор доставки
+        this.deliv = '';
         this.showCart = false;
         this.tab = 'profile';
 
     } catch (e) {
         console.error("Ошибка при оформлении:", e);
-        alert("Ошибка Firebase: " + e.message);
+        alert("Ошибка: " + e.message);
     } finally {
         this.loading = false;
     }
