@@ -403,7 +403,7 @@
 
     <div style="background: #fff; padding: 15px; border-radius: 20px; border: 1px solid #eee; margin-bottom: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
          <div style="font-size: 10px; font-weight: 800; color: var(--gray); letter-spacing: 1px; margin-bottom: 15px;">ДИНАМИКА ЗАКАЗОВ (7 ДНЕЙ)</div>
-         <canvas id="salesChart" style="max-height: 200px;"></canvas>
+        <canvas id="orderChart" style="max-height: 200px;"></canvas>
     </div>
             
             <div class="field">
@@ -1312,7 +1312,7 @@ async deleteOrder(docId) {
     }
 },
 updateChart() {
-    const ctx = document.getElementById('salesChart');
+    const ctx = document.getElementById('orderChart');
     if (!ctx) return;
 
     // Генерируем даты последних 7 дней
