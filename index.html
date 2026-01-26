@@ -394,20 +394,22 @@
             </div>
 
             <button v-if="o.status === 'Доставлен' && !o.reviewed" 
-             @click.stop="openReviewModal(o, item)" 
-             style="
-            background: #000; 
-            color: #fff; 
-            border: none; 
-            padding: 8px 14px; 
-            border-radius: 10px; 
-            font-size: 10px; 
-            font-weight: 800;
-            cursor: pointer;
-            z-index: 10;
-            ">
-           ОТЗЫВ
-            </button>
+    @click.stop="openReviewModal(o, item)" 
+    style="
+        position: relative; 
+        z-index: 999; 
+        cursor: pointer; 
+        background: #000; 
+        color: #fff; 
+        border: none; 
+        padding: 8px 14px; 
+        border-radius: 10px; 
+        font-size: 10px; 
+        font-weight: 800;
+        pointer-events: auto; /* Гарантирует, что кнопка кликабельна */
+    ">
+    ОТЗЫВ
+</button>
 
             <button v-if="o.status === 'Доставлен' && !o.reviewed" 
                 @click.stop="openReviewModal(o, item)" 
@@ -1391,6 +1393,7 @@ getProductrating(productId) {
     },
     openReviewModal(order, item) {
             this.vib();
+            console.log("Клик сработал!", order.id, item.title); // Для проверки
             this.selectedOrderForReview = order;
             this.selectedProductForReview = item;
 
@@ -1399,6 +1402,7 @@ getProductrating(productId) {
             this.reviewImages = [];
 
             this.showReviewModal = true;
+            if (this.vib) this.vib(); // Вибрация 
         },
      // Строка ~1060 (внутри methods)
 async uploadReviewImages(e) {
