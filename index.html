@@ -398,15 +398,8 @@
     style="
         position: relative; 
         z-index: 999; 
-        cursor: pointer; 
-        background: #000; 
-        color: #fff; 
-        border: none; 
-        padding: 8px 14px; 
-        border-radius: 10px; 
-        font-size: 10px; 
-        font-weight: 800;
-        pointer-events: auto; /* Гарантирует, что кнопка кликабельна */
+        pointer-events: auto;
+        /* ваши остальные стили */
     ">
     ОТЗЫВ
 </button>
@@ -671,12 +664,15 @@
             <span>{{btn.label}}</span>
         </button>
 
-        <div v-if="showReviewModal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);" @click.self="showReviewModal = false">
-    <div style="background: #fff; padding: 24px; border-radius: 24px; width: 90%; max-width: 400px;">
-        <h3 style="margin-top: 0; font-size: 16px; font-weight: 800;">ОТЗЫВ О ТОВАРЕ</h3>
-        <p style="font-size: 12px; color: var(--gray); margin-bottom: 15px;">{{ selectedProductForReview?.title }}</p>
+        <div v-if="showReviewModal" 
+     style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 99999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);" 
+     @click.self="showReviewModal = false">
+    
+    <div style="background: #fff; padding: 24px; border-radius: 24px; width: 90%; max-width: 400px; box-shadow: 0 20px 40px rgba(0,0,0,0.2);">
+        <h3 style="margin-top: 0; font-size: 16px; font-weight: 800; text-transform: uppercase;">Отзыв о товаре</h3>
+        <p style="font-size: 12px; color: #8e8e93; margin-bottom: 20px;">{{ selectedProductForReview?.title }}</p>
         
-        <div style="display: flex; gap: 10px; margin-bottom: 20px; font-size: 35px; justify-content: center; user-select: none;">
+        <div style="display: flex; gap: 10px; margin-bottom: 25px; font-size: 35px; justify-content: center; user-select: none;">
             <span v-for="i in 5" :key="i" 
                   @click="rating = i" 
                   :style="{ color: i <= rating ? '#ffb400' : '#e5e5ea', cursor: 'pointer' }">
@@ -684,17 +680,20 @@
             </span>
         </div>
 
-        <textarea v-model="reviewText" placeholder="Напишите ваш отзыв..." style="width: 100%; height: 80px; border-radius: 12px; border: 1px solid #eee; padding: 10px; font-family: inherit; font-size: 14px; margin-bottom: 10px; resize: none;"></textarea>
+        <textarea v-model="reviewText" 
+                  placeholder="Расскажите о качестве товара..." 
+                  style="width: 100%; height: 100px; border: 1px solid #eee; border-radius: 12px; padding: 12px; font-family: inherit; font-size: 14px; margin-bottom: 20px; resize: none;"></textarea>
 
-        <label style="font-size: 10px; font-weight: 800; display: block; margin-bottom: 5px;">ПРИКРЕПИТЬ ФОТО (ДО 3 ШТ)</label>
-        <input type="file" multiple @change="uploadReviewImages" style="font-size: 10px; margin-bottom: 15px;">
+        <button @click="submitFinalReview" 
+                :disabled="loading || rating === 0"
+                style="width: 100%; height: 50px; background: #000; color: #fff; border: none; border-radius: 14px; font-weight: 700; cursor: pointer;">
+            {{ loading ? 'ОТПРАВКА...' : 'ОТПРАВИТЬ ОТЗЫВ' }}
+        </button>
         
-        <div style="display: flex; gap: 5px; margin-bottom: 15px;">
-            <img v-for="img in reviewImages" :src="img" style="width: 40px; height: 40px; border-radius: 5px; object-fit: cover;">
-        </div>
-
-        <button @click="submitFinalReview" class="btn-black" style="width: 100%; height: 45px; border-radius: 12px;">ОТПРАВИТЬ</button>
-        <button @click="showReviewModal = false" style="width: 100%; background: none; border: none; margin-top: 10px; color: var(--gray); font-size: 12px;">ОТМЕНА</button>
+        <button @click="showReviewModal = false" 
+                style="width: 100%; background: none; border: none; margin-top: 15px; color: #8e8e93; font-size: 12px;">
+            ОТМЕНА
+        </button>
     </div>
 </div>
     </nav>
@@ -1535,54 +1534,68 @@ updateChart() {
     });
 }
     },
-    mounted() {
+   mounted() {
     tg.ready();
     tg.expand();
 
-    // 1. Получаем пользователя или оставляем null
-    this.user = tg.initDataUnsafe?.user || null;
+    // 1. Получаем данные пользователя
+    const tgUser = tg.initDataUnsafe?.user;
     
-    // 2. Проверяем: если пользователь есть, сравниваем ID. Если нет — isAdmin всегда false.
-    if (this.user && this.user.id) {
-        this.isAdmin = Number(this.user.id) === Number(this.adminId);
+    if (tgUser) {
+        this.user = tgUser;
     } else {
-        this.isAdmin = false;
-        // Опционально: создаем пустой объект для user, чтобы не было ошибок в шаблоне
-        this.user = { id: 0, first_name: 'Гость' }; 
+        this.user = { id: 0, first_name: 'Покупатель' };
+        console.warn("Данные Telegram не получены. Работа в режиме гостя.");
     }
 
-    console.log("Admin Status:", this.isAdmin, "User ID:", this.user.id);
     const checkFb = setInterval(() => {
         if (window.db && window.fb) {
             clearInterval(checkFb);
-            
-            // Загрузка товаров
+
+            // 2. ПРОВЕРКА АДМИНА (делаем внутри, чтобы adminId точно был доступен)
+            if (this.user && this.user.id && this.adminId) {
+                const currentId = String(this.user.id).trim();
+                const adminIdInCode = String(this.adminId).trim();
+                
+                this.isAdmin = (currentId === adminIdInCode);
+                
+                console.log("Ваш ID:", currentId);
+                console.log("ID админа:", adminIdInCode);
+                console.log("Результат проверки:", this.isAdmin);
+            }
+
+            // 3. Загрузка товаров, категорий и отзывов (общие данные)
             window.fb.onSnapshot(window.fb.query(window.fb.collection(window.db, "products"), window.fb.orderBy("createdAt", "desc")), snap => {
                 this.products = snap.docs.map(doc => ({ id: doc.id, ...doc.data(), aIdx: 0 }));
             });
 
-            // Загрузка категорий
             window.fb.onSnapshot(window.fb.collection(window.db, "categories"), snap => {
                 this.categories = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             });
 
-            // Загрузка отзывов
             window.fb.onSnapshot(window.fb.collection(window.db, "reviews"), snap => {
                 this.allReviews = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             });
 
-            // Загрузка всех заказов (ДЛЯ АДМИНА)
-            // Теперь это сработает только если isAdmin действительно true
+            // 4. Загрузка всех заказов (ТОЛЬКО ДЛЯ АДМИНА)
             if (this.isAdmin) {
-                window.fb.onSnapshot(window.fb.query(window.fb.collection(window.db, "orders"), window.fb.orderBy("createdAt", "desc")), snap => {
+                const ordersQuery = window.fb.query(window.fb.collection(window.db, "orders"), window.fb.orderBy("createdAt", "desc"));
+                window.fb.onSnapshot(ordersQuery, snap => {
                     this.allOrders = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    this.$nextTick(() => { this.updateChart(); });
+                    this.$nextTick(() => { 
+                        if (typeof this.updateChart === 'function') this.updateChart(); 
+                    });
                 });
             }
 
-            // Загрузка личных заказов
-            if (this.user && this.user.id) {
-                const qMy = window.fb.query(window.fb.collection(window.db, "orders"), window.fb.where("user.id", "==", this.user.id));
+            // 5. Загрузка личных заказов (ДЛЯ ПОЛЬЗОВАТЕЛЯ)
+            if (this.user && this.user.id !== 0) {
+                // ПРОВЕРКА: пробуем искать и по числу, и по строке, если не уверены в типе данных в БД
+                const qMy = window.fb.query(
+                    window.fb.collection(window.db, "orders"), 
+                    window.fb.where("user.id", "in", [Number(this.user.id), String(this.user.id)])
+                );
+                
                 window.fb.onSnapshot(qMy, snap => {
                     this.myOrders = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 });
