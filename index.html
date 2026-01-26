@@ -367,7 +367,7 @@
     </div>
 
 
-    <div v-if="tab === 'profile'">
+   <div v-if="tab === 'profile'">
     <div style="text-align:center; margin-bottom: 30px;">
         <img :src="user.photo_url || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'" style="width:80px; height:80px; border-radius:50%; border: 1px solid #000; padding: 3px;">
         <div style="font-weight:800; margin-top:10px; text-transform:uppercase;">{{user.first_name || 'Клиент'}}</div>
@@ -380,34 +380,45 @@
         У ВАС ПОКА НЕТ ЗАКАЗОВ
     </div>
 
-    <div v-for="o in myOrders" :key="o.id" class="order-card" style="background: #fff; padding: 15px; border-radius: 15px; margin-bottom: 15px; border: 1px solid #eee; position: relative; z-index: 1;">
+    <div v-for="o in myOrders" :key="o.id" class="order-card" @click="openOrderDetails(o)" style="background: #fff; padding: 15px; border-radius: 15px; margin-bottom: 15px; border: 1px solid #eee; cursor: pointer; position: relative;">
+        
         <div style="display: flex; justify-content: space-between; font-weight: 800; font-size: 11px; margin-bottom: 10px;">
-        <span>ЗАКАЗ №{{ o.order_id || o.id.slice(0,6) }}</span>
-        <span :style="{color: o.status === 'Доставлен' ? '#34c759' : '#007aff'}">{{ o.status || 'В обработке' }}</span>
-    </div>
+            <span>ЗАКАЗ №{{ o.order_id || o.id.slice(0,6) }}</span>
+            <span :style="{color: o.status === 'Доставлен' ? '#34c759' : '#007aff'}">{{ o.status || 'В обработке' }}</span>
+        </div>
 
-    <div v-for="item in o.items" :key="item.id" style="position: relative;">
-    <button v-if="o.status === 'Доставлен' && !o.reviewed" 
-        @click.stop="openReviewModal(o, item)" 
-        style="
-            position: absolute; /* Или relative, но с z-index */
-            right: 0;
-            z-index: 100; 
-            pointer-events: auto; 
-            background: #000; 
-            color: #fff;
-            padding: 8px 12px;
-            border-radius: 10px;
-        ">
-        ОТЗЫВ
-    </button>
+        <div v-for="item in o.items" :key="item.id" style="display: flex; align-items: center; gap: 10px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #f9f9f9; position: relative;">
+            <img :src="item.image" style="width: 45px; height: 45px; border-radius: 8px; object-fit: cover;">
+            
+            <div style="flex: 1;">
+                <div style="font-size: 12px; font-weight: 700;">{{ item.title }}</div>
+                <div style="font-size: 10px; color: var(--gray);">Размер: {{ item.selSize || item.size || '—' }}</div>
+            </div>
+
+            <button v-if="o.status === 'Доставлен' && !o.reviewed" 
+                @click.stop="openReviewModal(o, item)" 
+                style="
+                    z-index: 100; 
+                    pointer-events: auto; 
+                    background: #000; 
+                    color: #fff;
+                    padding: 8px 12px;
+                    border: none;
+                    border-radius: 10px;
+                    font-size: 10px;
+                    font-weight: 800;
+                    cursor: pointer;">
+                ОТЗЫВ
+            </button>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 8px; border-top: 1px dashed #eee;">
+            <div style="font-size: 9px; color: gray;">{{ o.date }}</div>
+            <div style="font-size: 11px; font-weight: 800;">ИТОГО: {{ o.order_total || o.total }} ₽</div>
+        </div>
+    </div>
 </div>
 
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 8px; border-top: 1px dashed #eee;">
-        <div style="font-size: 9px; color: gray;">{{ o.date }}</div>
-        <div style="font-size: 11px; font-weight: 800;">ИТОГО: {{ o.order_total || o.total }} ₽</div>
-    </div>
-    </div>
 </div> <div v-if="tab === 'admin' && isAdmin">
   <div class="admin-section" style="padding-bottom: 100px;"> 
         <h2 class="brand-name" style="font-size: 14px; margin-bottom: 20px;">АДМИН-ПАНЕЛЬ</h2>
@@ -731,6 +742,8 @@ Vue.createApp({
             cart: JSON.parse(localStorage.getItem('naran_cart_v3') || '[]'),
             favorites: JSON.parse(localStorage.getItem('naran_favs_v3') || '[]'),
             
+            showOrderDetails: false, // Видимость окна деталей
+            selectedOrder: null,     // Данные выбранного заказа
             showReviewModal: false,   // Открыто ли окно
             selectedOrderForReview: null,     // Храним объект заказа
             selectedProductForReview: null,   // Храним объект товара
@@ -1384,18 +1397,25 @@ getProductrating(productId) {
         return (sum / productReviews.length).toFixed(1);
     },
     openReviewModal(order, item) {
-            this.vib();
-            console.log("Клик сработал!", order.id, item.title); // Для проверки
-            this.selectedOrderForReview = order;
-            this.selectedProductForReview = item;
+    // 1. Проверка на входные данные (защита от краша)
+    if (!order || !item) return;
 
-            this.rating = 0;
-            this.reviewText = '';
-            this.reviewImages = [];
+    // 2. Сброс состояния (ВАЖНО!) 
+    // Чтобы новое окно было всегда пустым
+    this.rating = 0;
+    this.reviewText = '';
+    this.reviewImages = [];
 
-            this.showReviewModal = true;
-            if (this.vib) this.vib(); // Вибрация 
-        },
+    // 3. Привязка данных
+    this.selectedOrderForReview = order;
+    this.selectedProductForReview = item;
+
+    // 4. Визуальное открытие
+    this.showReviewModal = true;
+
+    // 5. Обратная связь (Haptic)
+    if (typeof this.vib === 'function') this.vib();
+},
      // Строка ~1060 (внутри methods)
 async uploadReviewImages(e) {
             const files = e.target.files;
@@ -1472,6 +1492,17 @@ async submitFinalReview() {
     } finally {
         this.loading = false;
     }
+},
+openOrderDetails(order) {
+    // Логика открытия накладной или модального окна с деталями
+    console.log("Открываем заказ:", order.id);
+    this.printOrder(order); // Например, сразу вызываем печать/просмотр чека
+},
+openReviewModal(order, item) {
+    this.selectedOrderForReview = order;
+    this.selectedProductForReview = item;
+    this.showReviewModal = true;
+    this.vib();
 },
 updateChart() {
     const ctx = document.getElementById('salesChart');
