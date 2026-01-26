@@ -1041,88 +1041,70 @@ async manageCategory(action, id) { // Добавь async здесь
     }
 },
 
-       async checkout() {
-    // 1. Валидация контактов (убираем лишние пробелы через trim())
-    const name = this.form?.name?.trim();
-    const phone = this.form?.phone?.trim();
-
+      async checkout() {
+    // 1. Валидация
     if (this.cart.length === 0) return alert('Ваша корзина пуста');
-    if (!name) return alert('Введите имя');
-    if (!phone) return alert('Введите телефон');
-
-    // 2. ПРОВЕРКА ДОСТАВКИ
-    if (!this.deliv || this.deliv === 'Не выбран') {
-        alert('Пожалуйста, выберите способ доставки: СДЭК, ПОЧТА или 5POST');
-        return; 
+    if (!this.form.name || !this.form.phone) {
+        alert('Пожалуйста, заполните имя и телефон в профиле');
+        return;
     }
-
-    // 3. Проверка адреса
-    const address = this.address?.trim();
-    if (!address || address.includes('Адрес не выбран')) {
-        alert('Пожалуйста, укажите адрес доставки');
+    if (!this.deliv || this.deliv === 'Не выбран') {
+        alert('Пожалуйста, выберите способ доставки');
         return;
     }
 
     this.loading = true;
 
     try {
-        const orderId = Date.now().toString().slice(-6);
+        const orderId = Math.floor(Math.random() * 900000) + 100000;
         
-        // Считаем итоговую сумму явно, если this.total вдруг подводит
-        const calculatedTotal = this.cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+        // Считаем сумму (totalSum)
+        const totalSum = this.cart.reduce((sum, item) => sum + (item.price * (item.qty || 1)), 0);
 
-        // Формируем текст состава заказа
+        // ВАЖНО: Создаем текст состава заказа (itemsText)
         const itemsText = this.cart.map(item => 
-            `▫️ ${item.title} ${item.selSize ? '(' + item.selSize + ')' : ''} x${item.qty} — ${item.price * item.qty} ₽`
+            `▫️ ${item.title} ${item.selSize ? '(' + item.selSize + ')' : ''} x${item.qty || 1} — ${item.price * (item.qty || 1)} ₽`
         ).join('\n');
 
-        // Создаем чистый объект данных
         const orderData = {
             order_id: orderId,
-            customer_name: name,
-            customer_phone: phone,
-            order_total: calculatedTotal || this.total,
+            name: this.form.name,           // Ключ для Python бота
+            customer_name: this.form.name,
+            phone: this.form.phone,         // Ключ для Python бота
+            customer_phone: this.form.phone,
+            total: totalSum,                // Исправляет 0 ₽
+            order_total: totalSum,
             delivery: this.deliv,
-            address: address,
-            items_text: itemsText,
-            // Добавляем массив объектов для Firebase, чтобы в админке было удобнее
-            items: this.cart.map(item => ({
-                title: item.title,
-                price: item.price,
-                qty: item.qty,
-                size: item.selSize || '-'
-            })),
+            address: this.address || "Адрес не указан",
+            items_text: itemsText,          // Теперь данные будут в СМС
             status: 'Новый',
             user: {
-                id: this.user?.id || 0,
-                username: this.user?.username || 'n/a'
-            },
-            createdAt: window.fb.serverTimestamp()
+                id: Number(this.user.id),   // СТРОГО числом для уведомлений
+                username: this.user.username || 'n/a'
+            }
         };
 
-        // Отладка: Посмотрите в консоль браузера перед отправкой!
-        console.log("Данные для отправки:", orderData);
+        // 1. Отправляем в Telegram (для СМС админу)
+        const tg = window.Telegram.WebApp;
+        tg.sendData(JSON.stringify(orderData));
 
-        // 1. Сохраняем в Firebase
-        await window.fb.addDoc(window.fb.collection(window.db, "orders"), orderData);
+        // 2. Сохраняем в Firebase (Используем addDoc)
+        const ordersRef = window.fb.collection(window.db, "orders");
+        await window.fb.addDoc(ordersRef, {
+            ...orderData,
+            createdAt: window.fb.serverTimestamp()
+        });
 
-        // 2. Отправляем в Telegram (JSON строка)
-        // ВАЖНО: tg.sendData работает только в Mini App, запущенных через KeyboardButton
-        if (window.Telegram?.WebApp) {
-            window.Telegram.WebApp.sendData(JSON.stringify(orderData));
-        }
+        tg.showAlert(`✅ Заказ №${orderId} успешно оформлен!`);
         
-        tg.showAlert(`Заказ №${orderId} успешно оформлен!`);
-        
-        // Полная очистка
+        // Очистка
         this.cart = [];
         this.saveCart();
-        this.deliv = '';
         this.showCart = false;
         this.tab = 'profile';
 
     } catch (e) {
-        console.error("Ошибка при оформлении:", e);
+        console.error("Ошибка оформления:", e);
         alert("Ошибка: " + e.message);
     } finally {
         this.loading = false;
