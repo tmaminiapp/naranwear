@@ -264,6 +264,18 @@
         {{s.trim()}}
     </div>
 </div>
+
+<div class="product-rating" @click="openProduct(p)" style="display: flex; align-items: center; gap: 6px; margin: 8px 0 12px 2px;">
+        <div style="display: flex; align-items: center; background: #fff9e6; padding: 2px 8px; border-radius: 8px; border: 1px solid #ffecb3;">
+            <span style="color: #ffb400; font-size: 14px; margin-right: 4px;">★</span>
+            <span style="font-weight: 800; font-size: 13px; color: #d4a017;">
+                {{ getProductRating(p.id) }} 
+            </span>
+        </div>
+        <span style="color: var(--gray); font-size: 11px; font-weight: 600;">
+            {{ allReviews.filter(r => r.productId === p.id).length }} отзывов
+        </span>
+    </div>
                     <button class="btn-black" style="width: 100%;" @click.stop="quickAddToCart(p)">
                         В КОРЗИНУ
                     </button>
@@ -373,31 +385,32 @@
                 <div style="font-size:9px; margin-top:8px; color:gray;">{{o.date}}</div>
             </div>
             
-            <div v-for="o in myOrders" :key="o.id" class="order-card">
-               <div style="display:flex; justify-content:space-between; font-weight:800; font-size:11px;">
-                <span>ЗАКАЗ №{{o.order_id}}</span>
-                <span>{{o.order_total || o.total}} ₽</span>
-              </div>
-              <div :class="['status-badge', o.status === 'Доставлен' ? 'status-ready' : 'status-process']">
-                  {{o.status || 'В обработке'}}
-              </div>
-        
-              <div style="margin-top: 10px; border-top: 1px solid #f2f2f7; padding-top: 8px;">
-                <div v-for="item in o.items" :key="item.id" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
-                  <span style="font-size:10px;">{{item.title}} {{item.selSize ? '('+item.selSize+')' : ''}}</span>
-                
-                  <button 
-                    v-if="o.status === 'Доставлен'"
-                    @click="openReviewModal(o, item)"
-                    style="background: #000; color: #fff; border: none; font-size: 9px; padding: 4px 8px; border-radius: 4px; font-weight: 700;">
-                    ОТЗЫВ
-                </button>
-                  </div>
-                 </div>
-        
-                <div style="font-size:9px; margin-top:8px; color:gray;">{{o.date}}</div>
-               </div>
+
+            <div v-for="o in myOrders" :key="o.id" class="order-card" style="background: #fff; padding: 15px; border-radius: 15px; margin-bottom: 15px; border: 1px solid #eee;">
+    <div style="display: flex; justify-content: space-between; font-weight: 800; font-size: 11px; margin-bottom: 10px;">
+        <span>ЗАКАЗ №{{ o.order_id || o.id.slice(0,6) }}</span>
+        <span :style="{color: o.status === 'Доставлен' ? '#34c759' : '#007aff'}">{{ o.status }}</span>
+    </div>
+
+    <div v-for="item in o.items" :key="item.id" style="display: flex; align-items: center; gap: 10px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #f9f9f9;">
+             <img :src="item.image" style="width: 45px; height: 45px; border-radius: 8px; object-fit: cover; background: #f5f5f5;">
+            <div style="flex: 1;">
+            <div style="font-size: 12px; font-weight: 700;">{{ item.title }}</div>
+            <div style="font-size: 10px; color: var(--gray);">Размер: {{ item.selSize || item.size || '—' }}</div>
             </div>
+
+             <button v-if="o.status === 'Доставлен' && !o.reviewed" 
+            @click.stop="openReviewModal(o, item)" 
+            style="background: #000; color: #fff; border: none; padding: 6px 12px; border-radius: 8px; font-size: 10px; font-weight: 800;">
+            ОТЗЫВ
+             </button>
+            </div>
+    
+             <div style="font-size: 10px; font-weight: 800; margin-top: 12px; text-align: right;">
+             ИТОГО: {{ o.order_total || o.total }} ₽
+            </div>
+      </div>
+
 
         <div v-if="isAdmin" class="admin-section">
             <h2 class="brand-name" style="font-size: 14px; margin-bottom: 20px;">АДМИН-ПАНЕЛЬ</h2>
@@ -646,6 +659,28 @@
             <svg v-html="btn.icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>
             <span>{{btn.label}}</span>
         </button>
+        <div v-if="showReviewModal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);" @click.self="showReviewModal = false">
+    <div style="background: #fff; padding: 24px; border-radius: 24px; width: 90%; max-width: 400px;">
+        <h3 style="margin-top: 0; font-size: 16px; font-weight: 800;">ОТЗЫВ О ТОВАРЕ</h3>
+        <p style="font-size: 12px; color: var(--gray); margin-bottom: 15px;">{{ selectedProductForReview?.title }}</p>
+        
+        <div style="display: flex; gap: 10px; margin-bottom: 20px; font-size: 30px; justify-content: center;">
+            <span v-for="i in 5" :key="i" @click="starRating = i" :style="{ color: i <= starRating ? '#ffb400' : '#e0e0e0', cursor: 'pointer' }">★</span>
+        </div>
+
+        <textarea v-model="reviewText" placeholder="Напишите ваш отзыв..." style="width: 100%; height: 80px; border-radius: 12px; border: 1px solid #eee; padding: 10px; font-family: inherit; font-size: 14px; margin-bottom: 10px; resize: none;"></textarea>
+
+        <label style="font-size: 10px; font-weight: 800; display: block; margin-bottom: 5px;">ПРИКРЕПИТЬ ФОТО (ДО 3 ШТ)</label>
+        <input type="file" multiple @change="uploadReviewImages" style="font-size: 10px; margin-bottom: 15px;">
+        
+        <div style="display: flex; gap: 5px; margin-bottom: 15px;">
+            <img v-for="img in reviewImages" :src="img" style="width: 40px; height: 40px; border-radius: 5px; object-fit: cover;">
+        </div>
+
+        <button @click="submitFinalReview" class="btn-black" style="width: 100%; height: 45px; border-radius: 12px;">ОТПРАВИТЬ</button>
+        <button @click="showReviewModal = false" style="width: 100%; background: none; border: none; margin-top: 10px; color: var(--gray); font-size: 12px;">ОТМЕНА</button>
+    </div>
+</div>
     </nav>
 </div>
 
@@ -688,6 +723,13 @@ Vue.createApp({
             cart: JSON.parse(localStorage.getItem('naran_cart_v3') || '[]'),
             favorites: JSON.parse(localStorage.getItem('naran_favs_v3') || '[]'),
             
+            showReviewModal: false,   // Открыто ли окно
+            selectedOrderForReview: null,     // Храним объект заказа
+            selectedProductForReview: null,   // Храним объект товара
+            starRating: 5,            // Оценка по умолчанию
+            reviewText: '',           // Текст отзыва
+            reviewImages: [],                 // Массив для нескольких фото
+
             user: {},
             isAdmin: false,
             adminId: 387881523,
@@ -1083,19 +1125,17 @@ async manageCategory(action, id) { // Добавь async здесь
     }
 },
 
-        async checkout() {
-    // 1. Валидация контактов
+       async checkout() {
+    // 1. Валидация
     if (this.cart.length === 0) return alert('Ваша корзина пуста');
     if (!this.form.name) return alert('Введите имя');
     if (!this.form.phone) return alert('Введите телефон');
 
-    // 2. ПРОВЕРКА ДОСТАВКИ (Синхронизировано с твоим data.deliv)
     if (!this.deliv || this.deliv === '' || this.deliv === 'Не выбран') {
-        alert('Пожалуйста, выберите способ доставки: СДЭК, ПОЧТА или 5POST');
+        alert('Пожалуйста, выберите способ доставки');
         return; 
     }
 
-    // 3. Проверка адреса
     if (!this.address || this.address.trim() === '' || this.address.includes('Адрес не выбран')) {
         alert('Пожалуйста, укажите адрес доставки');
         return;
@@ -1106,7 +1146,7 @@ async manageCategory(action, id) { // Добавь async здесь
     try {
         const orderId = Date.now().toString().slice(-6);
         
-        // Формируем текст состава заказа
+        // Текст для уведомления в бот (оставляем как у вас было)
         const itemsText = this.cart.map(item => 
             `▫️ ${item.title} ${item.selSize ? '('+item.selSize+')' : ''} x${item.qty} — ${item.price * item.qty} ₽`
         ).join('\n');
@@ -1116,10 +1156,21 @@ async manageCategory(action, id) { // Добавь async здесь
             customer_name: this.form.name,
             customer_phone: this.form.phone,
             order_total: this.total,
-            delivery: this.deliv, // Ключ для Python-бота
+            delivery: this.deliv, 
             address: this.address,
-            items_text: itemsText,
+            items_text: itemsText, // Для бота
+            
+            // ВАЖНО: Добавляем структурированный массив товаров для истории и отзывов
+            items: this.cart.map(item => ({
+                id: item.id,            // ID товара для привязки отзыва
+                title: item.title,
+                price: item.price,
+                image: item.images ? item.images[0] : '', // Фото для истории заказов
+                size: item.selSize || item.tempSize || '—'
+            })),
+
             status: 'Новый',
+            reviewed: false, // Пометка, что отзыв еще не оставлен
             user: {
                 id: this.user.id || 0,
                 username: this.user.username || 'n/a'
@@ -1130,15 +1181,15 @@ async manageCategory(action, id) { // Добавь async здесь
         // Сохраняем в Firebase
         await window.fb.addDoc(window.fb.collection(window.db, "orders"), orderData);
 
-        // Отправляем в Telegram
+        // Отправляем данные в Telegram боту
         tg.sendData(JSON.stringify(orderData));
         
         tg.showAlert(`Заказ №${orderId} успешно оформлен!`);
         
-        // Полная очистка после успеха
+        // Очистка
         this.cart = [];
         this.saveCart();
-        this.deliv = ''; // Сбрасываем выбор доставки
+        this.deliv = '';
         this.showCart = false;
         this.tab = 'profile';
 
@@ -1316,8 +1367,12 @@ async leaveReview(order, item) {
     const rating = prompt("Оцените товар от 1 до 5:", "5");
     const text = prompt("Напишите ваш отзыв:");
     
-    if (rating && text) {
+    // Проверяем, что пользователь ввел данные и оценка — это число 1-5
+    if (rating && text && !isNaN(rating) && rating >= 1 && rating <= 5) {
         try {
+            this.loading = true;
+            
+            // 1. Сохраняем отзыв в коллекцию reviews
             await window.fb.addDoc(window.fb.collection(window.db, "reviews"), {
                 productId: item.id,
                 orderId: order.id,
@@ -1327,13 +1382,89 @@ async leaveReview(order, item) {
                 text: text,
                 createdAt: window.fb.serverTimestamp()
             });
-            alert("Спасибо за отзыв!");
+
+            // 2. ОБНОВЛЯЕМ ЗАКАЗ: ставим отметку, что отзыв оставлен
+            // Это нужно, чтобы кнопка "ОТЗЫВ" скрылась
+            const orderRef = window.fb.doc(window.db, "orders", order.id);
+            await window.fb.updateDoc(orderRef, {
+                reviewed: true
+            });
+
+            alert("Спасибо! Ваш отзыв поможет другим покупателям. ❤️");
+            this.vib(); // Твоя функция вибрации
         } catch (e) {
             console.error(e);
-            alert("Ошибка при сохранении отзыва");
+            alert("Ошибка при сохранении отзыва: " + e.message);
+        } finally {
+            this.loading = false;
         }
+    } else if (rating) {
+        alert("Пожалуйста, введите корректную оценку от 1 до 5");
     }
 },
+getProductRating(productId) {
+        // Фильтруем все отзывы, оставляя только те, что относятся к этому товару
+        const productReviews = this.allReviews.filter(r => r.productId === productId);
+        
+        if (productReviews.length === 0) return 0; // Если отзывов нет, рейтинг 0
+        
+        // Суммируем все оценки
+        const sum = productReviews.reduce((acc, rev) => acc + rev.rating, 0);
+        
+        // Делим сумму на количество отзывов и округляем до 1 знака (например, 4.8)
+        return (sum / productReviews.length).toFixed(1);
+    },
+    openReviewModal(order, item) {
+            this.vib();
+            this.selectedOrderForReview = order;
+            this.selectedProductForReview = item;
+            this.starRating = 5;
+            this.reviewText = '';
+            this.reviewImages = [];
+            this.showReviewModal = true;
+        },
+     // Строка ~1060 (внутри methods)
+async uploadReviewImages(e) {
+            const files = e.target.files;
+            for (let f of files) {
+                if (this.reviewImages.length >= 3) break;
+                const fd = new FormData();
+                fd.append('image', f);
+                try {
+                    const r = await fetch('https://api.imgbb.com/1/upload?key=839e62907e9a52f0159461b7771bcb2f', { method: 'POST', body: fd });
+                    const d = await r.json();
+                    if (d.data?.url) this.reviewImages.push(d.data.url);
+                } catch (err) { console.error("Ошибка загрузки фото"); }
+            }
+        },
+
+async submitFinalReview() {
+            if (!this.reviewText.trim()) return alert("Напишите текст отзыва");
+            this.loading = true;
+            try {
+                await window.fb.addDoc(window.fb.collection(window.db, "reviews"), {
+                    productId: this.selectedProductForReview.id,
+                    orderId: this.selectedOrderForReview.id,
+                    rating: Number(this.starRating),
+                    text: this.reviewText,
+                    images: this.reviewImages,
+                    userName: this.user.first_name || "Покупатель",
+                    createdAt: window.fb.serverTimestamp()
+                });
+
+                // Помечаем заказ как "с отзывом", чтобы кнопка исчезла
+                await window.fb.updateDoc(window.fb.doc(window.db, "orders", this.selectedOrderForReview.id), {
+                    reviewed: true
+                });
+
+                this.showReviewModal = false;
+                tg.showAlert("⭐ Спасибо за отзыв!");
+            } catch (e) { 
+                alert("Ошибка сохранения: " + e.message); 
+            } finally { 
+                this.loading = false; 
+            }
+        },
 updateChart() {
     const ctx = document.getElementById('salesChart');
     if (!ctx) return;
