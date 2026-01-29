@@ -1326,10 +1326,10 @@ async deleteOrder(docId) {
     }
 },
 updateChart() {
-    const ctx = document.getElementById('orderChart').getContext('2d');
-    if (!ctx) return;
+    const canvas = document.getElementById('orderChart');
+    if (!canvas) return; // Если мы не на вкладке админа, выходим
+    const ctx = canvas.getContext('2d');
 
-    // Генерируем даты последних 7 дней
     const labels = [];
     const counts = [];
     const now = new Date();
@@ -1339,18 +1339,20 @@ updateChart() {
         d.setDate(now.getDate() - i);
         labels.push(d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }));
         
-        // Считаем заказы за этот день
         const dayStart = new Date(d.setHours(0,0,0,0)).getTime();
         const dayEnd = new Date(d.setHours(23,59,59,999)).getTime();
         
         const dayOrders = this.allOrders.filter(o => {
-            const t = o.createdAt?.seconds ? o.createdAt.seconds * 1000 : 0;
+            const t = o.createdAt?.seconds ? o.createdAt.seconds * 1000 : o.createdAt || 0;
             return t >= dayStart && t <= dayEnd;
         });
         counts.push(dayOrders.length);
     }
 
-    if (this.chart) this.chart.destroy();
+    // Уничтожаем старый объект графика, чтобы не было наслоений
+    if (this.chart) {
+        this.chart.destroy();
+    }
 
     this.chart = new Chart(ctx, {
         type: 'line',
@@ -1362,7 +1364,7 @@ updateChart() {
                 borderColor: '#000',
                 backgroundColor: 'rgba(0,0,0,0.05)',
                 borderWidth: 3,
-                tension: 0.4, // Делает линию плавной (премиально)
+                tension: 0.4,
                 fill: true,
                 pointRadius: 4,
                 pointBackgroundColor: '#000'
@@ -1370,11 +1372,8 @@ updateChart() {
         },
         options: {
             responsive: true,
-            plugins: { legend: { display: false } },
-            scales: {
-                y: { beginAtZero: true, grid: { display: false }, ticks: { stepSize: 1 } },
-                x: { grid: { display: false } }
-            }
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } }
         }
     });
 }
