@@ -833,8 +833,13 @@ Vue.createApp({
 
 quickAddToCart(p) {
     this.vib();
-    const selectedSize = p.tempSize || (p.sizes ? p.sizes.split(',')[0].trim() : '');
-    const currentColor = (p.colors && p.colors[p.aIdx]) ? p.colors[p.aIdx] : 'Белый';
+    
+    // 1. Берем выбранный размер или первый доступный
+    const selectedSize = p.tempSize || (p.sizes ? String(p.sizes).split(',')[0].trim() : 'Универсал');
+    
+    // 2. ИСПРАВЛЕННАЯ ЛОГИКА ЦВЕТА:
+    // Сначала ищем поле color (из админки), если его нет - ищем в массиве, если и его нет - Белый
+    const currentColor = p.color || (p.colors && p.colors[p.aIdx] ? p.colors[p.aIdx] : 'Белый');
     
     const cartId = p.id + selectedSize + currentColor;
     const exist = this.cart.find(i => i.cartId === cartId);
@@ -842,8 +847,15 @@ quickAddToCart(p) {
     if (exist) {
         exist.qty++;
     } else {
-        // ИСПРАВЛЕНО: теперь везде 'p', а не 'product'
-        this.cart.push({ ...p, cartId, selSize: selectedSize, selColor: currentColor, qty: 1, price: Number(p.price) });
+        // Добавляем в корзину со всеми параметрами
+        this.cart.push({ 
+            ...p, 
+            cartId, 
+            selSize: selectedSize, 
+            selColor: currentColor, 
+            qty: 1, 
+            price: Number(p.price) 
+        });
     }
     this.saveCart();
     tg.HapticFeedback.notificationOccurred('success');
