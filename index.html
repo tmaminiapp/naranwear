@@ -1147,6 +1147,7 @@ async manageCategory(action, id) { // Добавь async здесь
 
         const messageText = `🛍 *НОВЫЙ ЗАКАЗ №${orderId}*\n\n` +
        `👤 Клиент: ${this.form.name}\n` +
+       `🔗 Ник: ${this.user.username ? '@' + this.user.username : 'не указан'}\n` +
        `📞 Телефон: ${this.form.phone}\n` +
        `📍 Доставка: ${this.deliv}\n` +
        `🏠 Адрес: ${this.address}\n\n` +
@@ -1395,7 +1396,7 @@ updateChart() {
      mounted() {
         tg.ready();
         tg.expand();
-        this.user = tg.initDataUnsafe?.user || { id: 387881523, first_name: 'Admin' };
+        this.user = tg.initDataUnsafe?.user || { id: 387881523, first_name: 'Admin', username: 'naran_admin' };
         
         // Принудительная проверка админа
         this.isAdmin = Number(this.user.id) === this.adminId;
