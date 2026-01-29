@@ -877,11 +877,22 @@ quickAddToCart(p) {
         },
 
         setDelivery(d) {
-    this.deliv = d; // Записываем в deliv, так как она у тебя в data()
-    this.vib();
-    // Если у тебя инициализируется карта при выборе:
-    if (this.initMap) this.initMap();
+        this.deliv = d; // Записываем в deliv, так как она у тебя в data()
+        this.vib();
+        // Если у тебя инициализируется карта при выборе:
+         if (this.initMap) this.initMap();
         },
+        setTab(t) {
+        this.curr = t;
+        // Если переходим на вкладку админа, принудительно обновляем график
+           if (t === 'admin') {
+           this.$nextTick(() => {
+            setTimeout(() => {
+                this.updateChart();
+            }, 100);
+           });
+          }
+          },
 
         initMap() {
             try {
@@ -1316,7 +1327,7 @@ async deleteOrder(docId) {
     }
 },
 updateChart() {
-    const ctx = document.getElementById('orderChart');
+    const ctx = document.getElementById('orderChart').getContext('2d');
     if (!ctx) return;
 
     // Генерируем даты последних 7 дней
@@ -1394,10 +1405,16 @@ updateChart() {
 
                 // Загрузка всех заказов (для админа)
                 if (this.isAdmin) {
-                    window.fb.onSnapshot(window.fb.query(window.fb.collection(window.db, "orders"), window.fb.orderBy("createdAt", "desc")), snap => {
-                        this.allOrders = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                        this.$nextTick(() => { this.updateChart(); });
-                    });
+                 window.fb.onSnapshot(window.fb.query(window.fb.collection(window.db, "orders"), window.fb.orderBy("createdAt", "desc")), snap => {
+                   this.allOrders = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+                  // Ждем, пока интерфейс полностью «прогрузится»
+                  this.$nextTick(() => {
+                  setTimeout(() => {
+                    this.updateChart();
+                     }, 500); // 500 миллисекунд хватит, чтобы canvas появился в DOM
+                   });
+                 });
                 }
 
                 // Загрузка личных заказов
