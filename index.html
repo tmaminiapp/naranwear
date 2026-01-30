@@ -349,6 +349,11 @@
                 <div id="map" v-show="deliv"></div>
                 <div v-if="address" style="font-size:12px; font-weight:700; margin-bottom: 20px;">📍 {{address}}</div>
 
+                <div style="font-size: 9px; color: var(--gray); line-height: 1.2; margin-bottom: 15px; text-align: center; font-family: 'Montserrat', sans-serif;">
+    Нажимая на кнопку, вы даете согласие на <a href="#" style="color: var(--dark); text-decoration: underline;">обработку персональных данных</a> 
+    в соответствии с 152-ФЗ для оформления и доставки заказа.
+                 </div>
+
                 <button class="btn-black" style="width:100%; height:60px; font-size: 14px;" @click="checkout">ОФОРМИТЬ ЗАКАЗ • {{total}} ₽</button>
             </div>
         </div>
@@ -955,33 +960,55 @@ quickAddToCart(p) {
             } catch (e) { console.error("Map error", e); }
         },
 
-        getAddress(lat, lon) {
-            const currentKey = 'cab82c94-e619-42eb-9814-3361712feaf0';
-            const url = `https://catalog.api.2gis.com/3.0/items/geocode?lat=${lat}&lon=${lon}&radius=50&key=${currentKey}`;
+       getAddress(lat, lon) {
+    const currentKey = 'cab82c94-e619-42eb-9814-3361712feaf0';
+    // Добавили запрос всех полей, где может прятаться город
+    const url = `https://catalog.api.2gis.com/3.0/items/geocode?lat=${lat}&lon=${lon}&radius=50&fields=items.adm_div,items.address,items.full_name&key=${currentKey}`;
 
-            fetch(url)
-                .then(r => r.json())
-                .then(res => {
-                    if (res.result?.items?.length) {
-                        const addrName = res.result.items[0].address_name || res.result.items[0].name;
-                        
-                        // В вашем файле адрес должен попасть в ТРИ места, чтобы заработать:
-                        const fullAddr = (this.deliv ? this.deliv + ': ' : '') + addrName;
-                        
-                        this.address = fullAddr; // 1. Для текста под картой 📍
-                        if (this.form) this.form.address = fullAddr; // 2. Для данных заказа
-                        localStorage.setItem('naran_last_addr', fullAddr); // 3. В память
-                        
-                        // Важно для Vue: принудительно обновить экран
-                        this.$forceUpdate();
-                        
-                        if (window.Telegram?.WebApp?.HapticFeedback) {
-                            window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
-                        }
-                    }
-                })
-                .catch(err => console.error("2GIS error", err));
-        },
+    fetch(url)
+        .then(r => r.json())
+        .then(res => {
+            if (res.result?.items?.length) {
+                const item = res.result.items[0];
+                let city = '';
+
+                // 1. Ищем город в административном делении
+                if (item.adm_div) {
+                    const c = item.adm_div.find(d => ['city', 'settlement', 'district'].includes(d.type));
+                    if (c) city = c.name;
+                }
+
+                // 2. Если Москва всё еще не нашлась, берем её из full_name (там всегда есть город)
+                if (!city && item.full_name) {
+                    // Разбиваем "Москва, Манежная площадь, 1" и берем первый кусок
+                    city = item.full_name.split(',')[0].trim();
+                }
+
+                // 3. Если город - это округ Москвы (напр. Зеленоград), проверяем это
+                const streetHouse = item.address_name || item.name;
+                
+                // Собираем адрес. Если город уже есть в названии улицы, не дублируем
+                let cleanAddress = streetHouse;
+                if (city && !streetHouse.toLowerCase().includes(city.toLowerCase())) {
+                    cleanAddress = city + ', ' + streetHouse;
+                }
+
+                // ТВОЯ ЛОГИКА СОХРАНЕНИЯ (БЕЗ ИЗМЕНЕНИЙ)
+                const fullAddr = (this.deliv ? this.deliv + ': ' : '') + cleanAddress;
+                
+                this.address = fullAddr; 
+                if (this.form) this.form.address = fullAddr; 
+                localStorage.setItem('naran_last_addr', fullAddr); 
+                
+                this.$forceUpdate();
+                
+                if (window.Telegram?.WebApp?.HapticFeedback) {
+                    window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
+                }
+            }
+        })
+        .catch(err => console.error("2GIS error", err));
+},
 
         openSupport() { window.open('https://t.me/opttania', '_blank'); },
 
