@@ -499,32 +499,44 @@
 
 
                 <div v-for="p in products" :key="p.id" 
-     style="display: flex; align-items: center; gap: 10px; padding: 10px; border-bottom: 1px solid #f2f2f7;"
-     :style="{ opacity: p?.hidden ? '0.4' : '1' }">
+     style="display: flex; align-items: flex-start; gap: 12px; padding: 12px; border-bottom: 1px solid #f2f2f7;"
+     :style="{ opacity: p?.hidden ? '0.5' : '1' }">
     
-    <img :src="p.images ? p.images[0] : ''" style="width: 40px; height: 50px; object-fit: cover; border-radius: 4px; background: #eee;">
+    <img :src="p.images ? p.images[0] : ''" style="width: 50px; height: 60px; object-fit: cover; border-radius: 6px; background: #eee;">
     
     <div style="flex: 1; min-width: 0;">
-        <div style="font-weight: 700; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ p.title }}</div>
-        <div style="font-size: 11px; color: #8e8e93;">{{ p.price }} ₽</div>
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+            <div style="font-weight: 800; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1;">
+                {{ p.title }}
+            </div>
+            
+            <div style="display: flex; gap: 12px; align-items: center; margin-left: 10px;">
+                <span @click.stop="toggleVisibility(p)" style="cursor: pointer; font-size: 16px;">
+                    {{ p.hidden ? '🙈' : '👁️' }}
+                </span>
+                <span @click.stop="editProduct(p)" style="cursor: pointer; font-size: 14px;">✏️</span>
+                <span @click.stop="deleteProductFromCloud(p.id)" style="cursor: pointer; font-size: 14px; color: #ff3b30;">🗑️</span>
+            </div>
+        </div>
+
+        <div style="font-size: 12px; font-weight: 600; color: #8e8e93;">{{ p.price }} ₽</div>
         
-        <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px;">
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;">
             <div v-for="sz in p.sizes" 
                  :key="sz.value"
                  @click.stop="toggleSizeStatus(p, sz)"
-                 :style="{
-                     padding: '2px 6px',
-                     fontSize: '9px',
-                     borderRadius: '5px',
-                     cursor: 'pointer',
-                     fontWeight: '800',
-                     background: sz.visible !== false ? '#34c759' : '#ff3b30',
-                     color: '#fff',
-                     border: '1px solid rgba(0,0,0,0.1)'
+                 style="display: flex; align-items: center; gap: 3px; cursor: pointer; font-size: 11px; font-weight: 700; padding: 4px 8px; border-radius: 6px; background: #f2f2f7;"
+                 :style="{ 
+                    color: sz.visible !== false ? '#000' : '#ff3b30',
+                    textDecoration: sz.visible !== false ? 'none' : 'line-through'
                  }">
                 {{ sz.value }}
+                <span style="font-size: 10px;">{{ sz.visible !== false ? '👁️' : '❌' }}</span>
             </div>
         </div>
+    </div>
+</div>
+
     </div> <div style="display: flex; gap: 12px;">
         <button @click="editProduct(p)" style="border:none; background:none; font-size: 16px; cursor: pointer;">✏️</button>
         <button @click="toggleVisibility(p)" style="border:none; background:none; cursor: pointer; font-size: 16px;">
@@ -1155,6 +1167,27 @@ async toggleSizeStatus(product, sizeObj) {
         if (confirm(msg)) runDelete();
     }
 },
+async deleteProductFromCloud(id) {
+        const confirmMsg = "⚠️ Вы точно хотите удалить этот товар из базы НАВСЕГДА?";
+        
+        const runDelete = async () => {
+            try {
+                // Удаляем из коллекции products по ID
+                await window.fb.deleteDoc(window.fb.doc(window.db, "products", id));
+                if (window.Telegram?.WebApp?.HapticFeedback) {
+                    window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+                }
+            } catch (e) {
+                alert("Ошибка при удалении: " + e.message);
+            }
+        };
+
+        if (window.Telegram?.WebApp?.showConfirm) {
+            window.Telegram.WebApp.showConfirm(confirmMsg, (yes) => { if (yes) runDelete(); });
+        } else {
+            if (confirm(confirmMsg)) runDelete();
+        }
+    },
 
         async toggleVisibility(p) {
     if (!p || !p.id) return;
