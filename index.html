@@ -920,27 +920,34 @@ Vue.createApp({
         addToCart(p) {
     this.vib();
     
-    // 1. Определяем выбранный размер. 
-    // Если в карточке selSize это объект, берем его .value, если строка — берем как есть.
-    const selectedSize = (this.selP && this.selP.selSize) ? 
-                         (typeof this.selP.selSize === 'object' ? this.selP.selSize.value : this.selP.selSize) : 
-                         (p.selSize || '');
+    // 1. ОПРЕДЕЛЯЕМ РАЗМЕР
+    // Если мы в карточке (this.selP), берем размер оттуда. Если в каталоге — берем первый доступный.
+    let selectedSize = '';
+    if (this.selP && this.selP.id === p.id && this.selP.selSize) {
+        selectedSize = typeof this.selP.selSize === 'object' ? this.selP.selSize.value : this.selP.selSize;
+    } else {
+        // Логика для быстрого добавления из каталога
+        const firstAvailable = p.sizes.find(s => s.visible !== false);
+        selectedSize = firstAvailable ? (typeof firstAvailable === 'object' ? firstAvailable.value : firstAvailable) : '';
+    }
 
-    // 2. Определяем текущий цвет
-    const currentColor = (p.colors && p.colors[p.aIdx]) ? p.colors[p.aIdx] : (p.selColor || 'Белый');
+    // 2. ОПРЕДЕЛЯЕМ ЦВЕТ
+    // Берем цвет из карточки (через индекс aIdx) или базовый цвет товара
+    const currentColor = (p.colors && p.colors[p.aIdx]) ? p.colors[p.aIdx] : (p.color || 'Стандарт');
     
-    // 3. Собираем уникальный ID для корзины (чтобы разные размеры одного товара были разными строчками)
+    // 3. СОЗДАЕМ УНИКАЛЬНЫЙ ID (ID товара + Размер + Цвет)
     const cartId = p.id + selectedSize + currentColor;
+    
     const exist = this.cart.find(i => i.cartId === cartId);
     
     if (exist) {
         exist.qty++;
     } else {
-        // 4. Добавляем в корзину, сохраняя именно строковое значение размера (selectedSize)
+        // Сохраняем товар в корзину
         this.cart.push({ 
             ...p, 
             cartId, 
-            selSize: selectedSize, // Теперь тут всегда будет строка (например, "42")
+            selSize: selectedSize, 
             selColor: currentColor, 
             qty: 1, 
             price: Number(p.price) 
@@ -948,11 +955,13 @@ Vue.createApp({
     }
     
     this.saveCart();
-    this.selP = null; // Закрываем карточку
-    this.view = 'catalog'; // Возвращаемся в каталог, если нужно
     
-    if (window.tg && window.tg.HapticFeedback) {
-        window.tg.HapticFeedback.notificationOccurred('success');
+    // Закрываем карточку после добавления (опционально)
+    this.selP = null;
+    this.view = 'catalog'; 
+    
+    if (window.Telegram?.WebApp?.HapticFeedback) {
+        window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
     }
 },
 quickAddToCart(p) {
