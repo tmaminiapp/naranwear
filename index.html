@@ -509,21 +509,29 @@
         </div>
 
         <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;">
-            <div v-for="sz in p.sizes" 
-                 :key="sz.value"
-                 @click.stop="toggleSizeStatus(p, sz)"
-                 style="display: flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 6px; background: #f2f2f7; font-size: 11px; font-weight: 700; cursor: pointer;"
-                 :style="{ 
-                    color: sz.visible !== false ? '#000' : '#ff3b30',
-                    textDecoration: sz.visible !== false ? 'none' : 'line-through'
-                 }">
-                {{ sz.value }}
-                <span>{{ sz.visible !== false ? '👁️' : '❌' }}</span>
+            <div v-for="sz in p.sizes" :key="sz.value" 
+                 style="display: flex; align-items: center; background: #fff; border-radius: 4px; border: 1px solid #ddd; overflow: hidden;">
+                
+                <span style="padding: 4px 8px; font-size: 11px; font-weight: 700;"
+                      :style="{ 
+                         color: sz.visible !== false ? '#000' : '#8e8e93',
+                         textDecoration: sz.visible !== false ? 'none' : 'line-through' 
+                      }">
+                    {{ sz.value }}
+                </span>
+
+                <button @click.stop="toggleSizeStatus(p, sz)" 
+                        style="border: none; border-left: 1px solid #ddd; padding: 4px 8px; font-size: 9px; font-weight: 800; cursor: pointer; text-transform: uppercase;"
+                        :style="{ 
+                           background: sz.visible !== false ? '#f2f2f7' : '#ff3b30', 
+                           color: sz.visible !== false ? '#000' : '#fff' 
+                        }">
+                    {{ sz.visible !== false ? 'СКРЫТЬ' : 'ПОКАЗАТЬ' }}
+                </button>
             </div>
         </div>
     </div>
 </div>
-
            <hr style="margin: 6px 0; border: none; border-top: 2px solid #000;">   
 
             <h3 class="brand-name" style="font-size:12px; margin-top:2px;">ЗАКАЗЫ ({{allOrders.length}}) | ВЫРУЧКА: {{revenue}} ₽</h3>
@@ -1181,17 +1189,20 @@ async deleteProductFromCloud(id) {
 },
 
 async toggleSizeStatus(product, sizeObj) {
-    // Меняем статус на противоположный
-    sizeObj.visible = sizeObj.visible === false ? true : false;
+    // Инвертируем видимость (если было true, станет false)
+    sizeObj.visible = sizeObj.visible === false;
     
     try {
-        const productRef = window.fb.doc(window.db, "products", product.id);
-        await window.fb.updateDoc(productRef, {
-            sizes: product.sizes // Отправляем обновленный массив в базу
+        // Обновляем весь массив размеров этого товара в базе
+        await window.fb.updateDoc(window.fb.doc(window.db, "products", product.id), {
+            sizes: product.sizes
         });
-        if (window.tg?.HapticFeedback) window.tg.HapticFeedback.impactOccurred('light');
+        // Вибрация для подтверждения (в Telegram)
+        if (window.Telegram?.WebApp?.HapticFeedback) {
+            window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
+        }
     } catch (e) {
-        console.error("Ошибка:", e);
+        console.error("Ошибка обновления размера:", e);
     }
 },
 
