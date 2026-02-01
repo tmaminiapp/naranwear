@@ -256,12 +256,10 @@
                     </div>
                     
                     <div class="card-sizes">
-    <div v-for="s in (String(p.sizes || '').split(','))" 
-         v-if="p.sizes"
-         :key="s" 
-         @click="p.tempSize = s.trim(); vib()" 
-         :class="['size-chip', {active: (p.tempSize || String(p.sizes).split(',')[0].trim()) === s.trim()}]">
-        {{s.trim()}}
+    <div v-for="s in p.sizes" :key="s.value"
+         class="size-chip"
+         :style="s.visible !== false ? {} : { background: '#eee', color: '#bbb', textDecoration: 'line-through' }">
+        {{ typeof s === 'object' ? s.value : s }}
     </div>
 </div>
                     <button class="btn-black" style="width: 100%;" @click.stop="quickAddToCart(p)">
@@ -631,8 +629,10 @@
             
             <div style="font-size: 10px; font-weight: 800; text-transform: uppercase;">ВЫБЕРИТЕ РАЗМЕР</div>
             <div class="size-grid">
-                <button v-for="s in selP.sizes.split(',')" :key="s" @click="selP.selSize = s.trim(); vib()" :class="['size-btn', {active: selP.selSize === s.trim()}]">
-                    {{s.trim()}}
+                <button v-for="s in selP.sizes" :key="s.value"
+        @click="s.visible !== false ? (selP.selSize = s.value) : null"
+        :class="['size-btn', { active: selP.selSize === s.value }]">
+    {{ typeof s === 'object' ? s.value : s }}
                 </button>
             </div>
 
