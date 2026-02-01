@@ -255,20 +255,13 @@
                         <span v-if="p.oldPrice" class="old-price">{{p.oldPrice}} ₽</span>
                     </div>
                     
-                    <div class="card-sizes" style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px;">
-    <div v-for="s in p.sizes" :key="(typeof s === 'object' ? s.value : s)"
-         @click.stop="s.visible !== false ? (p.selSize = (typeof s === 'object' ? s.value : s), vib()) : null"
+                    <div class="card-sizes">
+    <div v-for="s in p.sizes" :key="s.value"
          class="size-chip"
-         :style="s.visible !== false ? 
-                { 
-                    background: (p.selSize || (p.sizes.find(x => x.visible !== false) || {}).value || (typeof p.sizes[0] === 'object' ? p.sizes[0].value : p.sizes[0])) === (typeof s === 'object' ? s.value : s) ? '#000' : '#f2f2f7', 
-                    color: (p.selSize || (p.sizes.find(x => x.visible !== false) || {}).value || (typeof p.sizes[0] === 'object' ? p.sizes[0].value : p.sizes[0])) === (typeof s === 'object' ? s.value : s) ? '#fff' : '#000'
-                } : 
-                { background: '#eee', color: '#bbb', textDecoration: 'line-through', cursor: 'not-allowed' }">
+         :style="s.visible !== false ? {} : { background: '#eee', color: '#bbb', textDecoration: 'line-through' }">
         {{ typeof s === 'object' ? s.value : s }}
     </div>
 </div>
-
                     <button class="btn-black" style="width: 100%;" @click.stop="quickAddToCart(p)">
                         В КОРЗИНУ
                     </button>
@@ -925,40 +918,29 @@ Vue.createApp({
         },
 
         addToCart(p) {
-    if (!p) return;
     this.vib();
     
-    // 1. ОПРЕДЕЛЯЕМ ВЫБРАННЫЙ РАЗМЕР
-    let selectedSize = '';
-    
-    // Если добавляем из открытой карточки
-    if (this.selP && this.selP.id === p.id && this.selP.selSize) {
-        selectedSize = typeof this.selP.selSize === 'object' ? this.selP.selSize.value : this.selP.selSize;
-    } 
-    // Если добавляем быстро из каталога (через p.selSize)
-    else if (p.selSize) {
-        selectedSize = typeof p.selSize === 'object' ? p.selSize.value : p.selSize;
-    } 
-    // Если ничего не выбрано, берем первый доступный размер
-    else if (p.sizes && p.sizes.length > 0) {
-        const firstOk = p.sizes.find(s => s.visible !== false) || p.sizes[0];
-        selectedSize = typeof firstOk === 'object' ? firstOk.value : firstOk;
-    }
+    // 1. Определяем выбранный размер. 
+    // Если в карточке selSize это объект, берем его .value, если строка — берем как есть.
+    const selectedSize = (this.selP && this.selP.selSize) ? 
+                         (typeof this.selP.selSize === 'object' ? this.selP.selSize.value : this.selP.selSize) : 
+                         (p.selSize || '');
 
-    // 2. ОПРЕДЕЛЯЕМ ЦВЕТ
-    const currentColor = (p.colors && p.colors[p.aIdx]) ? p.colors[p.aIdx] : (p.color || 'Стандарт');
+    // 2. Определяем текущий цвет
+    const currentColor = (p.colors && p.colors[p.aIdx]) ? p.colors[p.aIdx] : (p.selColor || 'Белый');
     
-    // 3. СОЗДАЕМ УНИКАЛЬНЫЙ ID (ID + Размер + Цвет)
-    const cartId = String(p.id) + String(selectedSize) + String(currentColor);
+    // 3. Собираем уникальный ID для корзины (чтобы разные размеры одного товара были разными строчками)
+    const cartId = p.id + selectedSize + currentColor;
     const exist = this.cart.find(i => i.cartId === cartId);
     
     if (exist) {
         exist.qty++;
     } else {
+        // 4. Добавляем в корзину, сохраняя именно строковое значение размера (selectedSize)
         this.cart.push({ 
             ...p, 
             cartId, 
-            selSize: selectedSize, 
+            selSize: selectedSize, // Теперь тут всегда будет строка (например, "42")
             selColor: currentColor, 
             qty: 1, 
             price: Number(p.price) 
@@ -966,14 +948,11 @@ Vue.createApp({
     }
     
     this.saveCart();
+    this.selP = null; // Закрываем карточку
+    this.view = 'catalog'; // Возвращаемся в каталог, если нужно
     
-    // Закрываем карточку и возвращаемся в каталог
-    this.selP = null;
-    this.view = 'catalog';
-
-    // Безопасный вызов HapticFeedback
-    if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback) {
-        window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+    if (window.tg && window.tg.HapticFeedback) {
+        window.tg.HapticFeedback.notificationOccurred('success');
     }
 },
 quickAddToCart(p) {
