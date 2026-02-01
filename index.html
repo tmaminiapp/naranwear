@@ -298,13 +298,14 @@
                     <div class="price-row" @click="openProduct(p)">
                         <span class="price">{{p.price}} ₽</span>
                     </div>
-                    <div class="card-sizes">
-    <div v-for="s in (String(p.sizes || '').split(','))" 
-         v-if="p.sizes"
-         :key="s"
-         @click="p.tempSize = s.trim(); vib()"
-         :class="['size-chip', {active: (p.tempSize || String(p.sizes).split(',')[0].trim()) === s.trim()}]">
-        {{s.trim()}}
+                    <div class="card-sizes" style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px;">
+    <div v-for="s in p.sizes" :key="s.value"
+         @click.stop="s.visible !== false ? (p.tempSize = s.value, vib()) : null"
+         style="padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; transition: 0.2s;"
+         :style="s.visible !== false ? 
+                { background: (p.tempSize || p.sizes[0].value) === s.value ? '#000' : '#f2f2f7', color: (p.tempSize || p.sizes[0].value) === s.value ? '#fff' : '#000', cursor: 'pointer' } : 
+                { background: '#eee', color: '#bbb', cursor: 'not-allowed', textDecoration: 'line-through' }">
+        {{ s.value }}
     </div>
 </div>
                     <button class="btn-black" style="width: 100%; margin-top: 5px;" @click.stop="quickAddToCart(p)">
@@ -487,31 +488,37 @@
 
 
 
-                <div v-for="p in products" :key="p.id" style="display: flex; align-items: flex-start; gap: 12px; padding: 12px; border-bottom: 1px solid #f2f2f7;">
+               <div v-for="p in products" :key="p.id" style="display: flex; align-items: flex-start; gap: 12px; padding: 12px; border-bottom: 1px solid #f2f2f7;">
     <img :src="p.images ? p.images[0] : ''" style="width: 50px; height: 60px; object-fit: cover; border-radius: 6px;">
     
-    <div style="flex: 1;">
-        <div style="display: flex; justify-content: space-between;">
-            <div style="font-weight: 800; font-size: 13px;">{{ p.title }} <span style="color: #8e8e93; font-weight: 400;">({{p.color}})</span></div>
-            <div style="display: flex; gap: 10px;">
+    <div style="flex: 1; min-width: 0;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-weight: 800; font-size: 13px;">
+                {{ p.title }} <span style="color: #8e8e93; font-weight: 400;">({{ p.color }})</span>
+            </div>
+            <div style="display: flex; gap: 12px;">
                 <span @click.stop="editProduct(p)" style="cursor: pointer;">✏️</span>
                 <span @click.stop="deleteProductFromCloud(p.id)" style="cursor: pointer; color: #ff3b30;">🗑️</span>
             </div>
         </div>
 
         <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;">
-            <div v-for="sz in p.sizes" :key="sz.value" style="display: flex; align-items: center; border: 1px solid #ddd; border-radius: 4px; overflow: hidden; background: #fff;">
-                <span style="padding: 4px 8px; font-size: 11px; font-weight: 800;" :style="{textDecoration: sz.visible !== false ? 'none' : 'line-through', color: sz.visible !== false ? '#000' : '#ff3b30'}">
+            <div v-for="sz in p.sizes" :key="sz.value" 
+                 style="display: flex; align-items: center; border: 1px solid #ddd; border-radius: 4px; overflow: hidden; background: #fff;">
+                <span style="padding: 4px 8px; font-size: 11px; font-weight: 800;" 
+                      :style="{ textDecoration: sz.visible !== false ? 'none' : 'line-through', color: sz.visible !== false ? '#000' : '#ff3b30' }">
                     {{ sz.value }}
                 </span>
-                <button @click.stop="toggleSizeStatus(p, sz)" style="border: none; border-left: 1px solid #ddd; padding: 4px 6px; font-size: 9px; font-weight: 800; cursor: pointer;"
-                        :style="{background: sz.visible !== false ? '#f2f2f7' : '#ff3b30', color: sz.visible !== false ? '#000' : '#fff'}">
+                <button @click.stop="toggleSizeStatus(p, sz)" 
+                        style="border: none; border-left: 1px solid #ddd; padding: 4px 8px; font-size: 9px; font-weight: 800; cursor: pointer;"
+                        :style="{ background: sz.visible !== false ? '#f2f2f7' : '#ff3b30', color: sz.visible !== false ? '#000' : '#fff' }">
                     {{ sz.visible !== false ? 'СКРЫТЬ' : 'ПОКАЗАТЬ' }}
                 </button>
             </div>
         </div>
     </div>
 </div>
+
            <hr style="margin: 6px 0; border: none; border-top: 2px solid #000;">   
 
             <h3 class="brand-name" style="font-size:12px; margin-top:2px;">ЗАКАЗЫ ({{allOrders.length}}) | ВЫРУЧКА: {{revenue}} ₽</h3>
@@ -609,18 +616,11 @@
             <p style="font-size: 13px; line-height: 1.6; margin: 20px 0; color: #444;">{{selP.desc}}</p>
             
             <div style="font-size: 10px; font-weight: 800; text-transform: uppercase;">ВЫБЕРИТЕ РАЗМЕР</div>
-            <div class="size-grid" style="display: flex; flex-wrap: wrap; gap: 8px;">
-               <template v-for="s in selP.sizes" :key="s.value">
-                 <button v-if="s.visible !== false" 
-                @click="selP.selSize = s.value; vib()" 
-                :class="['size-btn', {active: selP.selSize === s.value}]">
-            {{ s.value }}
+            <div class="size-grid">
+                <button v-for="s in selP.sizes.split(',')" :key="s" @click="selP.selSize = s.trim(); vib()" :class="['size-btn', {active: selP.selSize === s.trim()}]">
+                    {{s.trim()}}
                 </button>
-                <div v-else style="padding: 10px; background: #f2f2f7; color: #8e8e93; border-radius: 4px; font-size: 10px; font-weight: 700; text-decoration: line-through;">
-                 {{ s.value }} (НЕТ)
-               </div>
-               </template>
-             </div>
+            </div>
 
             <div style="font-size: 10px; font-weight: 800; text-transform: uppercase;">ЦВЕТ: {{selP.color}}</div>
 
@@ -1049,8 +1049,8 @@ quickAddToCart(p) {
     }
     this.loading = true;
     try {
-        // Превращаем строку "42, 44" в массив объектов [{value: "42", visible: true}, ...]
         let finalSizes = [];
+        // Преобразуем строку в объекты только если это строка
         if (typeof this.newP.sizes === 'string') {
             finalSizes = this.newP.sizes.split(',')
                 .map(s => s.trim())
@@ -1081,7 +1081,28 @@ quickAddToCart(p) {
     } catch (e) { alert(e.message); }
     this.loading = false;
 },
+// Скрыть/показать конкретный размер
+async toggleSizeStatus(product, sizeObj) {
+    sizeObj.visible = sizeObj.visible === false;
+    try {
+        await window.fb.updateDoc(window.fb.doc(window.db, "products", product.id), {
+            sizes: product.sizes
+        });
+        this.vib(); // Вибрация
+    } catch (e) { console.error("Ошибка обновления размера:", e); }
+},
 
+// Удаление товара из Firebase с подтверждением
+async deleteProductFromCloud(id) {
+    if (confirm("⚠️ ВНИМАНИЕ! Вы точно хотите удалить этот товар из базы данных НАВСЕГДА?")) {
+        try {
+            await window.fb.deleteDoc(window.fb.doc(window.db, "products", id));
+            if (window.Telegram?.WebApp?.HapticFeedback) {
+                window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+            }
+        } catch (e) { alert("Ошибка: " + e.message); }
+    }
+},
         editProduct(p) {
             this.editId = p.id;
             this.newP = { ...p };
@@ -1092,26 +1113,6 @@ quickAddToCart(p) {
             this.editId = null;
             this.newP = { title: '', desc: '', price: '', oldPrice: '', category: '', sizes: '42, 44, 46', color: '', images: [] };
         },
-        // Переключение видимости размера
-async toggleSizeStatus(product, sizeObj) {
-    sizeObj.visible = sizeObj.visible === false;
-    try {
-        await window.fb.updateDoc(window.fb.doc(window.db, "products", product.id), {
-            sizes: product.sizes
-        });
-        this.vib();
-    } catch (e) { console.error(e); }
-},
-
-// Удаление товара из облака
-async deleteProductFromCloud(id) {
-    if (confirm("Вы уверены, что хотите полностью удалить этот товар из базы данных?")) {
-        try {
-            await window.fb.deleteDoc(window.fb.doc(window.db, "products", id));
-            alert("Товар удален");
-        } catch (e) { alert("Ошибка при удалении: " + e.message); }
-    }
-},
 
         async deleteProduct(id) {
             const msg = "⚠️ Удалить заказ навсегда?";
