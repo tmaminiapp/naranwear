@@ -1080,31 +1080,51 @@ quickAddToCart(p) {
         },
 
         async saveProduct() {
-            if (!this.newP.title || !this.newP.price || this.newP.images.length === 0) {
-                return alert('Заполните название, цену и добавьте фото');
-            }
-            this.loading = true;
-            try {
-                const data = {
-                    ...this.newP,
-                    price: Number(this.newP.price),
-                    oldPrice: this.newP.oldPrice ? Number(this.newP.oldPrice) : null,
-                    updatedAt: Date.now()
-                };
+    if (!this.newP.title || !this.newP.price || this.newP.images.length === 0) {
+        return alert('Заполните название, цену и добавьте фото');
+    }
+    this.loading = true;
+    try {
+        // --- НОВЫЙ БЛОК ОБРАБОТКИ РАЗМЕРОВ ---
+        let processedSizes = [];
+        
+        // Если в newP.sizes лежит строка (которую вы ввели в инпут через запятую)
+        if (typeof this.newP.sizes === 'string') {
+            processedSizes = this.newP.sizes.split(',').map(s => ({
+                value: s.trim(),
+                visible: true // По умолчанию при создании все размеры в наличии
+            }));
+        } else {
+            // Если мы редактируем товар, и размеры там уже массив объектов
+            processedSizes = this.newP.sizes;
+        }
+        // -------------------------------------
 
-                if (this.editId) {
-                    await window.fb.updateDoc(window.fb.doc(window.db, "products", this.editId), data);
-                    this.editId = null;
-                } else {
-                    data.createdAt = Date.now();
-                    data.hidden = false;
-                    await window.fb.addDoc(window.fb.collection(window.db, "products"), data);
-                }
-                this.newP = { title: '', desc: '', price: '', oldPrice: '', category: '', sizes: '42, 44, 46', color: '', images: [] };
-                alert('Готово!');
-            } catch (e) { alert(e.message); }
-            this.loading = false;
-        },
+        const data = {
+            ...this.newP,
+            price: Number(this.newP.price),
+            oldPrice: this.newP.oldPrice ? Number(this.newP.oldPrice) : null,
+            sizes: processedSizes, // Сохраняем уже как массив объектов
+            updatedAt: Date.now()
+        };
+
+        if (this.editId) {
+            await window.fb.updateDoc(window.fb.doc(window.db, "products", this.editId), data);
+            this.editId = null;
+        } else {
+            data.createdAt = Date.now();
+            data.hidden = false;
+            await window.fb.addDoc(window.fb.collection(window.db, "products"), data);
+        }
+
+        // Очистка формы (возвращаем размеры по умолчанию в виде строки для следующего товара)
+        this.newP = { title: '', desc: '', price: '', oldPrice: '', category: '', sizes: '42, 44, 46', color: '', images: [] };
+        alert('Готово!');
+    } catch (e) { 
+        alert(e.message); 
+    }
+    this.loading = false;
+},
 
         editProduct(p) {
             this.editId = p.id;
@@ -1161,20 +1181,17 @@ async deleteProductFromCloud(id) {
 },
 
 async toggleSizeStatus(product, sizeObj) {
-    // Меняем статус (если не задано, считаем true)
+    // Меняем статус на противоположный
     sizeObj.visible = sizeObj.visible === false ? true : false;
     
-    if (window.Telegram?.WebApp?.HapticFeedback) {
-        window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
-    }
-
     try {
         const productRef = window.fb.doc(window.db, "products", product.id);
         await window.fb.updateDoc(productRef, {
-            sizes: product.sizes
+            sizes: product.sizes // Отправляем обновленный массив в базу
         });
+        if (window.tg?.HapticFeedback) window.tg.HapticFeedback.impactOccurred('light');
     } catch (e) {
-        console.error("Ошибка обновления размера:", e);
+        console.error("Ошибка:", e);
     }
 },
 
