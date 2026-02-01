@@ -255,13 +255,23 @@
                         <span v-if="p.oldPrice" class="old-price">{{p.oldPrice}} ₽</span>
                     </div>
                     
-                    <div class="card-sizes">
-    <div v-for="s in (String(p.sizes || '').split(','))" 
-         v-if="p.sizes"
-         :key="s" 
-         @click="p.tempSize = s.trim(); vib()" 
-         :class="['size-chip', {active: (p.tempSize || String(p.sizes).split(',')[0].trim()) === s.trim()}]">
-        {{s.trim()}}
+                    <div class="card-sizes" style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px;">
+    <div v-for="s in p.sizes" :key="s.value"
+         @click.stop="s.visible !== false ? (p.tempSize = s.value, vib()) : null"
+         style="padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; transition: 0.2s;"
+         :style="s.visible !== false ? 
+                { 
+                    background: (p.tempSize || (p.sizes.find(x => x.visible !== false) || {}).value) === s.value ? '#000' : '#f2f2f7', 
+                    color: (p.tempSize || (p.sizes.find(x => x.visible !== false) || {}).value) === s.value ? '#fff' : '#000', 
+                    cursor: 'pointer' 
+                } : 
+                { 
+                    background: '#eee', 
+                    color: '#bbb', 
+                    cursor: 'not-allowed', 
+                    textDecoration: 'line-through' 
+                }">
+        {{ s.value }}
     </div>
 </div>
                     <button class="btn-black" style="width: 100%;" @click.stop="quickAddToCart(p)">
@@ -489,7 +499,7 @@
 
 
                <div v-for="p in products" :key="p.id" style="display: flex; align-items: flex-start; gap: 12px; padding: 12px; border-bottom: 1px solid #f2f2f7;">
-    <img :src="p.images ? p.images[0] : ''" style="width: 50px; height: 60px; object-fit: cover; border-radius: 6px;">
+    <img :src="p.images ? p.images[0] : ''" style="width: 50px; height: 60px; object-fit: cover; border-radius: 6px; background: #eee;">
     
     <div style="flex: 1; min-width: 0;">
         <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -1050,7 +1060,7 @@ quickAddToCart(p) {
     this.loading = true;
     try {
         let finalSizes = [];
-        // Преобразуем строку в объекты только если это строка
+        // Обработка размеров: превращаем строку из инпута в массив объектов
         if (typeof this.newP.sizes === 'string') {
             finalSizes = this.newP.sizes.split(',')
                 .map(s => s.trim())
@@ -1064,7 +1074,7 @@ quickAddToCart(p) {
             ...this.newP,
             price: Number(this.newP.price),
             oldPrice: this.newP.oldPrice ? Number(this.newP.oldPrice) : null,
-            sizes: finalSizes,
+            sizes: finalSizes, // сохраняем как объекты
             updatedAt: Date.now()
         };
 
@@ -1076,31 +1086,38 @@ quickAddToCart(p) {
             data.hidden = false;
             await window.fb.addDoc(window.fb.collection(window.db, "products"), data);
         }
+        // Сброс формы
         this.newP = { title: '', desc: '', price: '', oldPrice: '', category: '', sizes: '42, 44, 46', color: '', images: [] };
         alert('Готово!');
     } catch (e) { alert(e.message); }
     this.loading = false;
 },
 // Скрыть/показать конкретный размер
+// Переключение видимости конкретного размера
 async toggleSizeStatus(product, sizeObj) {
-    sizeObj.visible = sizeObj.visible === false;
+    sizeObj.visible = sizeObj.visible === false; // инвертируем статус
     try {
-        await window.fb.updateDoc(window.fb.doc(window.db, "products", product.id), {
-            sizes: product.sizes
+        const productRef = window.fb.doc(window.db, "products", product.id);
+        await window.fb.updateDoc(productRef, {
+            sizes: product.sizes // сохраняем обновленный массив размеров
         });
-        this.vib(); // Вибрация
-    } catch (e) { console.error("Ошибка обновления размера:", e); }
+        if (window.Telegram?.WebApp?.HapticFeedback) window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
+    } catch (e) {
+        console.error("Ошибка обновления размера:", e);
+    }
 },
 
-// Удаление товара из Firebase с подтверждением
+// Удаление товара из облака с подтверждением
 async deleteProductFromCloud(id) {
-    if (confirm("⚠️ ВНИМАНИЕ! Вы точно хотите удалить этот товар из базы данных НАВСЕГДА?")) {
+    if (confirm("⚠️ Вы уверены, что хотите УДАЛИТЬ этот товар из базы данных навсегда?")) {
         try {
             await window.fb.deleteDoc(window.fb.doc(window.db, "products", id));
             if (window.Telegram?.WebApp?.HapticFeedback) {
                 window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
             }
-        } catch (e) { alert("Ошибка: " + e.message); }
+        } catch (e) {
+            alert("Ошибка при удалении: " + e.message);
+        }
     }
 },
         editProduct(p) {
