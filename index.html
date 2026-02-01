@@ -255,13 +255,20 @@
                         <span v-if="p.oldPrice" class="old-price">{{p.oldPrice}} ₽</span>
                     </div>
                     
-                    <div class="card-sizes">
-    <div v-for="s in p.sizes" :key="s.value"
-         class="size-chip"
-         :style="s.visible !== false ? {} : { background: '#eee', color: '#bbb', textDecoration: 'line-through' }">
+                    <div class="card-sizes" style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px;">
+                         <div v-for="s in p.sizes" :key="(typeof s === 'object' ? s.value : s)"
+                           @click.stop="s.visible !== false ? (p.selSize = (typeof s === 'object' ? s.value : s), vib()) : null"
+                        class="size-chip"
+                           :style="s.visible !== false ? 
+                { 
+                    background: (p.selSize || (p.sizes.find(x => x.visible !== false) || {}).value || p.sizes[0].value) === (typeof s === 'object' ? s.value : s) ? '#000' : '#f2f2f7', 
+                    color: (p.selSize || (p.sizes.find(x => x.visible !== false) || {}).value || p.sizes[0].value) === (typeof s === 'object' ? s.value : s) ? '#fff' : '#000'
+                } : 
+                { background: '#eee', color: '#bbb', textDecoration: 'line-through', cursor: 'not-allowed' }">
         {{ typeof s === 'object' ? s.value : s }}
-    </div>
-</div>
+                      </div>
+                   </div>
+
                     <button class="btn-black" style="width: 100%;" @click.stop="quickAddToCart(p)">
                         В КОРЗИНУ
                     </button>
@@ -920,30 +927,37 @@ Vue.createApp({
         addToCart(p) {
     this.vib();
     
-    // 1. ОПРЕДЕЛЯЕМ РАЗМЕР
-    // Если мы в карточке (this.selP), берем размер оттуда. Если в каталоге — берем первый доступный.
+    // 1. ОПРЕДЕЛЯЕМ ВЫБРАННЫЙ РАЗМЕР
     let selectedSize = '';
+    
+    // Если открыта карточка этого товара (selP)
     if (this.selP && this.selP.id === p.id && this.selP.selSize) {
         selectedSize = typeof this.selP.selSize === 'object' ? this.selP.selSize.value : this.selP.selSize;
-    } else {
-        // Логика для быстрого добавления из каталога
-        const firstAvailable = p.sizes.find(s => s.visible !== false);
-        selectedSize = firstAvailable ? (typeof firstAvailable === 'object' ? firstAvailable.value : firstAvailable) : '';
+    } 
+    // Если добавляем быстро из каталога
+    else if (p.selSize) {
+        selectedSize = p.selSize;
+    } 
+    // Если ничего не выбрано, берем первый доступный
+    else {
+        const firstOk = p.sizes.find(s => s.visible !== false);
+        if (firstOk) {
+            selectedSize = typeof firstOk === 'object' ? firstOk.value : firstOk;
+        } else {
+            selectedSize = typeof p.sizes[0] === 'object' ? p.sizes[0].value : p.sizes[0];
+        }
     }
 
     // 2. ОПРЕДЕЛЯЕМ ЦВЕТ
-    // Берем цвет из карточки (через индекс aIdx) или базовый цвет товара
     const currentColor = (p.colors && p.colors[p.aIdx]) ? p.colors[p.aIdx] : (p.color || 'Стандарт');
     
-    // 3. СОЗДАЕМ УНИКАЛЬНЫЙ ID (ID товара + Размер + Цвет)
+    // 3. СОЗДАЕМ УНИКАЛЬНЫЙ ID
     const cartId = p.id + selectedSize + currentColor;
-    
     const exist = this.cart.find(i => i.cartId === cartId);
     
     if (exist) {
         exist.qty++;
     } else {
-        // Сохраняем товар в корзину
         this.cart.push({ 
             ...p, 
             cartId, 
@@ -956,12 +970,14 @@ Vue.createApp({
     
     this.saveCart();
     
-    // Закрываем карточку после добавления (опционально)
-    this.selP = null;
-    this.view = 'catalog'; 
-    
-    if (window.Telegram?.WebApp?.HapticFeedback) {
-        window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+    // Если была открыта карточка — закрываем её
+    if (this.selP) {
+        this.selP = null;
+        this.view = 'catalog';
+    }
+
+    if (window.tg?.HapticFeedback) {
+        window.tg.HapticFeedback.notificationOccurred('success');
     }
 },
 quickAddToCart(p) {
