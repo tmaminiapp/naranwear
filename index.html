@@ -256,12 +256,12 @@
                     </div>
                     
                     <div class="card-sizes">
-    <div v-for="s in (String(p.sizes || '').split(','))" 
-         v-if="p.sizes"
-         :key="s" 
-         @click="p.tempSize = s.trim(); vib()" 
-         :class="['size-chip', {active: (p.tempSize || String(p.sizes).split(',')[0].trim()) === s.trim()}]">
-        {{s.trim()}}
+    <div v-for="s in p.sizes" 
+         v-if="p.sizes && s.visible !== false"
+         :key="typeof s === 'string' ? s : s.value" 
+         @click="p.tempSize = (typeof s === 'string' ? s : s.value); vib()" 
+         :class="['size-chip', {active: (p.tempSize || (typeof p.sizes[0] === 'string' ? p.sizes[0] : p.sizes[0].value)) === (typeof s === 'string' ? s : s.value)}]">
+        {{ typeof s === 'string' ? s : s.value }}
     </div>
 </div>
                     <button class="btn-black" style="width: 100%;" @click.stop="quickAddToCart(p)">
@@ -509,28 +509,29 @@
         </div>
 
         <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;">
-            <div v-for="sz in p.sizes" :key="sz.value" 
-                 style="display: flex; align-items: center; background: #fff; border-radius: 4px; border: 1px solid #ddd; overflow: hidden;">
-                
-                <span style="padding: 4px 8px; font-size: 11px; font-weight: 800; min-width: 35px; text-align: center;"
-                      :style="{ 
-                         color: sz.visible !== false ? '#000' : '#8e8e93',
-                         textDecoration: sz.visible !== false ? 'none' : 'line-through',
-                         background: sz.visible !== false ? '#fff' : '#f2f2f7'
-                      }">
-                    {{ sz.value }}
-                </span>
+           <div v-for="(sz, index) in p.sizes" :key="index" 
+             style="display: flex; align-items: center; background: #fff; border-radius: 4px; border: 1px solid #ddd; overflow: hidden;">
+        
+              <span style="padding: 4px 8px; font-size: 11px; font-weight: 800; min-width: 35px; text-align: center;"
+              :style="{ 
+                 color: sz.visible !== false ? '#000' : '#8e8e93',
+                 textDecoration: sz.visible !== false ? 'none' : 'line-through',
+                 background: sz.visible !== false ? '#fff' : '#f2f2f7'
+              }">
+                {{ sz.value }}
+              </span>
 
-                <button @click.stop="toggleSizeStatus(p, sz)" 
-                        style="border: none; border-left: 1px solid #ddd; padding: 5px 8px; font-size: 9px; font-weight: 800; cursor: pointer; text-transform: uppercase;"
-                        :style="{ 
-                           background: sz.visible !== false ? '#f2f2f7' : '#ff3b30', 
-                           color: sz.visible !== false ? '#000' : '#fff' 
-                        }">
-                    {{ sz.visible !== false ? 'СКРЫТЬ' : 'ПОКАЗАТЬ' }}
-                </button>
-            </div>
-        </div>
+               <button @click.stop="toggleSizeStatus(p, sz)" 
+                style="border: none; border-left: 1px solid #ddd; padding: 5px 8px; font-size: 9px; font-weight: 800; cursor: pointer;"
+                :style="{ 
+                   background: sz.visible !== false ? '#f2f2f7' : '#ff3b30', 
+                   color: sz.visible !== false ? '#000' : '#fff' 
+                }">
+                {{ sz.visible !== false ? 'СКРЫТЬ' : 'ПОКАЗАТЬ' }}
+              </button>
+             </div>
+         </div>
+
     </div>
 </div>
            <hr style="margin: 6px 0; border: none; border-top: 2px solid #000;">   
@@ -1094,38 +1095,31 @@ quickAddToCart(p) {
     }
     this.loading = true;
     try {
-        // --- НОВЫЙ БЛОК ОБРАБОТКИ РАЗМЕРОВ ---
-        let processedSizes = [];
-        
-        // Если в newP.sizes лежит строка (которую вы ввели в инпут через запятую)
-        if (typeof this.newP.sizes === 'string') {
-            processedSizes = this.newP.sizes.split(',').map(s => ({
-                value: s.trim(),
-                visible: true // По умолчанию при создании все размеры в наличии
-            }));
-        } else {
-            // Если мы редактируем товар, и размеры там уже массив объектов
-            processedSizes = this.newP.sizes;
-        }
-        // -------------------------------------
-// Внутри saveProduct перед созданием объекта data:
+        // 1. ПРАВИЛЬНАЯ ОБРАБОТКА РАЗМЕРОВ (только один блок)
+        // Внутри saveProduct, где обрабатываем строку
 let finalSizes = [];
 if (Array.isArray(this.newP.sizes)) {
     finalSizes = this.newP.sizes;
 } else if (typeof this.newP.sizes === 'string') {
-    finalSizes = this.newP.sizes.split(',').map(s => ({
-        value: s.trim(),
-        visible: true
-    }));
+    finalSizes = this.newP.sizes.split(',')
+        .map(s => s.trim())
+        .filter(s => s !== "") // УДАЛЯЕМ ПУСТЫЕ ЗНАЧЕНИЯ (чтобы не было лишних кнопок)
+        .map(s => ({
+            value: s,
+            visible: true
+        }));
 }
+
+        // 2. ПОДГОТОВКА ДАННЫХ
         const data = {
             ...this.newP,
             price: Number(this.newP.price),
             oldPrice: this.newP.oldPrice ? Number(this.newP.oldPrice) : null,
-            sizes: processedSizes, // Сохраняем уже как массив объектов
+            sizes: finalSizes, // Используем нашу переменную finalSizes
             updatedAt: Date.now()
         };
 
+        // 3. СОХРАНЕНИЕ В FIREBASE
         if (this.editId) {
             await window.fb.updateDoc(window.fb.doc(window.db, "products", this.editId), data);
             this.editId = null;
@@ -1135,15 +1129,17 @@ if (Array.isArray(this.newP.sizes)) {
             await window.fb.addDoc(window.fb.collection(window.db, "products"), data);
         }
 
-        // Очистка формы (возвращаем размеры по умолчанию в виде строки для следующего товара)
-        this.newP = { title: '', desc: '', price: '', oldPrice: '', category: '', sizes: '42, 44, 46', color: '', images: [] };
+        // 4. ОЧИСТКА ФОРМЫ
+        this.newP = { 
+            title: '', desc: '', price: '', oldPrice: '', 
+            category: '', sizes: '42, 44, 46', color: '', images: [] 
+        };
         alert('Готово!');
     } catch (e) { 
         alert(e.message); 
     }
     this.loading = false;
 },
-
         editProduct(p) {
             this.editId = p.id;
             this.newP = { ...p };
