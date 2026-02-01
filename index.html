@@ -256,13 +256,24 @@
                     </div>
                     
                     <div class="card-sizes">
-    <div v-for="s in (String(p.sizes || '').split(','))" 
-         v-if="p.sizes"
-         :key="s" 
-         @click="p.tempSize = s.trim(); vib()" 
-         :class="['size-chip', {active: (p.tempSize || String(p.sizes).split(',')[0].trim()) === s.trim()}]">
-        {{s.trim()}}
-    </div>
+    <template v-if="Array.isArray(p.sizes)">
+        <div v-for="s in p.sizes" 
+             v-if="s.visible !== false"
+             :key="s.value" 
+             @click="p.tempSize = s.value.trim(); vib()" 
+             :class="['size-chip', {active: (p.tempSize || p.sizes.find(sz => sz.visible !== false)?.value) === s.value.trim()}]">
+            {{s.value.trim()}}
+        </div>
+    </template>
+
+    <template v-else-if="p.sizes">
+        <div v-for="s in String(p.sizes).split(',')" 
+             :key="s" 
+             @click="p.tempSize = s.trim(); vib()" 
+             :class="['size-chip', {active: (p.tempSize || s.split(',')[0].trim()) === s.trim()}]">
+            {{s.trim()}}
+        </div>
+    </template>
 </div>
                     <button class="btn-black" style="width: 100%;" @click.stop="quickAddToCart(p)">
                         В КОРЗИНУ
@@ -490,12 +501,31 @@
                 <div v-for="p in products" :key="p.id" 
      style="display: flex; align-items: center; gap: 10px; padding: 10px; border-bottom: 1px solid #f2f2f7;"
      :style="{ opacity: p?.hidden ? '0.4' : '1' }">
+    
     <img :src="p.images ? p.images[0] : ''" style="width: 40px; height: 50px; object-fit: cover; border-radius: 4px; background: #eee;">
+    
     <div style="flex: 1; min-width: 0;">
         <div style="font-weight: 700; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ p.title }}</div>
         <div style="font-size: 11px; color: #8e8e93;">{{ p.price }} ₽</div>
-    </div>
-    <div style="display: flex; gap: 12px;">
+        
+        <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px;">
+            <div v-for="sz in p.sizes" 
+                 :key="sz.value"
+                 @click.stop="toggleSizeStatus(p, sz)"
+                 :style="{
+                     padding: '2px 6px',
+                     fontSize: '9px',
+                     borderRadius: '5px',
+                     cursor: 'pointer',
+                     fontWeight: '800',
+                     background: sz.visible !== false ? '#34c759' : '#ff3b30',
+                     color: '#fff',
+                     border: '1px solid rgba(0,0,0,0.1)'
+                 }">
+                {{ sz.value }}
+            </div>
+        </div>
+    </div> <div style="display: flex; gap: 12px;">
         <button @click="editProduct(p)" style="border:none; background:none; font-size: 16px; cursor: pointer;">✏️</button>
         <button @click="toggleVisibility(p)" style="border:none; background:none; cursor: pointer; font-size: 16px;">
             {{ p?.hidden ? '👁️‍🗨️' : '👁️' }}
@@ -1029,38 +1059,74 @@ quickAddToCart(p) {
             this.loading = false;
         },
 
-        async saveProduct() {
-            if (!this.newP.title || !this.newP.price || this.newP.images.length === 0) {
-                return alert('Заполните название, цену и добавьте фото');
-            }
-            this.loading = true;
-            try {
-                const data = {
-                    ...this.newP,
-                    price: Number(this.newP.price),
-                    oldPrice: this.newP.oldPrice ? Number(this.newP.oldPrice) : null,
-                    updatedAt: Date.now()
-                };
+       async saveProduct() {
+    if (!this.newP.title || !this.newP.price || this.newP.images.length === 0) {
+        return alert('Заполните название, цену и добавьте фото');
+    }
+    this.loading = true;
+    try {
+        // ПРЕОБРАЗОВАНИЕ РАЗМЕРОВ: из строки в массив объектов
+        let sizesData = this.newP.sizes;
+        if (typeof sizesData === 'string') {
+            sizesData = sizesData.split(',').map(s => ({
+                value: s.trim(),
+                visible: true // По умолчанию размер включен
+            })).filter(s => s.value !== ""); // Убираем пустые если есть
+        }
 
-                if (this.editId) {
-                    await window.fb.updateDoc(window.fb.doc(window.db, "products", this.editId), data);
-                    this.editId = null;
-                } else {
-                    data.createdAt = Date.now();
-                    data.hidden = false;
-                    await window.fb.addDoc(window.fb.collection(window.db, "products"), data);
-                }
-                this.newP = { title: '', desc: '', price: '', oldPrice: '', category: '', sizes: '42, 44, 46', color: '', images: [] };
-                alert('Готово!');
-            } catch (e) { alert(e.message); }
-            this.loading = false;
-        },
+        const data = {
+            ...this.newP,
+            sizes: sizesData, // Сохраняем уже массив
+            price: Number(this.newP.price),
+            oldPrice: this.newP.oldPrice ? Number(this.newP.oldPrice) : null,
+            updatedAt: Date.now()
+        };
+
+        if (this.editId) {
+            await window.fb.updateDoc(window.fb.doc(window.db, "products", this.editId), data);
+            this.editId = null;
+        } else {
+            data.createdAt = Date.now();
+            data.hidden = false;
+            await window.fb.addDoc(window.fb.collection(window.db, "products"), data);
+        }
+        
+        // Сброс формы (указываем дефолтные размеры строкой для удобства ввода)
+        this.newP = { title: '', desc: '', price: '', oldPrice: '', category: '', sizes: '42, 44, 46', color: '', images: [] };
+        alert('Готово!');
+    } catch (e) { alert(e.message); }
+    this.loading = false;
+},
+async toggleSizeStatus(product, sizeObj) {
+    // Переключаем видимость конкретного размера
+    sizeObj.visible = !sizeObj.visible;
+
+    try {
+        // Обновляем только поле sizes у конкретного товара в Firebase
+        const productRef = window.fb.doc(window.db, "products", product.id);
+        await window.fb.updateDoc(productRef, {
+            sizes: product.sizes
+        });
+        
+        if (window.Telegram && window.Telegram.WebApp) {
+            window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
+        }
+    } catch (e) {
+        console.error("Ошибка при обновлении размера:", e);
+        alert("Не удалось обновить размер");
+    }
+},
 
         editProduct(p) {
-            this.editId = p.id;
-            this.newP = { ...p };
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        },
+    this.editId = p.id;
+    // Если размеры уже массив, превращаем их обратно в строку для поля ввода
+    let sizeString = Array.isArray(p.sizes) 
+        ? p.sizes.map(s => s.value).join(', ') 
+        : p.sizes;
+        
+    this.newP = { ...p, sizes: sizeString };
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+},
 
         cancelEdit() {
             this.editId = null;
@@ -1432,7 +1498,7 @@ updateChart() {
      mounted() {
         tg.ready();
         tg.expand();
-        this.user = tg.initDataUnsafe?.user || { id: 482000977, first_name: 'Admin_Test' };
+        this.user = tg.initDataUnsafe?.user || { id: 482000977, first_name: 'Покупатель' };
         
         // Принудительная проверка админа
         this.isAdmin = Number(this.user.id) === this.adminId;
