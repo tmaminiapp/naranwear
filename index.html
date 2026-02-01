@@ -628,12 +628,27 @@
             <p style="font-size: 13px; line-height: 1.6; margin: 20px 0; color: #444;">{{selP.desc}}</p>
             
             <div style="font-size: 10px; font-weight: 800; text-transform: uppercase;">ВЫБЕРИТЕ РАЗМЕР</div>
-            <div class="size-grid">
-                <button v-for="s in selP.sizes" :key="s.value"
-        @click="s.visible !== false ? (selP.selSize = s.value) : null"
-        :class="['size-btn', { active: selP.selSize === s.value }]">
-    {{ typeof s === 'object' ? s.value : s }}
-                </button>
+            <div class="size-grid" style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px;">
+                 <template v-for="s in selP.sizes" :key="s.value">
+               <button v-if="s.visible !== false" 
+                @click="selP.selSize = s.value; vib()" 
+                :class="['size-btn', {active: selP.selSize === s.value}]">
+                {{ typeof s === 'object' ? s.value : s }}
+               </button>
+  
+               <div v-else style="
+            padding: 10px 15px; 
+            background: #f2f2f7; 
+            color: #8e8e93; 
+            border-radius: 4px; 
+            font-size: 11px; 
+            font-weight: 700; 
+            text-decoration: line-through;
+            border: 1px solid #ddd;
+            display: flex; align-items: center; justify-content: center;">
+            {{ typeof s === 'object' ? s.value : s }}
+            </div>
+            </template>
             </div>
 
             <div style="font-size: 10px; font-weight: 800; text-transform: uppercase;">ЦВЕТ: {{selP.color}}</div>
@@ -856,10 +871,26 @@ Vue.createApp({
             p.aIdx = idx;
         },
 
-        openProduct(p) {
-            this.vib();
-            this.selP = { ...p, aIdx: 0, selSize: p.sizes.split(',')[0].trim(), selColor: p.color };
-        },
+       openProduct(p) {
+    // Создаем копию товара для модального окна
+    this.selP = JSON.parse(JSON.stringify(p));
+    
+    // Проверяем: если размеры пришли строкой, превращаем в объекты
+    if (typeof this.selP.sizes === 'string') {
+        this.selP.sizes = this.selP.sizes.split(',')
+            .map(s => s.trim())
+            .filter(s => s !== "")
+            .map(s => ({ value: s, visible: true }));
+    }
+    
+    // Выбираем первый ДОСТУПНЫЙ размер по умолчанию
+    const firstAvailable = this.selP.sizes.find(s => s.visible !== false);
+    this.selP.selSize = firstAvailable ? firstAvailable.value : (this.selP.sizes[0] ? this.selP.sizes[0].value : '');
+    
+    this.selP.aIdx = 0;
+    this.view = 'product'; // Открываем вид товара
+    this.vib();
+},
 
         isFav(p) { return p && this.favorites.includes(p.id); },
         
@@ -876,25 +907,42 @@ Vue.createApp({
 
         addToCart(p) {
     this.vib();
-    // Определяем текущий цвет (если есть массив colors, берем по индексу aIdx)
+    
+    // 1. Определяем выбранный размер. 
+    // Если в карточке selSize это объект, берем его .value, если строка — берем как есть.
+    const selectedSize = (this.selP && this.selP.selSize) ? 
+                         (typeof this.selP.selSize === 'object' ? this.selP.selSize.value : this.selP.selSize) : 
+                         (p.selSize || '');
+
+    // 2. Определяем текущий цвет
     const currentColor = (p.colors && p.colors[p.aIdx]) ? p.colors[p.aIdx] : (p.selColor || 'Белый');
     
-    // Безопасно собираем ID
-    const cartId = p.id + (p.selSize || '') + currentColor;
+    // 3. Собираем уникальный ID для корзины (чтобы разные размеры одного товара были разными строчками)
+    const cartId = p.id + selectedSize + currentColor;
     const exist = this.cart.find(i => i.cartId === cartId);
     
     if (exist) {
         exist.qty++;
     } else {
-        // Добавляем объект, заменяя 'product' на 'p'
-        this.cart.push({ ...p, cartId, selColor: currentColor, qty: 1, price: Number(p.price) });
+        // 4. Добавляем в корзину, сохраняя именно строковое значение размера (selectedSize)
+        this.cart.push({ 
+            ...p, 
+            cartId, 
+            selSize: selectedSize, // Теперь тут всегда будет строка (например, "42")
+            selColor: currentColor, 
+            qty: 1, 
+            price: Number(p.price) 
+        });
     }
     
     this.saveCart();
-    this.selP = null;
-    tg.HapticFeedback.notificationOccurred('success');
+    this.selP = null; // Закрываем карточку
+    this.view = 'catalog'; // Возвращаемся в каталог, если нужно
+    
+    if (window.tg && window.tg.HapticFeedback) {
+        window.tg.HapticFeedback.notificationOccurred('success');
+    }
 },
-
 quickAddToCart(p) {
     this.vib();
     
