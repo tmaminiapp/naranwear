@@ -256,18 +256,18 @@
                     </div>
                     
                     <div class="card-sizes" style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px;">
-                         <div v-for="s in p.sizes" :key="(typeof s === 'object' ? s.value : s)"
-                           @click.stop="s.visible !== false ? (p.selSize = (typeof s === 'object' ? s.value : s), vib()) : null"
-                        class="size-chip"
-                           :style="s.visible !== false ? 
+    <div v-for="s in p.sizes" :key="(typeof s === 'object' ? s.value : s)"
+         @click.stop="s.visible !== false ? (p.selSize = (typeof s === 'object' ? s.value : s), vib()) : null"
+         class="size-chip"
+         :style="s.visible !== false ? 
                 { 
-                    background: (p.selSize || (p.sizes.find(x => x.visible !== false) || {}).value || p.sizes[0].value) === (typeof s === 'object' ? s.value : s) ? '#000' : '#f2f2f7', 
-                    color: (p.selSize || (p.sizes.find(x => x.visible !== false) || {}).value || p.sizes[0].value) === (typeof s === 'object' ? s.value : s) ? '#fff' : '#000'
+                    background: (p.selSize || (p.sizes.find(x => x.visible !== false) || {}).value || (typeof p.sizes[0] === 'object' ? p.sizes[0].value : p.sizes[0])) === (typeof s === 'object' ? s.value : s) ? '#000' : '#f2f2f7', 
+                    color: (p.selSize || (p.sizes.find(x => x.visible !== false) || {}).value || (typeof p.sizes[0] === 'object' ? p.sizes[0].value : p.sizes[0])) === (typeof s === 'object' ? s.value : s) ? '#fff' : '#000'
                 } : 
                 { background: '#eee', color: '#bbb', textDecoration: 'line-through', cursor: 'not-allowed' }">
         {{ typeof s === 'object' ? s.value : s }}
-                      </div>
-                   </div>
+    </div>
+</div>
 
                     <button class="btn-black" style="width: 100%;" @click.stop="quickAddToCart(p)">
                         В КОРЗИНУ
@@ -925,34 +925,31 @@ Vue.createApp({
         },
 
         addToCart(p) {
+    if (!p) return;
     this.vib();
     
     // 1. ОПРЕДЕЛЯЕМ ВЫБРАННЫЙ РАЗМЕР
     let selectedSize = '';
     
-    // Если открыта карточка этого товара (selP)
+    // Если добавляем из открытой карточки
     if (this.selP && this.selP.id === p.id && this.selP.selSize) {
         selectedSize = typeof this.selP.selSize === 'object' ? this.selP.selSize.value : this.selP.selSize;
     } 
-    // Если добавляем быстро из каталога
+    // Если добавляем быстро из каталога (через p.selSize)
     else if (p.selSize) {
-        selectedSize = p.selSize;
+        selectedSize = typeof p.selSize === 'object' ? p.selSize.value : p.selSize;
     } 
-    // Если ничего не выбрано, берем первый доступный
-    else {
-        const firstOk = p.sizes.find(s => s.visible !== false);
-        if (firstOk) {
-            selectedSize = typeof firstOk === 'object' ? firstOk.value : firstOk;
-        } else {
-            selectedSize = typeof p.sizes[0] === 'object' ? p.sizes[0].value : p.sizes[0];
-        }
+    // Если ничего не выбрано, берем первый доступный размер
+    else if (p.sizes && p.sizes.length > 0) {
+        const firstOk = p.sizes.find(s => s.visible !== false) || p.sizes[0];
+        selectedSize = typeof firstOk === 'object' ? firstOk.value : firstOk;
     }
 
     // 2. ОПРЕДЕЛЯЕМ ЦВЕТ
     const currentColor = (p.colors && p.colors[p.aIdx]) ? p.colors[p.aIdx] : (p.color || 'Стандарт');
     
-    // 3. СОЗДАЕМ УНИКАЛЬНЫЙ ID
-    const cartId = p.id + selectedSize + currentColor;
+    // 3. СОЗДАЕМ УНИКАЛЬНЫЙ ID (ID + Размер + Цвет)
+    const cartId = String(p.id) + String(selectedSize) + String(currentColor);
     const exist = this.cart.find(i => i.cartId === cartId);
     
     if (exist) {
@@ -970,14 +967,13 @@ Vue.createApp({
     
     this.saveCart();
     
-    // Если была открыта карточка — закрываем её
-    if (this.selP) {
-        this.selP = null;
-        this.view = 'catalog';
-    }
+    // Закрываем карточку и возвращаемся в каталог
+    this.selP = null;
+    this.view = 'catalog';
 
-    if (window.tg?.HapticFeedback) {
-        window.tg.HapticFeedback.notificationOccurred('success');
+    // Безопасный вызов HapticFeedback
+    if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback) {
+        window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
     }
 },
 quickAddToCart(p) {
