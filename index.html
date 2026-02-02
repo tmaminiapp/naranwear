@@ -1098,12 +1098,12 @@ quickAddToCart(p) {
         openSupport() { window.open('https://t.me/opttania', '_blank'); },
         
       total() {
-                return this.cart.reduce((sum, item) => {
-                    // Очищаем цену от пробелов и считаем
-                    const p = Number(String(item.price || 0).replace(/\s/g, ''));
-                    return sum + (p * (item.qty || 1));
-                }, 0);
-            },
+    return this.cart.reduce((sum, item) => {
+        // Убираем пробелы из цены и переводим в число
+        const price = Number(String(item.price || 0).replace(/\s/g, ''));
+        return sum + (price * (item.qty || 1));
+    }, 0);
+},
 
         async uploadImages(e) {
             this.loading = true;
