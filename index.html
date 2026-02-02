@@ -309,7 +309,6 @@
          @click="!p.hiddenSizes?.includes(s.trim()) ? (p.tempSize = s.trim(), vib()) : null"
          :class="['size-chip', {
             active: (p.tempSize || String(p.sizes).split(',')[0].trim()) === s.trim() && !p.hiddenSizes?.includes(s.trim()),
-            'hidden-size': p.hiddenSizes?.includes(s.trim())
          }]"
          :style="p.hiddenSizes?.includes(s.trim()) ? { opacity: '0.4', background: '#e5e5ea', color: '#8e8e93', borderColor: '#d1d1d6', cursor: 'not-allowed' } : {}">
         {{s.trim()}}
@@ -627,10 +626,19 @@
             
             <div style="font-size: 10px; font-weight: 800; text-transform: uppercase;">ВЫБЕРИТЕ РАЗМЕР</div>
             <div class="size-grid">
-                <button v-for="s in selP.sizes.split(',')" :key="s" @click="selP.selSize = s.trim(); vib()" :class="['size-btn', {active: selP.selSize === s.trim()}]">
-                    {{s.trim()}}
-                </button>
-            </div>
+    <button v-for="s in (String(selectedProduct.sizes || '').split(','))" 
+            :key="s"
+            @click="!selectedProduct.hiddenSizes?.includes(s.trim()) ? (selectedProduct.tempSize = s.trim(), vib()) : null"
+            :class="['size-btn', { 
+                active: (selectedProduct.tempSize || String(selectedProduct.sizes).split(',')[0].trim()) === s.trim(),
+                'hidden-size-btn': selectedProduct.hiddenSizes?.includes(s.trim())
+            }]"
+            :style="selectedProduct.hiddenSizes?.includes(s.trim()) ? { 
+                display: 'none' 
+            } : {}">
+        {{ s.trim() }}
+    </button>
+</div>
 
             <div style="font-size: 10px; font-weight: 800; text-transform: uppercase;">ЦВЕТ: {{selP.color}}</div>
 
@@ -1115,18 +1123,26 @@ quickAddToCart(p) {
 },
 // В методах Vue приложения
 toggleSizeVisibility(product, size) {
+    // Инициализируем массив, если его нет
     if (!product.hiddenSizes) product.hiddenSizes = [];
+    
     const index = product.hiddenSizes.indexOf(size);
     if (index > -1) {
-        product.hiddenSizes.splice(index, 1); // Показать
+        product.hiddenSizes.splice(index, 1); // Показать размер
     } else {
-        product.hiddenSizes.push(size); // Скрыть
+        product.hiddenSizes.push(size); // Скрыть размер
     }
-    // Сохранение в Firebase
-    window.fb.update(window.fb.doc(window.db, "products", product.id), {
+
+    // ВАЖНО: Обновляем в Firebase, чтобы данные сохранились в облаке
+    const productRef = window.fb.doc(window.db, "products", product.id);
+    window.fb.updateDoc(productRef, {
         hiddenSizes: product.hiddenSizes
+    }).then(() => {
+        this.vib(); // Вибрация при успешном сохранении
+    }).catch(e => {
+        console.error("Ошибка сохранения размера:", e);
+        alert("Не удалось сохранить изменения");
     });
-    this.vib();
 },
 
 // Функция удаления товара с подтверждением
