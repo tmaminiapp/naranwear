@@ -266,14 +266,14 @@
                     
                     <div class="card-sizes" v-if="p.sizes">
     <div v-for="s in (String(p.sizes).split(','))" 
-         :key="s"
-         @click="!(p.hiddenSizes?.includes(s.trim())) ? (p.tempSize = s.trim(), vib()) : null"
-         :class="['size-chip', {
-            active: (p.tempSize || String(p.sizes).split(',')[0].trim()) === s.trim() && !p.hiddenSizes?.includes(s.trim()),
-            disabled: p.hiddenSizes?.includes(s.trim())
-         }]">
-        {{ s.trim() }}
-    </div>
+     :key="s"
+     @click="!(p.hiddenSizes?.includes(s.trim())) ? (p.tempSize = s.trim(), vib()) : null"
+     :class="['size-chip', {
+        active: (p.tempSize || String(p.sizes).split(',')[0].trim()) === s.trim() && !p.hiddenSizes?.includes(s.trim()),
+        disabled: p.hiddenSizes?.includes(s.trim())
+     }]">
+    {{ s.trim() }}
+</div>
 </div>
                     <button class="btn-black" style="width: 100%;" @click.stop="quickAddToCart(p)">
                         В КОРЗИНУ
@@ -911,7 +911,9 @@ quickAddToCart(p) {
     
     // 1. Берем выбранный размер или первый доступный
     const selectedSize = p.tempSize || (p.sizes ? String(p.sizes).split(',')[0].trim() : 'Универсал');
-    
+    if (p.hiddenSizes && p.hiddenSizes.includes(selectedSize)) {
+        return; // Просто выходим, если размер скрыт
+    }
     // 2. ИСПРАВЛЕННАЯ ЛОГИКА ЦВЕТА:
     // Сначала ищем поле color (из админки), если его нет - ищем в массиве, если и его нет - Белый
     const currentColor = p.color || (p.colors && p.colors[p.aIdx] ? p.colors[p.aIdx] : 'Белый');
