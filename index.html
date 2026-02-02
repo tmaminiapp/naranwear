@@ -13,6 +13,16 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
     
     <style>
+        * { 
+    box-sizing: border-box; 
+    /* Запрещает синюю подсветку для ВСЕХ элементов на мобильных */
+    -webkit-tap-highlight-color: transparent !important; 
+    -webkit-touch-callout: none;
+         }
+
+button, a, div[role="button"] {
+    outline: none !important;
+         }
         :root {
             --bg: #ffffff;
             --dark: #000000;
@@ -181,17 +191,14 @@
     box-sizing: border-box !important;
 }
 
-/* Убираем возможные смещения у самой иконки */
-.btn-fav svg {
-    display: block !important; /* Убирает нижний отступ, характерный для текста */
-    margin: 0 auto !important;
-}
-
 /* Размер иконки внутри кнопки */
 .btn-fav svg {
+    margin: 0 auto !important;
     width: 24px !important; 
     height: 24px !important;
     display: block !important;
+    stroke: #000 !important; /* Черный контур */
+    color: #000 !important;
 }
 /* Маленькие превью фото */
 .preview-container {
@@ -234,8 +241,24 @@
 
         /* Modal Product View */
         .modal { position: fixed; inset: 0; background: #fff; z-index: 2000; overflow-y: auto; padding-bottom: 50px; }
-        .close-modal { position: fixed; top: 15px; right: 15px; z-index: 2100; background: #fff; border: 3px solid #000; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; font-weight: 800; }
-        
+       .close-modal { 
+    position: fixed; 
+    top: 15px; 
+    right: 15px; 
+    z-index: 2100; 
+    background: #fff !important; 
+    color: #000 !important; 
+    border: 1px solid #000 !important; 
+    width: 35px; 
+    height: 35px; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    font-weight: 800;
+    /* Убирает синий цвет на телефоне */
+    -webkit-tap-highlight-color: transparent !important; 
+    outline: none !important;
+}
         .size-grid { 
     display: flex; 
     gap: 10px; 
