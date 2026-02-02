@@ -1246,7 +1246,7 @@ async manageCategory(action, id) { // Добавь async здесь
     if (!this.form.name) return alert('Введите имя');
     if (!this.form.phone) return alert('Введите телефон');
 
-    // 2. ПРОВЕРКА ДОСТАВКИ (Синхронизировано с твоим data.deliv)
+    // 2. Проверка доставки
     if (!this.deliv || this.deliv === '' || this.deliv === 'Не выбран') {
         alert('Пожалуйста, выберите способ доставки: СДЭК, ПОЧТА или 5POST');
         return; 
@@ -1263,76 +1263,91 @@ async manageCategory(action, id) { // Добавь async здесь
     try {
         const orderId = Date.now().toString().slice(-6);
         
-        // Формируем текст состава заказа
-        // 1. Формируем текст состава заказа с учетом Размера и Цвета
-        const itemsText = this.cart.map(item => {
-            // Создаем массив характеристик
+        // ОЧИСТКА ДАННЫХ КОРЗИНЫ (убираем реактивность и функции Vue)
+        const cleanItems = this.cart.map(item => {
+            // Если selSize случайно оказался объектом, берем только строку значения
+            const sizeVal = (item.selSize && typeof item.selSize === 'object') 
+                ? item.selSize.value 
+                : item.selSize;
+
+            return {
+                id: String(item.id || ''),
+                title: String(item.title || ''),
+                price: Number(item.price || 0),
+                qty: Number(item.qty || 1),
+                selSize: String(sizeVal || ''),
+                selColor: String(item.selColor || '')
+            };
+        });
+
+        // Формируем текст состава заказа для Telegram
+        const itemsText = cleanItems.map(i => {
             let specs = [];
-            if (item.selSize) specs.push(item.selSize); // Размер
-            if (item.selColor) specs.push(item.selColor); // Цвет (Белый, Черный и т.д.)
-            
-            // Если характеристики есть, пишем их в скобках, если нет — оставляем пусто
+            if (i.selSize) specs.push(i.selSize);
+            if (i.selColor) specs.push(i.selColor);
             const details = specs.length > 0 ? `(${specs.join(', ')})` : '';
-            
-            return `▫️ ${item.title} ${details} x${item.qty} — ${item.price * item.qty} ₽`;
+            return `▫️ ${i.title} ${details} x${i.qty} — ${i.price * i.qty} ₽`;
         }).join('\n');
+
+        // Итоговая сумма (убеждаемся, что это число)
+        const finalTotal = Number(this.totalSum) || Number(this.total) || 0;
 
         const orderData = {
             order_id: orderId,
-            customer_name: this.form.name,
-            customer_phone: this.form.phone,
-            order_total: Number(this.totalSum),
-            delivery: this.deliv,
-            address: this.address,
-            items_text: itemsText, // Текст для бота
-            items: JSON.parse(JSON.stringify(this.cart)), // Полные данные для админки
+            customer_name: String(this.form.name),
+            customer_phone: String(this.form.phone),
+            order_total: finalTotal, // Теперь это точно число, а не функция
+            delivery: String(this.deliv),
+            address: String(this.address),
+            items_text: itemsText, 
+            items: cleanItems, // Передаем очищенный массив
             status: 'Новый',
             user: {
-                id: this.user.id || 0,
-                username: this.user.username || 'n/a'
+                id: Number(this.user.id) || 0,
+                username: String(this.user.username || 'n/a')
             },
             createdAt: window.fb.serverTimestamp()
         };
 
-        // Сохраняем в Firebase
+        // 1. Сохраняем в Firebase
         await window.fb.addDoc(window.fb.collection(window.db, "orders"), orderData);
 
-        // Отправляем в Telegram
-       const botToken = '8546116032:AAGHzNWm8ueB5ynxIgzf6OLM7EdbA2geEbk';
-        // 2. ID вашего чата (куда должны приходить заказы)
-       const chatId = '387881523'; 
+        // 2. Отправляем в Telegram
+        const botToken = '8546116032:AAGHzNWm8ueB5ynxIgzf6OLM7EdbA2geEbk';
+        const chatId = '387881523'; 
 
         const messageText = `🛍 *НОВЫЙ ЗАКАЗ №${orderId}*\n\n` +
-       `👤 Клиент: ${this.form.name}\n` +
-       `🔗 Ник: ${this.user.username ? '@' + this.user.username : 'не указан'}\n` +
-       `📞 Телефон: ${this.form.phone}\n` +
-       `📍 Доставка: ${this.deliv}\n` +
-       `🏠 Адрес: ${this.address}\n\n` +
-       `📦 Состав заказа:\n${itemsText}\n\n` +
-       `💰 Итого: ${this.total} ₽`;
+            `👤 Клиент: ${this.form.name}\n` +
+            `🔗 Ник: ${this.user.username ? '@' + this.user.username : 'не указан'}\n` +
+            `📞 Телефон: ${this.form.phone}\n` +
+            `📍 Доставка: ${this.deliv}\n` +
+            `🏠 Адрес: ${this.address}\n\n` +
+            `📦 Состав заказа:\n${itemsText}\n\n` +
+            `💰 Итого: ${finalTotal} ₽`;
 
-     await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, { 
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: messageText,
-        parse_mode: 'Markdown'
-    })
-      });
+        await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, { 
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: chatId,
+                text: messageText,
+                parse_mode: 'Markdown'
+            })
+        });
         
         tg.showAlert(`Заказ №${orderId} успешно оформлен!`);
         
-        // Полная очистка после успеха
+        // 3. Полная очистка после успеха
         this.cart = [];
         this.saveCart();
-        this.deliv = ''; // Сбрасываем выбор доставки
+        this.deliv = ''; 
+        this.address = ''; // Также сбросим адрес
         this.showCart = false;
         this.tab = 'profile';
 
     } catch (e) {
         console.error("Ошибка при оформлении:", e);
-        alert("Ошибка Firebase: " + e.message);
+        alert("Ошибка оформления: " + e.message);
     } finally {
         this.loading = false;
     }
