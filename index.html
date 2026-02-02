@@ -625,17 +625,15 @@
             <p style="font-size: 13px; line-height: 1.6; margin: 20px 0; color: #444;">{{selP.desc}}</p>
             
             <div style="font-size: 10px; font-weight: 800; text-transform: uppercase;">ВЫБЕРИТЕ РАЗМЕР</div>
-            <div class="size-grid">
-    <button v-for="s in (String(selectedProduct.sizes || '').split(','))" 
+            <div class="size-grid" v-if="selectedProduct && selectedProduct.sizes">
+    <button v-for="s in (String(selectedProduct.sizes).split(','))" 
             :key="s"
-            @click="!selectedProduct.hiddenSizes?.includes(s.trim()) ? (selectedProduct.tempSize = s.trim(), vib()) : null"
+            @click="!(selectedProduct.hiddenSizes && selectedProduct.hiddenSizes.includes(s.trim())) ? (selectedProduct.tempSize = s.trim(), vib()) : null"
             :class="['size-btn', { 
                 active: (selectedProduct.tempSize || String(selectedProduct.sizes).split(',')[0].trim()) === s.trim(),
-                'hidden-size-btn': selectedProduct.hiddenSizes?.includes(s.trim())
+                'hidden-size-btn': selectedProduct.hiddenSizes && selectedProduct.hiddenSizes.includes(s.trim())
             }]"
-            :style="selectedProduct.hiddenSizes?.includes(s.trim()) ? { 
-                display: 'none' 
-            } : {}">
+            :style="(selectedProduct.hiddenSizes && selectedProduct.hiddenSizes.includes(s.trim())) ? { display: 'none' } : {}">
         {{ s.trim() }}
     </button>
 </div>
@@ -860,10 +858,22 @@ Vue.createApp({
             p.aIdx = idx;
         },
 
-        openProduct(p) {
-            this.vib();
-            this.selP = { ...p, aIdx: 0, selSize: p.sizes.split(',')[0].trim(), selColor: p.color };
-        },
+        openProduct(product) {
+    // Создаем копию объекта, чтобы не мутировать основной список напрямую
+    this.selectedProduct = { ...product };
+    
+    // Если в базе нет поля hiddenSizes, создаем пустой массив, чтобы .includes() не вызывал ошибку
+    if (!this.selectedProduct.hiddenSizes) {
+        this.selectedProduct.hiddenSizes = [];
+    }
+    
+    // Устанавливаем размер по умолчанию (первый не скрытый)
+    const allSizes = String(this.selectedProduct.sizes || '').split(',').map(s => s.trim());
+    const firstAvailable = allSizes.find(s => !this.selectedProduct.hiddenSizes.includes(s));
+    this.selectedProduct.tempSize = firstAvailable || allSizes[0];
+    
+    this.showModal = true; // или другое имя переменной для открытия модалки
+},
 
         isFav(p) { return p && this.favorites.includes(p.id); },
         
