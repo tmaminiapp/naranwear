@@ -1312,82 +1312,33 @@ quickAddToCart(p) {
         
 
 async uploadFile(file) {
-    try {
-        // Создаем уникальное имя файла, чтобы они не перезаписывали друг друга
-        const fileName = Date.now() + '_' + file.name;
-        // Путь в хранилище: папка products / имя_файла
-        const storageRef = window.fb.ref(window.storage, 'products/' + fileName);
-        
-        // Загружаем файл (используем uploadBytes для лучшей совместимости)
-        const snapshot = await window.fb.uploadBytes(storageRef, file);
-        
-        // Получаем прямую ссылку для отображения на сайте
-        const url = await window.fb.getDownloadURL(snapshot.ref);
-        
-        console.log('Файл успешно загружен:', url);
-        return url;
-    } catch (e) {
-        console.error('Ошибка в uploadFile:', e);
-        // Если здесь вылетает CORS, значит настройка в терминале все еще нужна
-        throw e;
-    }
-},
-async compressImage(file) {
-    return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = (e) => {
-            const img = new Image();
-            img.src = e.target.result;
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                const MAX_WIDTH = 1000; 
-                let width = img.width;
-                let height = img.height;
-                
-                if (width > MAX_WIDTH) {
-                    height *= MAX_WIDTH / width;
-                    width = MAX_WIDTH;
-                }
-                
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, width, height);
-                
-                canvas.toBlob((blob) => {
-                    resolve(new File([blob], file.name, { type: 'image/jpeg' }));
-                }, 'image/jpeg', 0.8); // Качество 80% — идеально для сайта
-            };
-        };
-    });
+    const storageInstance = window.fb.getStorage(); 
+    const storageRef = window.fb.ref(storageInstance, 'products/' + Date.now() + '_' + file.name);
+    await window.fb.uploadBytes(storageRef, file);
+    return await window.fb.getDownloadURL(storageRef);
 },
         async saveProduct() {
-    // Проверка на наличие новых локальных файлов или уже существующих ссылок
     const hasLocal = this.newP.localFiles && this.newP.localFiles.length > 0;
     const hasImages = this.newP.images && this.newP.images.length > 0;
 
     if (!this.newP.title || !this.newP.price || (!hasLocal && !hasImages)) {
-        return alert('Заполните название, цену и добавьте хотя бы одно фото');
+        return alert('Заполните название, цену и добавьте фото');
     }
 
-    this.loading = true; // Включаем индикатор загрузки
+    this.loading = true;
     try {
         let uploadedUrls = [];
         
-        // Загружаем только новые выбранные файлы
+        // Загружаем новые файлы, если они есть
         if (hasLocal) {
             for (let item of this.newP.localFiles) {
-                // 1. Сначала сжимаем
-                const compressedFile = await this.compressImage(item.file);
-                // 2. Затем отправляем в облако
-                const url = await this.uploadFile(compressedFile);
-                if (url) uploadedUrls.push(url);
+                const url = await this.uploadFile(item.file);
+                uploadedUrls.push(url);
             }
         }
 
-        // Объединяем старые фото (если это редактирование) и новые загруженные
-        const finalImages = [...(this.newP.images || []), ...uploadedUrls].filter(Boolean);
+        // Собираем всё вместе
+        const finalImages = [...(this.newP.images || []), ...uploadedUrls];
 
         const data = {
             title: this.newP.title,
@@ -1402,47 +1353,27 @@ async compressImage(file) {
         };
 
         if (this.editId) {
-            // Если редактируем — обновляем существующий документ
             await window.fb.updateDoc(window.fb.doc(window.db, "products", this.editId), data);
             this.editId = null;
         } else {
-            // Если новый — добавляем в коллекцию
             data.createdAt = Date.now();
             data.hidden = false;
             await window.fb.addDoc(window.fb.collection(window.db, "products"), data);
         }
 
-        // Очищаем превью в браузере, чтобы не забивать память
+        // Очистка Blob ссылок для освобождения памяти
         if (hasLocal) {
             this.newP.localFiles.forEach(f => URL.revokeObjectURL(f.preview));
         }
 
-        // Очищаем форму
         this.newP = { title: '', desc: '', price: '', oldPrice: '', category: '', sizes: '42, 44, 46', color: '', images: [], localFiles: [] };
-        alert('Товар успешно сохранен!');
-        
-    } catch (e) {
-        console.error('Ошибка сохранения:', e);
-        alert('Произошла ошибка: ' + e.message);
-    } finally {
-        this.loading = false; // Выключаем индикатор загрузки
+        alert('Готово!');
+    } catch (e) { 
+        alert('Ошибка при сохранении: ' + e.message); 
     }
+    this.loading = false;
 },
 
-// Добавь этот вспомогательный метод в methods:
-resetForm() {
-    this.newP = { 
-        title: '', 
-        desc: '', 
-        price: '', 
-        oldPrice: '', 
-        category: '', 
-        sizes: '42, 44, 46', 
-        color: '', 
-        images: [], 
-        localFiles: [] 
-    };
-},
         editProduct(p) {
     this.editId = p.id;
     // Создаем копию товара и гарантируем, что localFiles существует
@@ -1481,43 +1412,19 @@ resetForm() {
     }
 },
 // В методах Vue приложения
-async toggleSizeVisibility(product, size) {
-    this.vib(); // Виброотклик
-    
-    const sTrim = size.trim();
-    
-    // 1. Подготавливаем массив локально
-    if (!product.hiddenSizes) {
-        product.hiddenSizes = [];
-    }
-    
-    const index = product.hiddenSizes.indexOf(sTrim);
+toggleSizeVisibility(product, size) {
+    if (!product.hiddenSizes) product.hiddenSizes = [];
+    const index = product.hiddenSizes.indexOf(size);
     if (index > -1) {
-        product.hiddenSizes.splice(index, 1); // Удаляем (станет видимым)
+        product.hiddenSizes.splice(index, 1); // Показать
     } else {
-        product.hiddenSizes.push(sTrim); // Добавляем (станет скрытым)
+        product.hiddenSizes.push(size); // Скрыть
     }
-
-    // 2. ЗАПИСЬ В БАЗУ ДАННЫХ
-    try {
-        // Проверяем наличие ID документа
-        if (!product.id) {
-            console.error("У товара нет ID, невозможно обновить базу!");
-            return;
-        }
-
-        // В вашем проекте используется window.fb.doc и window.fb.updateDoc
-        const productRef = window.fb.doc(window.db, "products", product.id);
-        
-        await window.fb.updateDoc(productRef, {
-            hiddenSizes: product.hiddenSizes
-        });
-        
-        console.log("Успешно сохранено в Firebase для:", sTrim);
-    } catch (e) {
-        console.error("ОШИБКА СОХРАНЕНИЯ:", e);
-        alert("Ошибка: " + e.message);
-    }
+    // Сохранение в Firebase
+    window.fb.update(window.fb.doc(window.db, "products", product.id), {
+        hiddenSizes: product.hiddenSizes
+    });
+    this.vib();
 },
 
 // Функция удаления товара с подтверждением
