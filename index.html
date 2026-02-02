@@ -1323,7 +1323,7 @@ async manageCategory(action, id) { // Добавь async здесь
             `📍 Доставка: ${this.deliv}\n` +
             `🏠 Адрес: ${this.address}\n\n` +
             `📦 Состав заказа:\n${itemsText}\n\n` +
-            `💰 Итого: ${finalTotal} ₽`;
+            `💰 *Итого: ${finalTotal} ₽*`; // Используем переменную finalTotal
 
         await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, { 
             method: 'POST',
