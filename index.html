@@ -371,7 +371,7 @@
     в соответствии с 152-ФЗ для оформления и доставки заказа.
                  </div>
 
-                <button class="btn-black" style="width:100%; height:60px; font-size: 14px;" @click="checkout">ОФОРМИТЬ ЗАКАЗ</button>
+                <button class="btn-black" style="width:100%; height:60px; font-size: 14px;" @click="checkout">ОФОРМИТЬ ЗАКАЗ • {{total}} ₽</button>
             </div>
         </div>
     </div>
@@ -655,13 +655,17 @@
                 </button>
                 <button 
     class="add-to-cart-btn" 
-    @click="addToCart(selP)" 
-        :disabled="selP.hiddenSizes?.includes(selP.tempSize)"
-        :class="{ 'disabled-btn': selP.hiddenSizes?.includes(selP.tempSize) }"
-        style="width: 100%; height: 50px; background: #000; color: #fff; border: none; border-radius: 8px; font-weight: 800; margin-top: 20px;">
-    
-    <span v-if="selP.hiddenSizes?.includes(selP.tempSize)">НЕТ В НАЛИЧИИ</span>
-    <span v-else>В КОРЗИНУ</span>
+    @click="selP && !selP.hiddenSizes?.includes(selP.tempSize || String(selP.sizes).split(',')[0].trim()) ? addToCart(selP) : null" 
+    :disabled="selP?.hiddenSizes?.includes(selP.tempSize || String(selP.sizes).split(',')[0].trim())"
+    :style="selP?.hiddenSizes?.includes(selP.tempSize || String(selP.sizes).split(',')[0].trim()) ? { opacity: 0.5, background: '#ccc', pointerEvents: 'none' } : {}"
+    style="width: 100%; height: 50px; background: #000; color: #fff; border: none; border-radius: 8px; font-weight: 800; margin-top: 20px;"
+>
+    <span v-if="selP?.hiddenSizes?.includes(selP.tempSize || String(selP.sizes).split(',')[0].trim())">
+        НЕТ В НАЛИЧИИ
+    </span>
+    <span v-else>
+        В КОРЗИНУ
+    </span>
 </button>
             </div>
         </div>
@@ -877,14 +881,9 @@ Vue.createApp({
         },
 
         openProduct(p) {
-    this.selP = { ...p };
-    if (!this.selP.hiddenSizes) this.selP.hiddenSizes = [];
-    
-    const sizes = String(this.selP.sizes || '').split(',').map(s => s.trim());
-    // При открытии сразу ставим "черную рамку" на первый НЕ скрытый размер
-    const firstOk = sizes.find(s => !this.selP.hiddenSizes.includes(s));
-    this.selP.tempSize = firstOk || sizes[0];
-},
+            this.vib();
+            this.selP = { ...p, aIdx: 0, selSize: p.sizes.split(',')[0].trim(), selColor: p.color };
+        },
 
         isFav(p) { return p && this.favorites.includes(p.id); },
         
@@ -899,48 +898,24 @@ Vue.createApp({
             localStorage.setItem('naran_favs_v3', JSON.stringify(this.favorites));
         },
 
-       addToCart(p) {
+        addToCart(p) {
     if (!p) return;
+    const selectedSize = p.tempSize || (p.sizes ? String(p.sizes).split(',')[0].trim() : 'Универсал');
+    
+    if (p.hiddenSizes && p.hiddenSizes.includes(selectedSize)) return;
 
-    // 1. ОПРЕДЕЛЯЕМ РАЗМЕР (только не скрытый)
-    let finalSize = '';
-    if (p.tempSize) {
-        finalSize = p.tempSize;
-    } else if (p.sizes) {
-        const allSizes = String(p.sizes).split(',').map(s => s.trim());
-        // Находим первый размер, которого НЕТ в списке скрытых
-        const firstAvailable = allSizes.find(s => !p.hiddenSizes?.includes(s));
-        finalSize = firstAvailable || allSizes[0];
-    } else {
-        finalSize = 'Универсал';
-    }
-
-    // Блокировка, если размер все равно скрыт
-    if (p.hiddenSizes && p.hiddenSizes.includes(finalSize)) return;
-
-    // 2. ОПРЕДЕЛЯЕМ ЦВЕТ
-    const finalColor = p.color || (p.colors && p.colors[p.aIdx] ? p.colors[p.aIdx] : 'Белый');
-
-    // 3. УНИКАЛЬНЫЙ ID (чтобы разные размеры не слипались в одну строку)
-    const cartId = p.id + finalSize + finalColor;
-
+    const currentColor = p.color || (p.colors && p.colors[p.aIdx] ? p.colors[p.aIdx] : 'Белый');
+    const cartId = p.id + selectedSize + currentColor;
     const exist = this.cart.find(i => i.cartId === cartId);
     if (exist) {
-        exist.qty++; // используем qty, так как в HTML у вас qty
+        exist.q++;
     } else {
-        this.cart.push({
-            ...p,
-            cartId: cartId,
-            selSize: finalSize,  // ВАШЕ НОВОЕ НАЗВАНИЕ
-            selColor: finalColor, // ВАШЕ НОВОЕ НАЗВАНИЕ
-            qty: 1
-        });
+        this.cart.push({...p, cartId, selectedSize, selectedColor: currentColor, q: 1});
     }
-    
     this.saveCart();
     this.vib();
-    this.showCartNotify = true;
-    setTimeout(() => { this.showCartNotify = false; }, 2000);
+    this.selP = null;
+    tg.HapticFeedback.notificationOccurred('success');
 },
 
 quickAddToCart(p) {
@@ -950,17 +925,17 @@ quickAddToCart(p) {
     if (!p) return;
 
     // 2. Определяем размер
-    const selSize = p.tempSize || (p.sizes ? String(p.sizes).split(',')[0].trim() : 'Универсал');
+    const selectedSize = p.tempSize || (p.sizes ? String(p.sizes).split(',')[0].trim() : 'Универсал');
     
     // 3. Если размер скрыт, немедленно выходим до того, как Vue начнет обрабатывать клик
-    if (p.hiddenSizes && p.hiddenSizes.includes(selSize)) {
+    if (p.hiddenSizes && p.hiddenSizes.includes(selectedSize)) {
         return; 
     }
     // 2. ИСПРАВЛЕННАЯ ЛОГИКА ЦВЕТА:
     // Сначала ищем поле color (из админки), если его нет - ищем в массиве, если и его нет - Белый
     const currentColor = p.color || (p.colors && p.colors[p.aIdx] ? p.colors[p.aIdx] : 'Белый');
     
-    const cartId = p.id + selSize + currentColor;
+    const cartId = p.id + selectedSize + currentColor;
     const exist = this.cart.find(i => i.cartId === cartId);
     
     if (exist) {
@@ -970,7 +945,7 @@ quickAddToCart(p) {
         this.cart.push({ 
             ...p, 
             cartId, 
-            selSize: selSize, 
+            selSize: selectedSize, 
             selColor: currentColor, 
             qty: 1, 
             price: Number(p.price) 
