@@ -901,28 +901,34 @@ Vue.createApp({
         addToCart(p) {
     if (!p) return;
 
-    // 1. Объявляем переменную selectedSize (именно это имя ищет ваш код)
+    // 1. ОПРЕДЕЛЯЕМ ВЫБРАННЫЙ РАЗМЕР
     let selectedSize = '';
     
+    // Если пользователь сам кликнул на размер
     if (p.tempSize) {
         selectedSize = p.tempSize;
     } else if (p.sizes) {
-        selectedSize = String(p.sizes).split(',')[0].trim();
+        // Если пользователь не кликал, ищем ПЕРВЫЙ НЕ СКРЫТЫЙ размер
+        const allSizes = String(p.sizes).split(',').map(s => s.trim());
+        const firstAvailable = allSizes.find(s => !p.hiddenSizes?.includes(s));
+        
+        // Если нашли доступный - берем его, если всё скрыто - берем первый из списка (страховка)
+        selectedSize = firstAvailable || allSizes[0];
     } else {
         selectedSize = 'Универсал';
     }
 
-    // 2. Проверка на скрытые размеры
+    // 2. ЖЕСТКАЯ ПРОВЕРКА: если размер всё равно оказался в скрытых — отмена
     if (p.hiddenSizes && p.hiddenSizes.includes(selectedSize)) {
+        console.log("Добавление заблокировано: размер скрыт");
         return; 
     }
 
-    // 3. Цвет
+    // 3. ОПРЕДЕЛЯЕМ ЦВЕТ
     const currentColor = p.color || (p.colors && p.colors[p.aIdx] ? p.colors[p.aIdx] : 'Белый');
     
-    // 4. Используем ТО ЖЕ ИМЯ переменной (selectedSize) для создания ID
+    // 4. ГЕНЕРИРУЕМ ID ДЛЯ КОРЗИНЫ
     const cartId = p.id + selectedSize + currentColor;
-    
     const exist = this.cart.find(i => i.cartId === cartId);
     
     if (exist) {
@@ -931,7 +937,7 @@ Vue.createApp({
         this.cart.push({
             ...p,
             cartId: cartId,
-            selectedSize: selectedSize, // И здесь тоже
+            selectedSize: selectedSize,
             selectedColor: currentColor,
             q: 1
         });
