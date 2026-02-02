@@ -849,20 +849,30 @@ Vue.createApp({
         },
 
         openProduct(p) {
-    this.vib();
-    // Если sizes - строка, превращаем в массив объектов для корректной работы
-    let currentSizes = p.sizes;
-    if (typeof p.sizes === 'string') {
-        currentSizes = p.sizes.split(',').map(s => ({ value: s.trim(), visible: true }));
-    }
+    try {
+        this.vib();
+        // 1. Приводим размеры к единому виду (массив объектов)
+        let currentSizes = [];
+        if (Array.isArray(p.sizes)) {
+            currentSizes = p.sizes;
+        } else if (typeof p.sizes === 'string') {
+            currentSizes = p.sizes.split(',').map(s => ({ value: s.trim(), visible: true }));
+        }
 
-    this.selP = { 
-        ...p, 
-        sizes: currentSizes, // Гарантируем массив объектов
-        aIdx: 0, 
-        selSize: currentSizes[0]?.value || '', 
-        selColor: p.color 
-    };
+        // 2. Ищем первый доступный размер для выбора по умолчанию
+        const firstVisible = currentSizes.find(s => s.visible) || currentSizes[0];
+        const defaultSize = firstVisible ? firstVisible.value : '';
+
+        this.selP = { 
+            ...p, 
+            sizes: currentSizes, // Теперь тут всегда массив объектов
+            aIdx: 0, 
+            selSize: defaultSize, 
+            selColor: p.color || (p.colors ? p.colors[0] : 'Белый') 
+        };
+    } catch (e) {
+        console.error("Ошибка открытия карточки:", e);
+    }
 },
 
         isFav(p) { return p && this.favorites.includes(p.id); },
@@ -880,20 +890,32 @@ Vue.createApp({
 
         addToCart(p) {
     this.vib();
-    // Определяем текущий цвет (если есть массив colors, берем по индексу aIdx)
+    // Извлекаем только текст размера (защита от [object Object])
+    let sizeValue = p.selSize;
+    if (typeof sizeValue === 'object' && sizeValue !== null) sizeValue = sizeValue.value;
+    const finalSize = sizeValue || 'Универсал';
+
     const currentColor = (p.colors && p.colors[p.aIdx]) ? p.colors[p.aIdx] : (p.selColor || 'Белый');
     
-    // Безопасно собираем ID
-    const cartId = p.id + (p.selSize || '') + currentColor;
+    // Генерируем ID для корзины
+    const cartId = String(p.id) + String(finalSize) + String(currentColor);
     const exist = this.cart.find(i => i.cartId === cartId);
     
     if (exist) {
         exist.qty++;
     } else {
-        // Добавляем объект, заменяя 'product' на 'p'
-        this.cart.push({ ...p, cartId, selColor: currentColor, qty: 1, price: Number(p.price) });
+        // В корзину сохраняем только нужные данные
+        this.cart.push({
+            id: p.id,
+            title: p.title,
+            price: Number(p.price),
+            images: p.images,
+            cartId: cartId,
+            selSize: String(finalSize),
+            selColor: String(currentColor),
+            qty: 1
+        });
     }
-    
     this.saveCart();
     this.selP = null;
     tg.HapticFeedback.notificationOccurred('success');
@@ -901,28 +923,31 @@ Vue.createApp({
 
 quickAddToCart(p) {
     this.vib();
+    // Определяем размер для быстрой покупки
+    let rawSize = '';
+    if (Array.isArray(p.sizes)) {
+        const firstVisible = p.sizes.find(s => s.visible) || p.sizes[0];
+        rawSize = firstVisible ? firstVisible.value : 'Универсал';
+    } else {
+        rawSize = String(p.sizes).split(',')[0].trim();
+    }
+
+    const currentColor = p.color || (p.colors ? p.colors[0] : 'Белый');
+    const cartId = String(p.id) + String(rawSize) + String(currentColor);
     
-    // 1. Берем выбранный размер или первый доступный
-    const selectedSize = p.tempSize || (p.sizes ? String(p.sizes).split(',')[0].trim() : 'Универсал');
-    
-    // 2. ИСПРАВЛЕННАЯ ЛОГИКА ЦВЕТА:
-    // Сначала ищем поле color (из админки), если его нет - ищем в массиве, если и его нет - Белый
-    const currentColor = p.color || (p.colors && p.colors[p.aIdx] ? p.colors[p.aIdx] : 'Белый');
-    
-    const cartId = p.id + selectedSize + currentColor;
     const exist = this.cart.find(i => i.cartId === cartId);
-    
     if (exist) {
         exist.qty++;
     } else {
-        // Добавляем в корзину со всеми параметрами
-        this.cart.push({ 
-            ...p, 
-            cartId, 
-            selSize: selectedSize, 
-            selColor: currentColor, 
-            qty: 1, 
-            price: Number(p.price) 
+        this.cart.push({
+            id: p.id,
+            title: p.title,
+            price: Number(p.price),
+            images: p.images,
+            cartId: cartId,
+            selSize: String(rawSize),
+            selColor: String(currentColor),
+            qty: 1
         });
     }
     this.saveCart();
@@ -1205,23 +1230,19 @@ async manageCategory(action, id) { // Добавь async здесь
     }
 
     this.loading = true;
-
     try {
         const orderId = Date.now().toString().slice(-6);
         
-        // Формируем текст состава заказа
-        // 1. Формируем текст состава заказа с учетом Размера и Цвета
-        const itemsText = this.cart.map(item => {
-            // Создаем массив характеристик
-            let specs = [];
-            if (item.selSize) specs.push(item.selSize); // Размер
-            if (item.selColor) specs.push(item.selColor); // Цвет (Белый, Черный и т.д.)
-            
-            // Если характеристики есть, пишем их в скобках, если нет — оставляем пусто
-            const details = specs.length > 0 ? `(${specs.join(', ')})` : '';
-            
-            return `▫️ ${item.title} ${details} x${item.qty} — ${item.price * item.qty} ₽`;
-        }).join('\n');
+        // Очищаем товары от лишних свойств Firebase и Vue
+        const cleanItems = this.cart.map(item => ({
+            title: item.title,
+            price: Number(item.price),
+            qty: Number(item.qty),
+            selSize: String(item.selSize),
+            selColor: String(item.selColor)
+        }));
+
+        const itemsText = cleanItems.map(i => `▫️ ${i.title} (${i.selSize}, ${i.selColor}) x${i.qty}`).join('\n');
 
         const orderData = {
             order_id: orderId,
