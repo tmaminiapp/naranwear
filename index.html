@@ -842,17 +842,27 @@ Vue.createApp({
     },
     methods: {
         vib() { tg.HapticFeedback.impactOccurred('light'); },
-        total() {
-            // Если в корзине пусто, сумма 0
-            if (!this.cart || this.cart.length === 0) return 0;
+       total() {
+    // 1. Проверка на наличие корзины
+    if (!this.cart || !Array.isArray(this.cart) || this.cart.length === 0) return 0;
 
-            return this.cart.reduce((sum, item) => {
-                // Очищаем цену от пробелов и лишних символов (₽, букв)
-                const price = Number(String(item.price || 0).replace(/[^\d]/g, ''));
-                // Считаем: сумма + (цена * количество)
-                return sum + (price * (item.qty || 1));
-            }, 0);
-        },
+    return this.cart.reduce((sum, item) => {
+        // 2. Пробуем достать цену из разных полей (на случай опечаток в коде)
+        let rawPrice = item.price || item.cost || 0;
+        
+        // 3. Очищаем цену: оставляем только цифры. 
+        // Если цена "1 500 ₽", она превратится в "1500"
+        let cleanPrice = String(rawPrice).replace(/[^\d]/g, '');
+        
+        // 4. Превращаем в число. Если не получилось — берем 0
+        let priceNumber = parseInt(cleanPrice) || 0;
+        
+        // 5. Количество (qty или count)
+        let quantity = parseInt(item.qty || item.count || 1);
+        
+        return sum + (priceNumber * quantity);
+    }, 0);
+},
         
         setCategory(name) {
             try {
