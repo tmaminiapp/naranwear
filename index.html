@@ -256,12 +256,15 @@
                     </div>
                     
                     <div class="card-sizes">
-    <div v-for="s in (String(p.sizes || '').split(','))" 
-         v-if="p.sizes"
-         :key="s" 
-         @click="p.tempSize = s.trim(); vib()" 
-         :class="['size-chip', {active: (p.tempSize || String(p.sizes).split(',')[0].trim()) === s.trim()}]">
-        {{s.trim()}}
+    <div v-for="s in p.sizes" 
+         :key="s.name"
+         @click="s.visible ? (p.tempSize = s.name) : null" 
+         :class="['size-chip', { 
+            active: (p.tempSize || p.sizes[0].name) === s.name && s.visible,
+            'size-hidden': !s.visible 
+         }]"
+         :style="!s.visible ? { color: '#ccc', borderColor: '#eee', cursor: 'not-allowed' } : {}">
+        {{ s.name }}
     </div>
 </div>
                     <button class="btn-black" style="width: 100%;" @click.stop="quickAddToCart(p)">
@@ -487,23 +490,20 @@
 
 
 
-                <div v-for="p in products" :key="p.id" 
-     style="display: flex; align-items: center; gap: 10px; padding: 10px; border-bottom: 1px solid #f2f2f7;"
-     :style="{ opacity: p?.hidden ? '0.4' : '1' }">
-    <img :src="p.images ? p.images[0] : ''" style="width: 40px; height: 50px; object-fit: cover; border-radius: 4px; background: #eee;">
-    <div style="flex: 1; min-width: 0;">
-        <div style="font-weight: 700; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ p.title }}</div>
-        <div style="font-size: 11px; color: #8e8e93;">{{ p.price }} ₽</div>
-    </div>
-    <div style="display: flex; gap: 12px;">
-        <button @click="editProduct(p)" style="border:none; background:none; font-size: 16px; cursor: pointer;">✏️</button>
-        <button @click="toggleVisibility(p)" style="border:none; background:none; cursor: pointer; font-size: 16px;">
-            {{ p?.hidden ? '👁️‍🗨️' : '👁️' }}
-        </button>
-        <button @click="deleteProduct(p.id)" style="border:none; background:none; font-size: 16px; cursor: pointer;">🗑</button>
+                <div v-for="p in products" :key="p.id" class="admin-product-item">
+    <div class="admin-sizes-list" style="margin: 10px 0; padding-left: 50px;">
+        <div v-for="(s, idx) in p.sizes" :key="idx" 
+             style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
+            <span :style="{ color: s.visible ? '#000' : '#ccc', fontWeight: '700' }">
+                {{ s.name }}
+            </span>
+            <button @click="toggleSizeVisibility(p, idx)" 
+                    style="font-size: 10px; padding: 2px 6px; border: 1px solid #000; background: none;">
+                {{ s.visible ? 'СКРЫТЬ' : 'ПОКАЗАТЬ' }}
+            </button>
+        </div>
     </div>
 </div>
-             </div>
 
            <hr style="margin: 6px 0; border: none; border-top: 2px solid #000;">   
 
@@ -1030,6 +1030,7 @@ quickAddToCart(p) {
         },
 
         async saveProduct() {
+            
             if (!this.newP.title || !this.newP.price || this.newP.images.length === 0) {
                 return alert('Заполните название, цену и добавьте фото');
             }
@@ -1089,7 +1090,26 @@ quickAddToCart(p) {
         if (confirm(msg)) runDelete();
     }
 },
-
+async deleteProduct(id) {
+    // Вызываем стандартное окно подтверждения браузера
+    if (confirm("Вы уверены, что хотите удалить этот товар навсегда?")) {
+        try {
+            await window.fb.deleteDoc(window.fb.doc(window.db, "products", id));
+            this.haptic(); // Виброотклик
+            alert("Товар удален");
+        } catch (e) {
+            console.error(e);
+            alert("Ошибка при удалении");
+        }
+    }
+},
+toggleSizeVisibility(product, sizeIdx) {
+    product.sizes[sizeIdx].visible = !product.sizes[sizeIdx].visible;
+    // Сразу сохраняем изменения в облаке
+    window.fb.updateDoc(window.fb.doc(window.db, "products", product.id), {
+        sizes: product.sizes
+    });
+},
         async toggleVisibility(p) {
     if (!p || !p.id) return;
     
