@@ -655,17 +655,13 @@
                 </button>
                 <button 
     class="add-to-cart-btn" 
-    @click="selP && !selP.hiddenSizes?.includes(selP.tempSize || String(selP.sizes).split(',')[0].trim()) ? addToCart(selP) : null" 
-    :disabled="selP?.hiddenSizes?.includes(selP.tempSize || String(selP.sizes).split(',')[0].trim())"
-    :style="selP?.hiddenSizes?.includes(selP.tempSize || String(selP.sizes).split(',')[0].trim()) ? { opacity: 0.5, background: '#ccc', pointerEvents: 'none' } : {}"
-    style="width: 100%; height: 50px; background: #000; color: #fff; border: none; border-radius: 8px; font-weight: 800; margin-top: 20px;"
->
-    <span v-if="selP?.hiddenSizes?.includes(selP.tempSize || String(selP.sizes).split(',')[0].trim())">
-        НЕТ В НАЛИЧИИ
-    </span>
-    <span v-else>
-        В КОРЗИНУ
-    </span>
+    @click="addToCart(selP)" 
+        :disabled="selP.hiddenSizes?.includes(selP.tempSize)"
+        :class="{ 'disabled-btn': selP.hiddenSizes?.includes(selP.tempSize) }"
+        style="width: 100%; height: 50px; background: #000; color: #fff; border: none; border-radius: 8px; font-weight: 800; margin-top: 20px;">
+    
+    <span v-if="selP.hiddenSizes?.includes(selP.tempSize)">НЕТ В НАЛИЧИИ</span>
+    <span v-else>В КОРЗИНУ</span>
 </button>
             </div>
         </div>
@@ -881,9 +877,14 @@ Vue.createApp({
         },
 
         openProduct(p) {
-            this.vib();
-            this.selP = { ...p, aIdx: 0, selSize: p.sizes.split(',')[0].trim(), selColor: p.color };
-        },
+    this.selP = { ...p };
+    if (!this.selP.hiddenSizes) this.selP.hiddenSizes = [];
+    
+    const sizes = String(this.selP.sizes || '').split(',').map(s => s.trim());
+    // При открытии сразу ставим "черную рамку" на первый НЕ скрытый размер
+    const firstOk = sizes.find(s => !this.selP.hiddenSizes.includes(s));
+    this.selP.tempSize = firstOk || sizes[0];
+},
 
         isFav(p) { return p && this.favorites.includes(p.id); },
         
