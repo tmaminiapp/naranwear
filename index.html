@@ -1312,10 +1312,22 @@ quickAddToCart(p) {
         
 
 async uploadFile(file) {
-    const storageInstance = window.fb.getStorage(); 
-    const storageRef = window.fb.ref(storageInstance, 'products/' + Date.now() + '_' + file.name);
-    await window.fb.uploadBytes(storageRef, file);
-    return await window.fb.getDownloadURL(storageRef);
+    try {
+        const storageInstance = window.fb.getStorage(); 
+        const storageRef = window.fb.ref(storageInstance, 'products/' + Date.now() + '_' + file.name);
+        
+        // 1. Сохраняем результат загрузки в snapshot
+        const snapshot = await window.fb.uploadBytes(storageRef, file);
+        
+        // 2. Получаем URL именно из ссылки, которую вернул сервер (snapshot.ref)
+        const downloadURL = await window.fb.getDownloadURL(snapshot.ref);
+        
+        console.log("Файл загружен, URL получен:", downloadURL);
+        return downloadURL;
+    } catch (error) {
+        console.error("Ошибка внутри uploadFile:", error);
+        throw error; // Пробрасываем ошибку дальше в saveProduct
+    }
 },
         async saveProduct() {
     const hasLocal = this.newP.localFiles && this.newP.localFiles.length > 0;
