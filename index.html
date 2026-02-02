@@ -904,52 +904,49 @@ Vue.createApp({
     // 1. ОПРЕДЕЛЯЕМ РАЗМЕР
     let selectedSize = '';
     
-    // Сначала проверяем, выбрал ли пользователь что-то вручную (tempSize)
+    // Если пользователь сам нажал на кнопку размера
     if (p.tempSize) {
         selectedSize = p.tempSize;
     } else if (p.sizes) {
-        // Если не выбрал, ищем ПЕРВЫЙ доступный (не скрытый)
+        // ЕСЛИ ПОЛЬЗОВАТЕЛЬ НЕ ВЫБИРАЛ:
+        // Разбиваем строку размеров в массив
         const allSizes = String(p.sizes).split(',').map(s => s.trim());
-        const firstAvailable = allSizes.find(sz => !p.hiddenSizes?.includes(sz));
+        // Ищем ПЕРВЫЙ размер, которого НЕТ в списке скрытых
+        const firstAvailable = allSizes.find(s => !p.hiddenSizes?.includes(s));
+        
+        // Если нашли живой размер — берем его, если нет — берем первый (страховка)
         selectedSize = firstAvailable || allSizes[0];
     } else {
         selectedSize = 'Универсал';
     }
 
-    // 2. КРИТИЧЕСКАЯ ПРОВЕРКА: Если выбранный размер СКРЫТ - ПРЕРЫВАЕМ
+    // 2. ЖЕСТКАЯ ПРОВЕРКА (Блокировка добавления)
     if (p.hiddenSizes && p.hiddenSizes.includes(selectedSize)) {
-        console.error("Ошибка: Попытка добавить скрытый размер:", selectedSize);
-        // Можно добавить уведомление для пользователя
-        // alert("Этот размер закончился");
+        console.warn("Размер скрыт, добавление отменено");
         return; 
     }
 
-    // 3. ОПРЕДЕЛЯЕМ ЦВЕТ
+    // 3. ЦВЕТ
     const currentColor = p.color || (p.colors && p.colors[p.aIdx] ? p.colors[p.aIdx] : 'Белый');
     
-    // 4. ГЕНЕРИРУЕМ cartId С ИСПОЛЬЗОВАНИЕМ ПРОВЕРЕННОГО РАЗМЕРА
+    // 4. ГЕНЕРИРУЕМ ID (обязательно используем selectedSize)
     const cartId = p.id + selectedSize + currentColor;
-    
     const exist = this.cart.find(i => i.cartId === cartId);
     
     if (exist) {
         exist.q++;
     } else {
-        // Создаем новый объект для корзины
-        const itemToCart = {
+        this.cart.push({
             ...p,
             cartId: cartId,
-            selectedSize: selectedSize, // Тот самый проверенный размер
+            selectedSize: selectedSize, // Сохраняем именно тот, что прошел проверку
             selectedColor: currentColor,
             q: 1
-        };
-        // Удаляем временное поле, чтобы оно не мешало другим товарам
-        delete itemToCart.tempSize; 
-        this.cart.push(itemToCart);
+        });
     }
     
     this.saveCart();
-    this.vib();
+    this.vib(); // Виброотклик Telegram
     this.showCartNotify = true;
     setTimeout(() => { this.showCartNotify = false; }, 2000);
 },
