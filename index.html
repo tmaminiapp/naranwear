@@ -650,10 +650,17 @@
                     <svg :fill="isFav(selP) ? '#000' : 'none'" viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
                 </button>
                 <button class="btn-black" @click="addToCart(selP)" 
-        :disabled="selP.hiddenSizes?.includes(selP.tempSize)"
-        :style="selP.hiddenSizes?.includes(selP.tempSize) ? { opacity: 0.5, background: '#ccc', cursor: 'not-allowed' } : {}"
+        /* Блокируем кнопку, если текущий выбранный размер (tempSize) есть в списке скрытых */
+        :disabled="selP.hiddenSizes?.includes(selP.tempSize || String(selP.sizes).split(',')[0].trim())"
+        :style="selP.hiddenSizes?.includes(selP.tempSize || String(selP.sizes).split(',')[0].trim()) ? { opacity: 0.5, background: '#ccc', cursor: 'not-allowed' } : {}"
         style="width: 100%; height: 50px; background: #000; color: #fff; border: none; border-radius: 8px; font-weight: 800; margin-top: 20px;">
-    {{ selP.hiddenSizes?.includes(selP.tempSize) ? 'НЕТ В НАЛИЧИИ' : 'В КОРЗИНУ' }}</button>
+    
+    <span v-if="selP.hiddenSizes?.includes(selP.tempSize || String(selP.sizes).split(',')[0].trim())">
+        РАЗМЕР РАСПРОДАН
+    </span>
+    <span v-else>
+        В КОРЗИНУ
+    </span></button>
             </div>
         </div>
     </div>
@@ -887,6 +894,14 @@ Vue.createApp({
 
         addToCart(p) {
     this.vib();
+    // Определяем, какой размер выбран
+    const selectedSize = p.tempSize || (p.sizes ? String(p.sizes).split(',')[0].trim() : 'Универсал');
+    
+    // ПРОВЕРКА: если размер в скрытых — ничего не делаем и выходим из функции
+    if (p.hiddenSizes && p.hiddenSizes.includes(selectedSize)) {
+        console.log("Попытка добавить скрытый размер");
+        return; 
+    }
     // Определяем текущий цвет (если есть массив colors, берем по индексу aIdx)
     const currentColor = (p.colors && p.colors[p.aIdx]) ? p.colors[p.aIdx] : (p.selColor || 'Белый');
     
