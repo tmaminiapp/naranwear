@@ -901,33 +901,46 @@ Vue.createApp({
         addToCart(p) {
     if (!p) return;
 
-    // СНАЧАЛА проверяем tempSize (то, что кликнули в модалке)
-    // Если его нет — берем первый из списка sizes
-    // Если и списка нет — Универсал
-    let finalSize = '';
+    // 1. Объявляем переменную selectedSize (именно это имя ищет ваш код)
+    let selectedSize = '';
+    
     if (p.tempSize) {
-        finalSize = p.tempSize;
+        selectedSize = p.tempSize;
     } else if (p.sizes) {
-        finalSize = String(p.sizes).split(',')[0].trim();
+        selectedSize = String(p.sizes).split(',')[0].trim();
     } else {
-        finalSize = 'Универсал';
+        selectedSize = 'Универсал';
     }
 
-    // Проверка на скрытость
-    if (p.hiddenSizes && p.hiddenSizes.includes(finalSize)) return;
+    // 2. Проверка на скрытые размеры
+    if (p.hiddenSizes && p.hiddenSizes.includes(selectedSize)) {
+        return; 
+    }
 
+    // 3. Цвет
     const currentColor = p.color || (p.colors && p.colors[p.aIdx] ? p.colors[p.aIdx] : 'Белый');
+    
+    // 4. Используем ТО ЖЕ ИМЯ переменной (selectedSize) для создания ID
     const cartId = p.id + selectedSize + currentColor;
+    
     const exist = this.cart.find(i => i.cartId === cartId);
+    
     if (exist) {
         exist.q++;
     } else {
-        this.cart.push({...p, cartId, selectedSize, selectedColor: currentColor, q: 1});
+        this.cart.push({
+            ...p,
+            cartId: cartId,
+            selectedSize: selectedSize, // И здесь тоже
+            selectedColor: currentColor,
+            q: 1
+        });
     }
+    
     this.saveCart();
     this.vib();
-    this.selP = null;
-    tg.HapticFeedback.notificationOccurred('success');
+    this.showCartNotify = true;
+    setTimeout(() => { this.showCartNotify = false; }, 2000);
 },
 
 quickAddToCart(p) {
