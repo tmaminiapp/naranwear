@@ -1539,12 +1539,40 @@ async manageCategory(action, id) { // Добавь async здесь
 
 // Метод для кнопок "В пути" и "Готов"
 async updateStatus(order, newStatus) {
+    // Если статус уже такой же, ничего не делаем
+    if (order.status === newStatus) return;
+
     try {
         order.isUpdating = true;
         const orderRef = window.fb.doc(window.db, "orders", order.id);
         await window.fb.updateDoc(orderRef, { status: newStatus });
         
-        // Безопасная вибрация (проверяем версию API)
+        // --- БЛОК УВЕДОМЛЕНИЯ КЛИЕНТА ---
+        const botToken = '8546116032:AAGHzNWm8ueB5ynxIgzf6OLM7EdbA2geEbk';
+        const customerId = order.user ? order.user.id : null;
+
+        if (customerId && customerId !== 0) {
+            let message = "";
+            if (newStatus === 'Отправлен') {
+                message = `🚀 *Ваш заказ №${order.order_id} отправлен!*\n📦 Мы передали его в службу доставки. Скоро он будет у вас!`;
+            } else if (newStatus === 'Доставлен') {
+                message = `✅ *Заказ №${order.order_id} доставлен!*\n📦 Посылка ожидает вас в пункте выдачи или доставлена курьером. Спасибо за выбор NARAN!`;
+            }
+
+            if (message) {
+                await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        chat_id: customerId,
+                        text: message,
+                        parse_mode: 'Markdown'
+                    })
+                });
+            }
+        }
+        // --- КОНЕЦ БЛОКА УВЕДОМЛЕНИЯ ---
+
         if (window.tg && window.tg.version && parseFloat(window.tg.version) >= 6.1) {
             if (window.tg.HapticFeedback) window.tg.HapticFeedback.impactOccurred('medium');
         }
