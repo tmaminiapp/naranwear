@@ -371,7 +371,7 @@
     в соответствии с 152-ФЗ для оформления и доставки заказа.
                  </div>
 
-                <button class="btn-black" style="width:100%; height:60px; font-size: 14px;" @click="checkout">ОФОРМИТЬ ЗАКАЗ • {{total}} ₽</button>
+                <button class="btn-black" style="width:100%; height:60px; font-size: 14px;" @click="checkout">ОФОРМИТЬ ЗАКАЗ</button>
             </div>
         </div>
     </div>
@@ -899,55 +899,46 @@ Vue.createApp({
             localStorage.setItem('naran_favs_v3', JSON.stringify(this.favorites));
         },
 
-        addToCart(p) {
+       addToCart(p) {
     if (!p) return;
 
-    // 1. ОПРЕДЕЛЯЕМ РАЗМЕР
-    let selectedSize = '';
-    
-    // Если пользователь сам нажал на кнопку размера
+    // 1. ОПРЕДЕЛЯЕМ РАЗМЕР (только не скрытый)
+    let finalSize = '';
     if (p.tempSize) {
-        selectedSize = p.tempSize;
+        finalSize = p.tempSize;
     } else if (p.sizes) {
-        // ЕСЛИ ПОЛЬЗОВАТЕЛЬ НЕ ВЫБИРАЛ:
-        // Разбиваем строку размеров в массив
         const allSizes = String(p.sizes).split(',').map(s => s.trim());
-        // Ищем ПЕРВЫЙ размер, которого НЕТ в списке скрытых
+        // Находим первый размер, которого НЕТ в списке скрытых
         const firstAvailable = allSizes.find(s => !p.hiddenSizes?.includes(s));
-        
-        // Если нашли живой размер — берем его, если нет — берем первый (страховка)
-        selectedSize = firstAvailable || allSizes[0];
+        finalSize = firstAvailable || allSizes[0];
     } else {
-        selectedSize = 'Универсал';
+        finalSize = 'Универсал';
     }
 
-    // 2. ЖЕСТКАЯ ПРОВЕРКА (Блокировка добавления)
-    if (p.hiddenSizes && p.hiddenSizes.includes(selectedSize)) {
-        console.warn("Размер скрыт, добавление отменено");
-        return; 
-    }
+    // Блокировка, если размер все равно скрыт
+    if (p.hiddenSizes && p.hiddenSizes.includes(finalSize)) return;
 
-    // 3. ЦВЕТ
-    const currentColor = p.color || (p.colors && p.colors[p.aIdx] ? p.colors[p.aIdx] : 'Белый');
-    
-    // 4. ГЕНЕРИРУЕМ ID (обязательно используем selectedSize)
-    const cartId = p.id + selectedSize + currentColor;
+    // 2. ОПРЕДЕЛЯЕМ ЦВЕТ
+    const finalColor = p.color || (p.colors && p.colors[p.aIdx] ? p.colors[p.aIdx] : 'Белый');
+
+    // 3. УНИКАЛЬНЫЙ ID (чтобы разные размеры не слипались в одну строку)
+    const cartId = p.id + finalSize + finalColor;
+
     const exist = this.cart.find(i => i.cartId === cartId);
-    
     if (exist) {
-        exist.q++;
+        exist.qty++; // используем qty, так как в HTML у вас qty
     } else {
         this.cart.push({
             ...p,
             cartId: cartId,
-            selectedSize: selectedSize, // Сохраняем именно тот, что прошел проверку
-            selectedColor: currentColor,
-            q: 1
+            selSize: finalSize,  // ВАШЕ НОВОЕ НАЗВАНИЕ
+            selColor: finalColor, // ВАШЕ НОВОЕ НАЗВАНИЕ
+            qty: 1
         });
     }
     
     this.saveCart();
-    this.vib(); // Виброотклик Telegram
+    this.vib();
     this.showCartNotify = true;
     setTimeout(() => { this.showCartNotify = false; }, 2000);
 },
@@ -959,17 +950,17 @@ quickAddToCart(p) {
     if (!p) return;
 
     // 2. Определяем размер
-    const selectedSize = p.tempSize || (p.sizes ? String(p.sizes).split(',')[0].trim() : 'Универсал');
+    const selSize = p.tempSize || (p.sizes ? String(p.sizes).split(',')[0].trim() : 'Универсал');
     
     // 3. Если размер скрыт, немедленно выходим до того, как Vue начнет обрабатывать клик
-    if (p.hiddenSizes && p.hiddenSizes.includes(selectedSize)) {
+    if (p.hiddenSizes && p.hiddenSizes.includes(selSize)) {
         return; 
     }
     // 2. ИСПРАВЛЕННАЯ ЛОГИКА ЦВЕТА:
     // Сначала ищем поле color (из админки), если его нет - ищем в массиве, если и его нет - Белый
     const currentColor = p.color || (p.colors && p.colors[p.aIdx] ? p.colors[p.aIdx] : 'Белый');
     
-    const cartId = p.id + selectedSize + currentColor;
+    const cartId = p.id + selSize + currentColor;
     const exist = this.cart.find(i => i.cartId === cartId);
     
     if (exist) {
@@ -979,7 +970,7 @@ quickAddToCart(p) {
         this.cart.push({ 
             ...p, 
             cartId, 
-            selSize: selectedSize, 
+            selSize: selSize, 
             selColor: currentColor, 
             qty: 1, 
             price: Number(p.price) 
