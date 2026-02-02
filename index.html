@@ -25,14 +25,39 @@
     pointer-events: none !important;
     opacity: 0.5;
 }
-        .size-chip.disabled, .size-btn.disabled {
+    /* Общие стили для кнопок размеров */
+.size-chip { 
+    font-size: 9px; 
+    font-weight: 700; 
+    padding: 4px 8px; 
+    border: 1px solid #ddd; 
+    border-radius: 2px; 
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    
+    /* Убирает синий блик при нажатии на смартфонах */
+    -webkit-tap-highlight-color: transparent;
+    /* Запрещает выделение текста синим цветом при долгом тапе */
+    user-select: none; 
+}
+
+/* Активный размер (черный) */
+.size-chip.active { 
+    background: #000; 
+    color: #fff; 
+    border-color: #000; 
+}
+
+/* Отключенный размер (серый/перечеркнутый) */
+.size-chip.disabled, 
+.size-btn.disabled {
     opacity: 0.4 !important;
-    background: #e5e5ea !important;
-    color: #8e8e93 !important;
+    background: #f2f2f7 !important; /* Используем вашу переменную --light */
+    color: #8e8e93 !important; /* Ваша переменная --gray */
     border-color: #d1d1d6 !important;
-    cursor: not-allowed !important;
-    pointer-events: none; /* Полностью отключает клики */
-    text-decoration: line-through; /* Визуально перечеркиваем для ясности */
+    pointer-events: none; 
+    text-decoration: line-through;
 }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
@@ -89,11 +114,6 @@
     display: flex; gap: 5px; overflow-x: auto; padding: 5px 0; 
     scrollbar-width: none; margin-bottom: 8px;
 }
-.size-chip { 
-    font-size: 9px; font-weight: 700; padding: 4px 8px; 
-    border: 1px solid #ddd; border-radius: 2px; white-space: nowrap;
-}
-.size-chip.active { background: #000; color: #fff; border-color: #000; }
 
         /* Grid */
         .products-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
