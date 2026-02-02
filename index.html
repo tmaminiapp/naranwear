@@ -47,6 +47,7 @@
     background: #000; 
     color: #fff; 
     border-color: #000; 
+    transform: scale(0.95);
 }
 
 /* Отключенный размер (серый/перечеркнутый) */
@@ -561,8 +562,32 @@
                 <input v-model="newP.color" class="input-admin">
             </div>
             <div class="field">
-                <label>ФОТО (МОЖНО НЕСКОЛЬКО)</label>
-                <input type="file" multiple @change="uploadImages" class="input-admin" style="padding: 8px;">
+    <label>ФОТО (МОЖНО НЕСКОЛЬКО)</label>
+    <input type="file" multiple @change="handleFiles" class="input-admin" style="padding: 8px;">
+</div>
+
+<div class="preview-container" v-if="newP.localFiles && newP.localFiles.length > 0">
+    <div v-for="(item, index) in newP.localFiles" :key="index" class="preview-card">
+        <img :src="item.preview" />
+        <div class="remove-preview-btn" @click="removePhoto(index)">×</div>
+    </div>
+</div>
+    <style>
+.preview-container {
+    display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0;
+}
+.preview-card {
+    position: relative; width: 60px; height: 60px;
+}
+.preview-card img {
+    width: 100%; height: 100%; object-fit: cover; border-radius: 5px; border: 1px solid #ddd;
+}
+.remove-preview-btn {
+    position: absolute; top: -5px; right: -5px; background: #ff3b30; color: white;
+    width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center;
+    justify-content: center; font-size: 12px; cursor: pointer; border: 1px solid #fff;
+}
+</style>
             </div>
 
             <button class="btn-black" style="width:100%; margin-top:10px;" @click="saveProduct" :disabled="loading">
@@ -815,6 +840,7 @@ Vue.createApp({
             showProductList: false,
             allOrders: [],
             chart: null,
+            localFiles: [], // Сюда будем сохранять объекты {file, preview}
             myOrders: [],
 
             nav: [
@@ -1035,7 +1061,11 @@ Vue.createApp({
     this.showCartNotify = true;
     setTimeout(() => { this.showCartNotify = false; }, 2000);
 },
-
+removePhoto(index) {
+    // Освобождаем память браузера
+    URL.revokeObjectURL(this.newP.localFiles[index].preview);
+    this.newP.localFiles.splice(index, 1);
+},
 quickAddToCart(p) {
     this.vib();
     
@@ -1205,33 +1235,65 @@ quickAddToCart(p) {
             }
             this.loading = false;
         },
-
+async uploadFile(file) {
+    const storage = window.fb.getStorage();
+    const storageRef = window.fb.ref(storage, 'products/' + Date.now() + '_' + file.name);
+    await window.fb.uploadBytes(storageRef, file);
+    return await window.fb.getDownloadURL(storageRef);
+},
         async saveProduct() {
-            if (!this.newP.title || !this.newP.price || this.newP.images.length === 0) {
-                return alert('Заполните название, цену и добавьте фото');
-            }
-            this.loading = true;
-            try {
-                const data = {
-                    ...this.newP,
-                    price: Number(this.newP.price),
-                    oldPrice: this.newP.oldPrice ? Number(this.newP.oldPrice) : null,
-                    updatedAt: Date.now()
-                };
+    // Проверка: теперь смотрим и на готовые картинки (если редактируем), 
+    // и на новые локальные файлы
+    const hasImages = (this.newP.images && this.newP.images.length > 0) || 
+                      (this.newP.localFiles && this.newP.localFiles.length > 0);
 
-                if (this.editId) {
-                    await window.fb.updateDoc(window.fb.doc(window.db, "products", this.editId), data);
-                    this.editId = null;
-                } else {
-                    data.createdAt = Date.now();
-                    data.hidden = false;
-                    await window.fb.addDoc(window.fb.collection(window.db, "products"), data);
-                }
-                this.newP = { title: '', desc: '', price: '', oldPrice: '', category: '', sizes: '42, 44, 46', color: '', images: [] };
-                alert('Готово!');
-            } catch (e) { alert(e.message); }
-            this.loading = false;
-        },
+    if (!this.newP.title || !this.newP.price || !hasImages) {
+        return alert('Заполните название, цену и добавьте фото');
+    }
+
+    this.loading = true;
+    try {
+        // 1. ЗАГРУЗКА НОВЫХ ФОТО (если они есть)
+        let uploadedUrls = [];
+        if (this.newP.localFiles && this.newP.localFiles.length > 0) {
+            for (let item of this.newP.localFiles) {
+                const url = await this.uploadFile(item.file); // Вызываем функцию загрузки
+                uploadedUrls.push(url);
+            }
+        }
+
+        // 2. ФОРМИРОВАНИЕ СПИСКА КАРТИНОК
+        // Если мы редактируем, объединяем старые фото с новыми загруженными
+        const finalImages = [...(this.newP.images || []), ...uploadedUrls];
+
+        const data = {
+            ...this.newP,
+            images: finalImages, // Сохраняем итоговый массив ссылок
+            price: Number(this.newP.price),
+            oldPrice: this.newP.oldPrice ? Number(this.newP.oldPrice) : null,
+            updatedAt: Date.now()
+        };
+
+        // Удаляем техническое поле localFiles перед отправкой в базу
+        delete data.localFiles;
+
+        if (this.editId) {
+            await window.fb.updateDoc(window.fb.doc(window.db, "products", this.editId), data);
+            this.editId = null;
+        } else {
+            data.createdAt = Date.now();
+            data.hidden = false;
+            await window.fb.addDoc(window.fb.collection(window.db, "products"), data);
+        }
+
+        // 3. ОЧИСТКА
+        this.newP = { title: '', desc: '', price: '', oldPrice: '', category: '', sizes: '42, 44, 46', color: '', images: [], localFiles: [] };
+        alert('Готово!');
+    } catch (e) { 
+        alert('Ошибка при сохранении: ' + e.message); 
+    }
+    this.loading = false;
+},
 
         editProduct(p) {
             this.editId = p.id;
@@ -1466,6 +1528,20 @@ async updateStatus(order, newStatus) {
     } finally {
         order.isUpdating = false;
     }
+},
+handleFiles(event) {
+    if (!this.newP.localFiles) this.newP.localFiles = [];
+    
+    const files = Array.from(event.target.files);
+    files.forEach(file => {
+        // Создаем временную ссылку "blob:", которая видна только в вашем браузере
+        const previewUrl = URL.createObjectURL(file);
+        this.newP.localFiles.push({
+            file: file,     // Сам файл для будущей загрузки
+            preview: previewUrl // Ссылка для тега <img>
+        });
+    });
+    event.target.value = ''; // Сброс инпута
 },
 
 async deleteOrder(docId) {
