@@ -1412,19 +1412,43 @@ async uploadFile(file) {
     }
 },
 // В методах Vue приложения
-toggleSizeVisibility(product, size) {
-    if (!product.hiddenSizes) product.hiddenSizes = [];
-    const index = product.hiddenSizes.indexOf(size);
-    if (index > -1) {
-        product.hiddenSizes.splice(index, 1); // Показать
-    } else {
-        product.hiddenSizes.push(size); // Скрыть
+async toggleSizeVisibility(product, size) {
+    this.vib(); // Виброотклик
+    
+    const sTrim = size.trim();
+    
+    // 1. Подготавливаем массив локально
+    if (!product.hiddenSizes) {
+        product.hiddenSizes = [];
     }
-    // Сохранение в Firebase
-    window.fb.update(window.fb.doc(window.db, "products", product.id), {
-        hiddenSizes: product.hiddenSizes
-    });
-    this.vib();
+    
+    const index = product.hiddenSizes.indexOf(sTrim);
+    if (index > -1) {
+        product.hiddenSizes.splice(index, 1); // Удаляем (станет видимым)
+    } else {
+        product.hiddenSizes.push(sTrim); // Добавляем (станет скрытым)
+    }
+
+    // 2. ЗАПИСЬ В БАЗУ ДАННЫХ
+    try {
+        // Проверяем наличие ID документа
+        if (!product.id) {
+            console.error("У товара нет ID, невозможно обновить базу!");
+            return;
+        }
+
+        // В вашем проекте используется window.fb.doc и window.fb.updateDoc
+        const productRef = window.fb.doc(window.db, "products", product.id);
+        
+        await window.fb.updateDoc(productRef, {
+            hiddenSizes: product.hiddenSizes
+        });
+        
+        console.log("Успешно сохранено в Firebase для:", sTrim);
+    } catch (e) {
+        console.error("ОШИБКА СОХРАНЕНИЯ:", e);
+        alert("Ошибка: " + e.message);
+    }
 },
 
 // Функция удаления товара с подтверждением
