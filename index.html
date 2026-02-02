@@ -635,17 +635,17 @@
             <p style="font-size: 13px; line-height: 1.6; margin: 20px 0; color: #444;">{{selP.desc}}</p>
             
             <div style="font-size: 10px; font-weight: 800; text-transform: uppercase; margin-bottom: 10px;">ВЫБЕРИТЕ РАЗМЕР</div>
-<div class="size-grid">
-            <button v-for="s in String(selP.sizes || '').split(',')" 
-                :key="s"
-                @click="!(selP.hiddenSizes?.includes(s.trim())) ? (selP.tempSize = s.trim(), vib()) : null"
-                :class="['size-btn', { 
-                    active: (selP.tempSize || String(selP.sizes).split(',')[0].trim()) === s.trim() && !selP.hiddenSizes?.includes(s.trim()),
-                    disabled: selP.hiddenSizes?.includes(s.trim())
-                }]">
-                {{ s.trim() }}
-            </button>
-        </div>
+<div class="size-grid" v-if="selP && selP.sizes">
+    <button v-for="s in String(selP.sizes).split(',')" 
+            :key="s"
+            @click="!(selP.hiddenSizes?.includes(s.trim())) ? (selP.tempSize = s.trim(), vib()) : null"
+            :class="['size-btn', { 
+                active: (selP.tempSize || String(selP.sizes).split(',')[0].trim()) === s.trim() && !selP.hiddenSizes?.includes(s.trim()),
+                disabled: selP.hiddenSizes?.includes(s.trim())
+            }]">
+        {{ s.trim() }}
+    </button>
+</div>
 
             <div style="font-size: 10px; font-weight: 800; text-transform: uppercase;">ЦВЕТ: {{selP.color}}</div>
 
@@ -654,11 +654,19 @@
                     <svg :fill="isFav(selP) ? '#000' : 'none'" viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
                 </button>
                 <button 
-            @click="selP ? addToCart(selP) : null" 
-            :disabled="!selP || selP.hiddenSizes?.includes(selP.tempSize || String(selP.sizes).split(',')[0].trim())"
-            class="add-to-cart-btn">
-            {{ (selP.hiddenSizes?.includes(selP.tempSize || String(selP.sizes).split(',')[0].trim())) ? 'НЕТ В НАЛИЧИИ' : 'В КОРЗИНУ' }}
-        </button>
+    class="add-to-cart-btn" 
+    @click="selP && !selP.hiddenSizes?.includes(selP.tempSize || String(selP.sizes).split(',')[0].trim()) ? addToCart(selP) : null" 
+    :disabled="selP?.hiddenSizes?.includes(selP.tempSize || String(selP.sizes).split(',')[0].trim())"
+    :style="selP?.hiddenSizes?.includes(selP.tempSize || String(selP.sizes).split(',')[0].trim()) ? { opacity: 0.5, background: '#ccc', pointerEvents: 'none' } : {}"
+    style="width: 100%; height: 50px; background: #000; color: #fff; border: none; border-radius: 8px; font-weight: 800; margin-top: 20px;"
+>
+    <span v-if="selP?.hiddenSizes?.includes(selP.tempSize || String(selP.sizes).split(',')[0].trim())">
+        НЕТ В НАЛИЧИИ
+    </span>
+    <span v-else>
+        В КОРЗИНУ
+    </span>
+</button>
             </div>
         </div>
     </div>
@@ -891,30 +899,21 @@ Vue.createApp({
         },
 
         addToCart(p) {
-    this.vib();
-    // Определяем, какой размер выбран
+    if (!p) return;
     const selectedSize = p.tempSize || (p.sizes ? String(p.sizes).split(',')[0].trim() : 'Универсал');
     
-    // ПРОВЕРКА: если размер в скрытых — ничего не делаем и выходим из функции
-    if (p.hiddenSizes && p.hiddenSizes.includes(selectedSize)) {
-        console.log("Попытка добавить скрытый размер");
-        return; 
-    }
-    // Определяем текущий цвет (если есть массив colors, берем по индексу aIdx)
-    const currentColor = (p.colors && p.colors[p.aIdx]) ? p.colors[p.aIdx] : (p.selColor || 'Белый');
-    
-    // Безопасно собираем ID
-    const cartId = p.id + (p.selSize || '') + currentColor;
+    if (p.hiddenSizes && p.hiddenSizes.includes(selectedSize)) return;
+
+    const currentColor = p.color || (p.colors && p.colors[p.aIdx] ? p.colors[p.aIdx] : 'Белый');
+    const cartId = p.id + selectedSize + currentColor;
     const exist = this.cart.find(i => i.cartId === cartId);
-    
     if (exist) {
-        exist.qty++;
+        exist.q++;
     } else {
-        // Добавляем объект, заменяя 'product' на 'p'
-        this.cart.push({ ...p, cartId, selColor: currentColor, qty: 1, price: Number(p.price) });
+        this.cart.push({...p, cartId, selectedSize, selectedColor: currentColor, q: 1});
     }
-    
     this.saveCart();
+    this.vib();
     this.selP = null;
     tg.HapticFeedback.notificationOccurred('success');
 },
