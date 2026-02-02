@@ -255,17 +255,15 @@
                         <span v-if="p.oldPrice" class="old-price">{{p.oldPrice}} ₽</span>
                     </div>
                     
-                    <div class="card-sizes">
-    <div v-for="s in (String(p.sizes || '').split(','))" 
-         v-if="p.sizes"
-         :key="s" 
-         @click="!p.hiddenSizes?.includes(s.trim()) ? (p.tempSize = s.trim(), vib()) : null" 
+                    <div class="card-sizes" v-if="p.sizes">
+    <div v-for="s in (String(p.sizes).split(','))" 
+         :key="s"
+         @click="!(p.hiddenSizes && p.hiddenSizes.includes(s.trim())) ? (p.tempSize = s.trim(), vib()) : null"
          :class="['size-chip', {
-            active: (p.tempSize || String(p.sizes).split(',')[0].trim()) === s.trim() && !p.hiddenSizes?.includes(s.trim()),
-            'hidden-size': p.hiddenSizes?.includes(s.trim())
-         }]"
-         :style="p.hiddenSizes?.includes(s.trim()) ? { opacity: '0.4', background: '#e5e5ea', color: '#8e8e93', borderColor: '#d1d1d6', cursor: 'not-allowed' } : {}">
-        {{s.trim()}}
+            active: (p.tempSize || String(p.sizes).split(',')[0].trim()) === s.trim() && !(p.hiddenSizes && p.hiddenSizes.includes(s.trim())),
+            'hidden-size': p.hiddenSizes && p.hiddenSizes.includes(s.trim())
+         }]">
+        {{ s.trim() }}
     </div>
 </div>
                     <button class="btn-black" style="width: 100%;" @click.stop="quickAddToCart(p)">
@@ -622,18 +620,26 @@
                 <div class="price" style="font-size: 20px;">{{selP.price}} ₽</div>
             </div>
             
-            <p style="font-size: 13px; line-height: 1.6; margin: 20px 0; color: #444;">{{selP.desc}}</p>
-            
-            <div style="font-size: 10px; font-weight: 800; text-transform: uppercase;">ВЫБЕРИТЕ РАЗМЕР</div>
-            <div class="size-grid" v-if="selectedProduct && selectedProduct.sizes">
-    <button v-for="s in (String(selectedProduct.sizes).split(','))" 
+            <p style="font-size: 13px; line-height: 1.6; margin: 20px 0; color: #444;">
+    {{ selectedProduct?.desc }}
+</p>
+
+<div style="font-size: 10px; font-weight: 800; text-transform: uppercase;">
+    ВЫБЕРИТЕ РАЗМЕР
+</div>
+
+<div class="size-grid" v-if="selectedProduct && selectedProduct.sizes">
+    <button v-for="s in String(selectedProduct.sizes).split(',')" 
             :key="s"
-            @click="!(selectedProduct.hiddenSizes && selectedProduct.hiddenSizes.includes(s.trim())) ? (selectedProduct.tempSize = s.trim(), vib()) : null"
+            /* Если размер скрыт — ничего не делаем, если нет — выбираем */
+            @click="!(selectedProduct.hiddenSizes?.includes(s.trim())) ? (selectedProduct.tempSize = s.trim(), vib()) : null"
             :class="['size-btn', { 
-                active: (selectedProduct.tempSize || String(selectedProduct.sizes).split(',')[0].trim()) === s.trim(),
-                'hidden-size-btn': selectedProduct.hiddenSizes && selectedProduct.hiddenSizes.includes(s.trim())
+                /* Подсвечиваем активный размер, если он не скрыт */
+                active: (selectedProduct.tempSize || String(selectedProduct.sizes).split(',')[0].trim()) === s.trim() && !selectedProduct.hiddenSizes?.includes(s.trim()),
+                'hidden-size-btn': selectedProduct.hiddenSizes?.includes(s.trim())
             }]"
-            :style="(selectedProduct.hiddenSizes && selectedProduct.hiddenSizes.includes(s.trim())) ? { display: 'none' } : {}">
+            /* Скрываем кнопку совсем, если размер в списке скрытых */
+            :style="selectedProduct.hiddenSizes?.includes(s.trim()) ? { display: 'none' } : {}">
         {{ s.trim() }}
     </button>
 </div>
