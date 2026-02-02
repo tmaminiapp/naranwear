@@ -116,11 +116,60 @@
         .old-price { font-size: 11px; color: var(--gray); text-decoration: line-through; }
         .sale-badge { background: #000; color: #fff; font-size: 9px; padding: 2px 4px; font-weight: 800; }
 
-        /* Buttons */
-        .btn-row { display: flex; gap: 5px; }
-        .btn-black { background: #000; color: #fff; border: none; padding: 12px; font-weight: 700; font-size: 11px; text-transform: uppercase; flex: 1; cursor: pointer; border-radius: 2px; }
-        .btn-fav { background: #fff; border: 1px solid #000; padding: 10px; width: 40px; display: flex; align-items: center; justify-content: center; border-radius: 2px; }
+     /* Buttons */
+.btn-row { 
+    display: flex !important; 
+    gap: 8px !important; 
+    margin-top: 10px !important;
+    /* Это выровняет обе кнопки по нижней линии, если они разной высоты */
+    align-items: flex-end !important; 
+}
 
+.btn-black { 
+    background: #000 !important; 
+    color: #fff !important; 
+    border: none !important; 
+    height: 48px !important; /* Жесткая высота */
+    flex: 1 !important; 
+    padding: 0 !important;
+    font-weight: 700 !important; 
+    font-size: 11px !important; 
+    text-transform: uppercase !important; 
+    cursor: pointer !important; 
+    border-radius: 2px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.btn-fav { 
+    background: #fff !important; 
+    border: 1px solid #000 !important; 
+    width: 50px !important;  
+    height: 50px !important; 
+    
+    /* Эти три строки опустят сердце в центр */
+    display: flex !important; 
+    align-items: center !important; 
+    justify-content: center !important; 
+    
+    padding: 0 !important;   
+    flex-shrink: 0 !important;
+    box-sizing: border-box !important;
+}
+
+/* Убираем возможные смещения у самой иконки */
+.btn-fav svg {
+    display: block !important; /* Убирает нижний отступ, характерный для текста */
+    margin: 0 auto !important;
+}
+
+/* Размер иконки внутри кнопки */
+.btn-fav svg {
+    width: 24px !important; 
+    height: 24px !important;
+    display: block !important;
+}
         /* Modal Product View */
         .modal { position: fixed; inset: 0; background: #fff; z-index: 2000; overflow-y: auto; padding-bottom: 50px; }
         .close-modal { position: fixed; top: 15px; right: 15px; z-index: 2100; background: #fff; border: 1px solid #000; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; font-weight: 800; }
@@ -374,7 +423,7 @@
         <div v-if="address" style="font-size:12px; font-weight:700; margin-bottom: 20px;">📍 {{address}}</div>
 
         <div style="font-size: 9px; color: var(--gray); line-height: 1.2; margin-bottom: 15px; text-align: center;">
-            Нажимая на кнопку, вы даете согласие на обработку персональных данных.
+            Нажимая на кнопку, вы даете согласие на обработку персональных данных в соответствии с 152-Ф3 для оформления и доставки заказа.
         </div>
 
         <button class="btn-black" style="width:100%; height:60px; font-size: 14px;" @click="checkout">
