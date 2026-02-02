@@ -255,15 +255,17 @@
                         <span v-if="p.oldPrice" class="old-price">{{p.oldPrice}} ₽</span>
                     </div>
                     
-                    <div class="card-sizes" v-if="p.sizes">
-    <div v-for="s in (String(p.sizes).split(','))" 
-         :key="s"
-         @click="!(p.hiddenSizes && p.hiddenSizes.includes(s.trim())) ? (p.tempSize = s.trim(), vib()) : null"
+                    <div class="card-sizes">
+    <div v-for="s in (String(p.sizes || '').split(','))" 
+         v-if="p.sizes"
+         :key="s" 
+         @click="!p.hiddenSizes?.includes(s.trim()) ? (p.tempSize = s.trim(), vib()) : null" 
          :class="['size-chip', {
-            active: (p.tempSize || String(p.sizes).split(',')[0].trim()) === s.trim() && !(p.hiddenSizes && p.hiddenSizes.includes(s.trim())),
-            'hidden-size': p.hiddenSizes && p.hiddenSizes.includes(s.trim())
-         }]">
-        {{ s.trim() }}
+            active: (p.tempSize || String(p.sizes).split(',')[0].trim()) === s.trim() && !p.hiddenSizes?.includes(s.trim()),
+            'hidden-size': p.hiddenSizes?.includes(s.trim())
+         }]"
+         :style="p.hiddenSizes?.includes(s.trim()) ? { opacity: '0.4', background: '#e5e5ea', color: '#8e8e93', borderColor: '#d1d1d6', cursor: 'not-allowed' } : {}">
+        {{s.trim()}}
     </div>
 </div>
                     <button class="btn-black" style="width: 100%;" @click.stop="quickAddToCart(p)">
@@ -304,11 +306,8 @@
     <div v-for="s in (String(p.sizes || '').split(','))" 
          v-if="p.sizes"
          :key="s"
-         @click="!p.hiddenSizes?.includes(s.trim()) ? (p.tempSize = s.trim(), vib()) : null"
-         :class="['size-chip', {
-            active: (p.tempSize || String(p.sizes).split(',')[0].trim()) === s.trim() && !p.hiddenSizes?.includes(s.trim()),
-         }]"
-         :style="p.hiddenSizes?.includes(s.trim()) ? { opacity: '0.4', background: '#e5e5ea', color: '#8e8e93', borderColor: '#d1d1d6', cursor: 'not-allowed' } : {}">
+         @click="p.tempSize = s.trim(); vib()"
+         :class="['size-chip', {active: (p.tempSize || String(p.sizes).split(',')[0].trim()) === s.trim()}]">
         {{s.trim()}}
     </div>
 </div>
@@ -620,29 +619,14 @@
                 <div class="price" style="font-size: 20px;">{{selP.price}} ₽</div>
             </div>
             
-            <p style="font-size: 13px; line-height: 1.6; margin: 20px 0; color: #444;">
-    {{ selectedProduct?.desc }}
-</p>
-
-<div style="font-size: 10px; font-weight: 800; text-transform: uppercase;">
-    ВЫБЕРИТЕ РАЗМЕР
-</div>
-
-<div class="size-grid" v-if="selectedProduct && selectedProduct.sizes">
-    <button v-for="s in String(selectedProduct.sizes).split(',')" 
-            :key="s"
-            /* Если размер скрыт — ничего не делаем, если нет — выбираем */
-            @click="!(selectedProduct.hiddenSizes?.includes(s.trim())) ? (selectedProduct.tempSize = s.trim(), vib()) : null"
-            :class="['size-btn', { 
-                /* Подсвечиваем активный размер, если он не скрыт */
-                active: (selectedProduct.tempSize || String(selectedProduct.sizes).split(',')[0].trim()) === s.trim() && !selectedProduct.hiddenSizes?.includes(s.trim()),
-                'hidden-size-btn': selectedProduct.hiddenSizes?.includes(s.trim())
-            }]"
-            /* Скрываем кнопку совсем, если размер в списке скрытых */
-            :style="selectedProduct.hiddenSizes?.includes(s.trim()) ? { display: 'none' } : {}">
-        {{ s.trim() }}
-    </button>
-</div>
+            <p style="font-size: 13px; line-height: 1.6; margin: 20px 0; color: #444;">{{selP.desc}}</p>
+            
+            <div style="font-size: 10px; font-weight: 800; text-transform: uppercase;">ВЫБЕРИТЕ РАЗМЕР</div>
+            <div class="size-grid">
+                <button v-for="s in selP.sizes.split(',')" :key="s" @click="selP.selSize = s.trim(); vib()" :class="['size-btn', {active: selP.selSize === s.trim()}]">
+                    {{s.trim()}}
+                </button>
+            </div>
 
             <div style="font-size: 10px; font-weight: 800; text-transform: uppercase;">ЦВЕТ: {{selP.color}}</div>
 
@@ -864,22 +848,10 @@ Vue.createApp({
             p.aIdx = idx;
         },
 
-        openProduct(product) {
-    // Создаем копию объекта, чтобы не мутировать основной список напрямую
-    this.selectedProduct = { ...product };
-    
-    // Если в базе нет поля hiddenSizes, создаем пустой массив, чтобы .includes() не вызывал ошибку
-    if (!this.selectedProduct.hiddenSizes) {
-        this.selectedProduct.hiddenSizes = [];
-    }
-    
-    // Устанавливаем размер по умолчанию (первый не скрытый)
-    const allSizes = String(this.selectedProduct.sizes || '').split(',').map(s => s.trim());
-    const firstAvailable = allSizes.find(s => !this.selectedProduct.hiddenSizes.includes(s));
-    this.selectedProduct.tempSize = firstAvailable || allSizes[0];
-    
-    this.showModal = true; // или другое имя переменной для открытия модалки
-},
+        openProduct(p) {
+            this.vib();
+            this.selP = { ...p, aIdx: 0, selSize: p.sizes.split(',')[0].trim(), selColor: p.color };
+        },
 
         isFav(p) { return p && this.favorites.includes(p.id); },
         
@@ -1139,26 +1111,18 @@ quickAddToCart(p) {
 },
 // В методах Vue приложения
 toggleSizeVisibility(product, size) {
-    // Инициализируем массив, если его нет
     if (!product.hiddenSizes) product.hiddenSizes = [];
-    
     const index = product.hiddenSizes.indexOf(size);
     if (index > -1) {
-        product.hiddenSizes.splice(index, 1); // Показать размер
+        product.hiddenSizes.splice(index, 1); // Показать
     } else {
-        product.hiddenSizes.push(size); // Скрыть размер
+        product.hiddenSizes.push(size); // Скрыть
     }
-
-    // ВАЖНО: Обновляем в Firebase, чтобы данные сохранились в облаке
-    const productRef = window.fb.doc(window.db, "products", product.id);
-    window.fb.updateDoc(productRef, {
+    // Сохранение в Firebase
+    window.fb.update(window.fb.doc(window.db, "products", product.id), {
         hiddenSizes: product.hiddenSizes
-    }).then(() => {
-        this.vib(); // Вибрация при успешном сохранении
-    }).catch(e => {
-        console.error("Ошибка сохранения размера:", e);
-        alert("Не удалось сохранить изменения");
     });
+    this.vib();
 },
 
 // Функция удаления товара с подтверждением
