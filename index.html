@@ -329,51 +329,59 @@
                     </button>
                 </div> </div> </div> </div> <div v-if="tab === 'cart'">
         <h2 class="brand-name" style="font-size: 16px; margin-bottom: 20px;">КОРЗИНА</h2>
-        <div v-if="cart.length === 0" style="text-align:center; padding: 50px;">ВАША КОРЗИНА ПУСТА</div>
-        <div v-else>
-            <div v-for="item in cart" :key="item.cartId" class="cart-item">
-                <img :src="item.images[0]" class="cart-img" @click="openProduct(item)" style="cursor:pointer;">
-                <div style="flex:1;">
-                    <div @click="openProduct(item)" style="cursor:pointer;">
-                        <div style="font-weight:700; font-size:12px; text-transform:uppercase;">{{item.title}}</div>
-                        <div style="font-size:10px; color:gray; margin: 4px 0;">РАЗМЕР: {{item.selSize}} | ЦВЕТ: {{item.selColor}}</div>
-                        <div style="font-weight:800;">{{item.price}} ₽</div>
-                    </div>
-                    <div class="qty-controls">
-                        <button class="qty-btn" @click="changeQty(item, -1)">-</button>
-                        <span style="font-weight:700;">{{item.qty}}</span>
-                        <button class="qty-btn" @click="changeQty(item, 1)">+</button>
-                    </div>
-                </div>
-                <button @click="removeFromCart(item.cartId)" style="border:none; background:none; font-size: 18px;">✕</button>
+<div v-if="cart.length === 0" style="text-align:center; padding: 50px;">ВАША КОРЗИНА ПУСТА</div>
+<div v-else>
+    <div v-for="item in cart" :key="item.cartId" class="cart-item">
+        <img :src="item.images[0]" class="cart-img" @click="openProduct(item)" style="cursor:pointer;">
+        <div style="flex:1;">
+            <div @click="openProduct(item)" style="cursor:pointer;">
+                <div style="font-weight:700; font-size:12px; text-transform:uppercase;">{{item.title}}</div>
+                <div style="font-size:10px; color:gray; margin: 4px 0;">РАЗМЕР: {{item.selSize}} | ЦВЕТ: {{item.selColor}}</div>
+                <div style="font-weight:800;">{{item.price}} ₽</div>
             </div>
-
-            <div style="margin-top: 30px;">
-                <div class="field">
-                    <label>ВАШЕ ИМЯ</label>
-                    <input v-model="form.name" class="input-admin" placeholder="ИМЯ">
-                </div>
-                <div class="field">
-                    <label>ТЕЛЕФОН (10-11 ЦИФР)</label>
-                    <input v-model="form.phone" class="input-admin" type="tel" placeholder="89000000000">
-                </div>
-
-                <label style="font-size:10px; font-weight:800;">СПОСОБ ДОСТАВКИ</label>
-                <div class="delivery-grid">
-                    <button v-for="d in ['СДЭК', 'ПОЧТА', '5POST']" :key="d" @click="setDelivery(d)" :class="['cat-tab', {active: deliv === d}]">{{d}}</button>
-                </div>
-
-                <div id="map" v-show="deliv"></div>
-                <div v-if="address" style="font-size:12px; font-weight:700; margin-bottom: 20px;">📍 {{address}}</div>
-
-                <div style="font-size: 9px; color: var(--gray); line-height: 1.2; margin-bottom: 15px; text-align: center; font-family: 'Montserrat', sans-serif;">
-    Нажимая на кнопку, вы даете согласие на <a href="#" style="color: var(--dark); text-decoration: underline;">обработку персональных данных</a> 
-    в соответствии с 152-ФЗ для оформления и доставки заказа.
-                 </div>
-
-                <button class="btn-black" style="width:100%; height:60px; font-size: 14px;" @click="checkout">ОФОРМИТЬ ЗАКАЗ</button>
+            <div class="qty-controls">
+                <button class="qty-btn" @click="changeQty(item, -1)">-</button>
+                <span style="font-weight:700;">{{item.qty}}</span>
+                <button class="qty-btn" @click="changeQty(item, 1)">+</button>
             </div>
         </div>
+        <button @click="removeFromCart(item.cartId)" style="border:none; background:none; font-size: 18px;">✕</button>
+    </div>
+
+    <div style="margin-top: 20px; padding: 15px; background: #f9f9f9; border-radius: 2px; border: 1px solid #eee;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 13px; font-weight: 800;">ИТОГО К ОПЛАТЕ:</span>
+            <span style="font-size: 18px; font-weight: 800;">{{ total().toLocaleString() }} ₽</span>
+        </div>
+    </div>
+
+    <div style="margin-top: 30px;">
+        <div class="field">
+            <label>ВАШЕ ИМЯ</label>
+            <input v-model="form.name" class="input-admin" placeholder="ИМЯ">
+        </div>
+        <div class="field">
+            <label>ТЕЛЕФОН (10-11 ЦИФР)</label>
+            <input v-model="form.phone" class="input-admin" type="tel" placeholder="89000000000">
+        </div>
+
+        <label style="font-size:10px; font-weight:800;">СПОСОБ ДОСТАВКИ</label>
+        <div class="delivery-grid">
+            <button v-for="d in ['СДЭК', 'ПОЧТА', '5POST']" :key="d" @click="setDelivery(d)" :class="['cat-tab', {active: deliv === d}]">{{d}}</button>
+        </div>
+
+        <div id="map" v-show="deliv"></div>
+        <div v-if="address" style="font-size:12px; font-weight:700; margin-bottom: 20px;">📍 {{address}}</div>
+
+        <div style="font-size: 9px; color: var(--gray); line-height: 1.2; margin-bottom: 15px; text-align: center;">
+            Нажимая на кнопку, вы даете согласие на обработку персональных данных.
+        </div>
+
+        <button class="btn-black" style="width:100%; height:60px; font-size: 14px;" @click="checkout">
+            ОФОРМИТЬ ЗАКАЗ — {{ total().toLocaleString() }} ₽
+        </button>
+    </div>
+</div>
     </div>
 
     <div v-if="tab === 'profile'">
@@ -818,13 +826,6 @@ Vue.createApp({
             if (!this.products) return [];
             return this.products.filter(p => this.favorites.includes(p.id));
         },
-        
-        // 1. Считает сумму ТОВАРОВ В КОРЗИНЕ (для кнопки оформления)
-        total() {
-            return this.cart.reduce((sum, item) => {
-                return sum + (Number(item.price) * Number(item.qty));
-            }, 0);
-        },
 
         // 2. Считает количество ШТУК в корзине (для красного кружка на иконке)
         cartCount() {
@@ -1094,6 +1095,16 @@ quickAddToCart(p) {
 },
 
         openSupport() { window.open('https://t.me/opttania', '_blank'); },
+        
+       total() {
+        if (!this.cart || this.cart.length === 0) return 0;
+        return this.cart.reduce((sum, item) => {
+            // Очистка от пробелов (чтобы "1 200" стало 1200)
+            const price = Number(String(item.price || 0).replace(/\s/g, ''));
+            const qty = Number(item.qty || 0);
+            return sum + (price * qty);
+        }, 0);
+    },
 
         async uploadImages(e) {
             this.loading = true;
