@@ -843,9 +843,25 @@ Vue.createApp({
         },
 
         openProduct(p) {
-            this.vib();
-            this.selP = { ...p, aIdx: 0, selSize: p.sizes.split(',')[0].trim(), selColor: p.color };
-        },
+    this.vib();
+    let initialSize = '';
+    
+    // Универсальная проверка: строка или массив
+    if (Array.isArray(p.sizes)) {
+        // Если массив, берем значение первого видимого размера
+        const firstVisible = p.sizes.find(s => s.visible !== false) || p.sizes[0];
+        initialSize = firstVisible ? (firstVisible.value || firstVisible) : '';
+    } else if (typeof p.sizes === 'string') {
+        initialSize = p.sizes.split(',')[0].trim();
+    }
+
+    this.selP = { 
+        ...p, 
+        aIdx: 0, 
+        selSize: initialSize, 
+        selColor: p.color || (p.colors ? p.colors[0] : 'Белый') 
+    };
+},
 
         isFav(p) { return p && this.favorites.includes(p.id); },
         
@@ -860,26 +876,48 @@ Vue.createApp({
             localStorage.setItem('naran_favs_v3', JSON.stringify(this.favorites));
         },
 
-        addToCart(p) {
+      addToCart(p) {
     this.vib();
-    // Определяем текущий цвет (если есть массив colors, берем по индексу aIdx)
+    
+    // 1. Извлекаем ЧИСТОЕ значение размера (строку), даже если там объект
+    let sizeValue = p.selSize;
+    if (typeof sizeValue === 'object' && sizeValue !== null) {
+        sizeValue = sizeValue.value; 
+    }
+    const finalSize = sizeValue || 'Универсал';
+
+    // 2. Определяем цвет
     const currentColor = (p.colors && p.colors[p.aIdx]) ? p.colors[p.aIdx] : (p.selColor || 'Белый');
     
-    // Безопасно собираем ID
-    const cartId = p.id + (p.selSize || '') + currentColor;
+    // 3. Собираем уникальный ID для корзины (теперь без [object Object])
+    const cartId = p.id + finalSize + currentColor;
+    
     const exist = this.cart.find(i => i.cartId === cartId);
     
     if (exist) {
         exist.qty++;
     } else {
-        // Добавляем объект, заменяя 'product' на 'p'
-        this.cart.push({ ...p, cartId, selColor: currentColor, qty: 1, price: Number(p.price) });
+        // Создаем чистую копию объекта товара для корзины
+        const cartItem = {
+            id: p.id,
+            title: p.title,
+            price: Number(p.price),
+            images: p.images,
+            selSize: finalSize,   // Сохраняем как строку!
+            selColor: currentColor,
+            cartId: cartId,
+            qty: 1
+        };
+        this.cart.push(cartItem);
     }
     
     this.saveCart();
-    this.selP = null;
-    tg.HapticFeedback.notificationOccurred('success');
+    this.selP = null; // Закрываем карточку
+    if (window.tg?.HapticFeedback) {
+        tg.HapticFeedback.notificationOccurred('success');
+    }
 },
+
 // Метод переключения видимости размера
 async toggleSizeStatus(product, sizeObj) {
     sizeObj.visible = !sizeObj.visible; // Инвертируем статус
@@ -910,33 +948,40 @@ async deleteProductFromCloud(id) {
 },
 quickAddToCart(p) {
     this.vib();
-    // Сразу приводим selSize к строке перед сохранением в корзину
-let finalSize = p.selSize;
-if (typeof finalSize === 'object' && finalSize !== null) {
-    finalSize = finalSize.value;
-}
-// В push в массив cart используем finalSize
-    // 1. Берем выбранный размер или первый доступный
-    const selectedSize = p.tempSize || (p.sizes ? String(p.sizes).split(',')[0].trim() : 'Универсал');
     
-    // 2. ИСПРАВЛЕННАЯ ЛОГИКА ЦВЕТА:
-    // Сначала ищем поле color (из админки), если его нет - ищем в массиве, если и его нет - Белый
+    // 1. ОПРЕДЕЛЯЕМ РАЗМЕР (чистый текст)
+    let rawSize = p.tempSize || p.selSize; 
+    
+    // Если размера нет вообще, берем первый из списка
+    if (!rawSize && p.sizes) {
+        rawSize = Array.isArray(p.sizes) ? p.sizes[0] : p.sizes.split(',')[0];
+    }
+
+    // Если размер — это объект {value: '42', visible: true}, берем только value
+    let finalSize = (typeof rawSize === 'object' && rawSize !== null) 
+        ? rawSize.value 
+        : (rawSize || 'Универсал');
+
+    // 2. ОПРЕДЕЛЯЕМ ЦВЕТ
     const currentColor = p.color || (p.colors && p.colors[p.aIdx] ? p.colors[p.aIdx] : 'Белый');
     
-    const cartId = p.id + selectedSize + currentColor;
+    // 3. СОЗДАЕМ ID (теперь точно строка + строка + строка)
+    const cartId = String(p.id) + String(finalSize) + String(currentColor);
+    
     const exist = this.cart.find(i => i.cartId === cartId);
     
     if (exist) {
         exist.qty++;
     } else {
-        // Добавляем в корзину со всеми параметрами
         this.cart.push({ 
-            ...p, 
-            cartId, 
-            selSize: selectedSize, 
+            id: p.id,
+            title: p.title,
+            price: Number(p.price),
+            images: p.images,
+            cartId: cartId, 
+            selSize: String(finalSize), // Сохраняем как строку!
             selColor: currentColor, 
-            qty: 1, 
-            price: Number(p.price) 
+            qty: 1
         });
     }
     this.saveCart();
