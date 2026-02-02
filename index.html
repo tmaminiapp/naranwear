@@ -155,6 +155,21 @@
         .status-ready { background: #e8f5e9; color: #2e7d32; }
         .status-process { background: #fff3e0; color: #ef6c00; }
 
+        /* Стиль для неактивного размера */
+.size-btn-disabled {
+    background-color: #f2f2f7 !important;
+    color: #ccc !important;
+    border: 1px solid #e5e5ea !important;
+    cursor: not-allowed !important;
+    text-decoration: line-through;
+    opacity: 0.7;
+}
+
+/* Убираем эффект нажатия для отключенных кнопок */
+.size-btn-disabled:active {
+    transform: none !important;
+}
+
         [v-cloak] { display: none; }
     </style>
 </head>
@@ -614,15 +629,15 @@
             <div style="font-size: 10px; font-weight: 800; text-transform: uppercase;">ВЫБЕРИТЕ РАЗМЕР</div>
             <div class="size-grid">
                 <button 
-        v-for="sz in (Array.isArray(selP.sizes) ? selP.sizes : [])" 
+        v-for="sz in selP.sizes" 
         :key="sz.value"
         @click="sz.visible ? selP.selSize = sz.value : null"
+        :class="{ 
+            'active': selP.selSize === sz.value,
+            'size-btn-disabled': !sz.visible 
+        }"
         :disabled="!sz.visible"
-        :class="{ 'active': selP.selSize === sz.value }"
-        :style="[
-            { padding: '10px 16px', borderRadius: '10px', border: '1px solid #eee', fontWeight: '600' },
-            !sz.visible ? { background: '#f2f2f7', color: '#ccc', border: '1px solid #f2f2f7', cursor: 'not-allowed' } : {}
-        ]"
+        style="padding: 10px 20px; border-radius: 12px; border: 1px solid #eee; font-weight: 600; transition: all 0.2s;"
     >
         {{ sz.value }}
     </button>
@@ -752,39 +767,27 @@ Vue.createApp({
         return { todayCount, todayRev, monthCount, monthRev, allCount, allRev };
     },
        filteredProducts() {
-    // 1. Быстрая проверка на наличие данных
     if (!this.products || !Array.isArray(this.products)) return [];
     
-    try {
-        // 2. Подготавливаем данные для поиска один раз (оптимизация)
-        const query = (this.searchQuery || '').toLowerCase().trim();
-        const targetCat = (this.currentCat || '').toLowerCase().trim();
+    const query = (this.searchQuery || '').toLowerCase().trim();
+    const targetCat = (this.currentCat || '').toLowerCase().trim();
 
-        return this.products.filter(p => {
-            // 3. Защита: проверяем, что объект товара существует
-            if (!p) return false;
+    return this.products.filter(p => {
+        if (!p || p.hidden) return false;
 
-            // 4. СКРЫТИЕ: Если товар помечен как hidden, не показываем его клиенту
-            // (p?.hidden корректно вернет false, если свойства еще нет в базе)
-            if (p?.hidden === true) return false;
+        // Поиск по названию
+        const titleMatch = query === '' || 
+            (p.title && String(p.title).toLowerCase().includes(query));
 
-            // 5. ПОИСК
-            const titleMatch = query === '' || 
-                (p.title && String(p.title).toLowerCase().includes(query));
+        // Поиск по категории
+        let catMatch = true;
+        if (targetCat !== '' && targetCat !== 'все') {
+            const prodCat = p.category ? String(p.category).toLowerCase().trim() : '';
+            catMatch = (prodCat === targetCat);
+        }
 
-            // 6. КАТЕГОРИЯ
-            let catMatch = true;
-            if (targetCat !== '' && targetCat !== 'все') {
-                const prodCat = p.category ? String(p.category).toLowerCase().trim() : '';
-                catMatch = (prodCat === targetCat);
-            }
-
-            return titleMatch && catMatch;
-        });
-    } catch (e) {
-        console.error("Критическая ошибка фильтрации:", e);
-        return [];
-    }
+        return titleMatch && catMatch;
+    });
 },
         favList() {
             if (!this.products) return [];
