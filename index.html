@@ -32,6 +32,7 @@
     font-weight: 700; 
     padding: 4px 8px; 
     border: 1px solid #ddd; 
+    color: #000;
     border-radius: 2px; 
     white-space: nowrap;
     cursor: pointer;
@@ -1056,45 +1057,57 @@ Vue.createApp({
        addToCart(p) {
     if (!p) return;
 
-    // 1. ОПРЕДЕЛЯЕМ РАЗМЕР (только не скрытый)
+    // 1. ОПРЕДЕЛЯЕМ РАЗМЕР (сохраняем твою логику)
     let finalSize = '';
     if (p.tempSize) {
         finalSize = p.tempSize;
     } else if (p.sizes) {
         const allSizes = String(p.sizes).split(',').map(s => s.trim());
-        // Находим первый размер, которого НЕТ в списке скрытых
         const firstAvailable = allSizes.find(s => !p.hiddenSizes?.includes(s));
         finalSize = firstAvailable || allSizes[0];
     } else {
         finalSize = 'Универсал';
     }
 
-    // Блокировка, если размер все равно скрыт
     if (p.hiddenSizes && p.hiddenSizes.includes(finalSize)) return;
 
     // 2. ОПРЕДЕЛЯЕМ ЦВЕТ
     const finalColor = p.color || (p.colors && p.colors[p.aIdx] ? p.colors[p.aIdx] : 'Белый');
 
-    // 3. УНИКАЛЬНЫЙ ID (чтобы разные размеры не слипались в одну строку)
+    // 3. УНИКАЛЬНЫЙ ID
     const cartId = p.id + finalSize + finalColor;
 
     const exist = this.cart.find(i => i.cartId === cartId);
     if (exist) {
-        exist.qty++; // используем qty, так как в HTML у вас qty
+        exist.qty++;
     } else {
         this.cart.push({
             ...p,
             cartId: cartId,
-            selSize: finalSize,  // ВАШЕ НОВОЕ НАЗВАНИЕ
-            selColor: finalColor, // ВАШЕ НОВОЕ НАЗВАНИЕ
+            selSize: finalSize,
+            selColor: finalColor,
             qty: 1
         });
     }
     
+    // --- УЛУЧШЕНИЯ ДЛЯ "БЕСШОВНОСТИ" ---
+    
     this.saveCart();
-    this.vib();
+    this.vib('success'); // Используем успех для вибрации
+
+    // Показываем уведомление
     this.showCartNotify = true;
     setTimeout(() => { this.showCartNotify = false; }, 2000);
+
+    // ЗАКРЫВАЕМ КАРТОЧКУ (если она была открыта)
+    // Это позволит тебе сразу увидеть Избранное или Каталог под карточкой
+    if (this.activeP) {
+        setTimeout(() => {
+            this.activeP = null; 
+            // Очищаем временный размер для следующего открытия
+            if (p.tempSize) p.tempSize = null; 
+        }, 300); // Небольшая задержка, чтобы юзер увидел нажатие кнопки
+    }
 },
 removePhoto(index) {
     // Освобождаем память браузера
