@@ -1281,7 +1281,7 @@ async manageCategory(action, id) { // Добавь async здесь
             order_id: orderId,
             customer_name: this.form.name,
             customer_phone: this.form.phone,
-            order_total: this.total,
+            order_total: Number(this.totalSum),
             delivery: this.deliv,
             address: this.address,
             items_text: itemsText, // Текст для бота
