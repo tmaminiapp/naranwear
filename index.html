@@ -256,10 +256,12 @@
                     </div>
                     
                     <div class="card-sizes">
-    <div v-for="s in p.sizes" :key="s.value"
-         class="size-chip"
-         :style="s.visible !== false ? {} : { background: '#eee', color: '#bbb', textDecoration: 'line-through' }">
-        {{ typeof s === 'object' ? s.value : s }}
+    <div v-for="s in (String(p.sizes || '').split(','))" 
+         v-if="p.sizes"
+         :key="s" 
+         @click="p.tempSize = s.trim(); vib()" 
+         :class="['size-chip', {active: (p.tempSize || String(p.sizes).split(',')[0].trim()) === s.trim()}]">
+        {{s.trim()}}
     </div>
 </div>
                     <button class="btn-black" style="width: 100%;" @click.stop="quickAddToCart(p)">
@@ -486,50 +488,22 @@
 
 
                 <div v-for="p in products" :key="p.id" 
-     style="display: flex; align-items: flex-start; gap: 12px; padding: 12px; border-bottom: 1px solid #f2f2f7;"
-     :style="{ opacity: p?.hidden ? '0.5' : '1' }">
-    
-    <img :src="p.images ? p.images[0] : ''" style="width: 50px; height: 60px; object-fit: cover; border-radius: 6px; background: #eee;">
-    
+     style="display: flex; align-items: center; gap: 10px; padding: 10px; border-bottom: 1px solid #f2f2f7;"
+     :style="{ opacity: p?.hidden ? '0.4' : '1' }">
+    <img :src="p.images ? p.images[0] : ''" style="width: 40px; height: 50px; object-fit: cover; border-radius: 4px; background: #eee;">
     <div style="flex: 1; min-width: 0;">
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-            <div style="min-width: 0;">
-                <div style="font-weight: 800; font-size: 14px; line-height: 1.2;">{{ p.title }}</div>
-                <div style="font-size: 12px; color: var(--gray);">Цвет: {{ p.color || 'не указан' }}</div>
-            </div>
-            
-            <div style="display: flex; gap: 12px; align-items: center;">
-                <span @click.stop="editProduct(p)" style="cursor: pointer; font-size: 18px;">✏️</span>
-                <span @click.stop="deleteProductFromCloud(p.id)" style="cursor: pointer; color: var(--red); font-size: 18px;">🗑️</span>
-            </div>
-        </div>
-
-        <div style="display: flex; flex-direction: column; gap: 4px; margin-top: 10px; border-top: 1px dashed #eee; padding-top: 8px;">
-            <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--gray); margin-bottom: 4px;">Размеры в наличии:</div>
-            
-            <div v-for="sz in p.sizes" :key="sz.value" 
-                 style="display: flex; align-items: center; justify-content: space-between; background: #f9f9f9; border-radius: 6px; padding: 4px 8px; border: 1px solid #eee;">
-                
-                <span style="font-size: 12px; font-weight: 800;"
-                      :style="{ 
-                         color: sz.visible !== false ? '#000' : 'var(--gray)',
-                         textDecoration: sz.visible !== false ? 'none' : 'line-through' 
-                      }">
-                    {{ sz.value }}
-                </span>
-
-                <button @click.stop="toggleSizeStatus(p, sz)" 
-                        style="border: none; border-radius: 4px; padding: 4px 8px; font-size: 9px; font-weight: 800; cursor: pointer; text-transform: uppercase; transition: 0.2s;"
-                        :style="{ 
-                           background: sz.visible !== false ? '#eee' : 'var(--red)', 
-                           color: sz.visible !== false ? '#000' : '#fff' 
-                        }">
-                    {{ sz.visible !== false ? 'Скрыть' : 'Показать' }}
-                </button>
-            </div>
-        </div>
+        <div style="font-weight: 700; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ p.title }}</div>
+        <div style="font-size: 11px; color: #8e8e93;">{{ p.price }} ₽</div>
+    </div>
+    <div style="display: flex; gap: 12px;">
+        <button @click="editProduct(p)" style="border:none; background:none; font-size: 16px; cursor: pointer;">✏️</button>
+        <button @click="toggleVisibility(p)" style="border:none; background:none; cursor: pointer; font-size: 16px;">
+            {{ p?.hidden ? '👁️‍🗨️' : '👁️' }}
+        </button>
+        <button @click="deleteProduct(p.id)" style="border:none; background:none; font-size: 16px; cursor: pointer;">🗑</button>
     </div>
 </div>
+             </div>
 
            <hr style="margin: 6px 0; border: none; border-top: 2px solid #000;">   
 
@@ -628,27 +602,10 @@
             <p style="font-size: 13px; line-height: 1.6; margin: 20px 0; color: #444;">{{selP.desc}}</p>
             
             <div style="font-size: 10px; font-weight: 800; text-transform: uppercase;">ВЫБЕРИТЕ РАЗМЕР</div>
-            <div class="size-grid" style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px;">
-                 <template v-for="s in selP.sizes" :key="s.value">
-               <button v-if="s.visible !== false" 
-                @click="selP.selSize = s.value; vib()" 
-                :class="['size-btn', {active: selP.selSize === s.value}]">
-                {{ typeof s === 'object' ? s.value : s }}
-               </button>
-  
-               <div v-else style="
-            padding: 10px 15px; 
-            background: #f2f2f7; 
-            color: #8e8e93; 
-            border-radius: 4px; 
-            font-size: 11px; 
-            font-weight: 700; 
-            text-decoration: line-through;
-            border: 1px solid #ddd;
-            display: flex; align-items: center; justify-content: center;">
-            {{ typeof s === 'object' ? s.value : s }}
-            </div>
-            </template>
+            <div class="size-grid">
+                <button v-for="s in selP.sizes.split(',')" :key="s" @click="selP.selSize = s.trim(); vib()" :class="['size-btn', {active: selP.selSize === s.trim()}]">
+                    {{s.trim()}}
+                </button>
             </div>
 
             <div style="font-size: 10px; font-weight: 800; text-transform: uppercase;">ЦВЕТ: {{selP.color}}</div>
@@ -871,38 +828,10 @@ Vue.createApp({
             p.aIdx = idx;
         },
 
-       openProduct(p) {
-    // 1. Создаем глубокую копию товара
-    this.selP = JSON.parse(JSON.stringify(p));
-    
-    // 2. Приводим размеры к единому формату (массив объектов)
-    if (typeof this.selP.sizes === 'string') {
-        // Если это старый формат (строка "42, 44")
-        this.selP.sizes = this.selP.sizes.split(',')
-            .map(s => s.trim())
-            .filter(s => s !== "")
-            .map(s => ({ value: s, visible: true }));
-    } else if (!Array.isArray(this.selP.sizes)) {
-        // Если размеров нет вообще, создаем пустой массив
-        this.selP.sizes = [];
-    }
-
-    // 3. Выбираем первый ДОСТУПНЫЙ (не скрытый) размер
-    const firstAvailable = this.selP.sizes.find(s => s.visible !== false);
-    
-    // Устанавливаем выбранный размер (берем значение .value, так как selSize должен быть строкой)
-    if (firstAvailable) {
-        this.selP.selSize = firstAvailable.value;
-    } else if (this.selP.sizes.length > 0) {
-        this.selP.selSize = this.selP.sizes[0].value;
-    } else {
-        this.selP.selSize = '';
-    }
-
-    this.selP.aIdx = 0;
-    this.view = 'product'; // Теперь окно откроется без ошибок
-    this.vib();
-},
+        openProduct(p) {
+            this.vib();
+            this.selP = { ...p, aIdx: 0, selSize: p.sizes.split(',')[0].trim(), selColor: p.color };
+        },
 
         isFav(p) { return p && this.favorites.includes(p.id); },
         
@@ -916,46 +845,28 @@ Vue.createApp({
             }
             localStorage.setItem('naran_favs_v3', JSON.stringify(this.favorites));
         },
-        
 
         addToCart(p) {
     this.vib();
-    
-    // 1. Определяем выбранный размер. 
-    // Если в карточке selSize это объект, берем его .value, если строка — берем как есть.
-    const selectedSize = (this.selP && this.selP.selSize) ? 
-                         (typeof this.selP.selSize === 'object' ? this.selP.selSize.value : this.selP.selSize) : 
-                         (p.selSize || '');
-
-    // 2. Определяем текущий цвет
+    // Определяем текущий цвет (если есть массив colors, берем по индексу aIdx)
     const currentColor = (p.colors && p.colors[p.aIdx]) ? p.colors[p.aIdx] : (p.selColor || 'Белый');
     
-    // 3. Собираем уникальный ID для корзины (чтобы разные размеры одного товара были разными строчками)
-    const cartId = p.id + selectedSize + currentColor;
+    // Безопасно собираем ID
+    const cartId = p.id + (p.selSize || '') + currentColor;
     const exist = this.cart.find(i => i.cartId === cartId);
     
     if (exist) {
         exist.qty++;
     } else {
-        // 4. Добавляем в корзину, сохраняя именно строковое значение размера (selectedSize)
-        this.cart.push({ 
-            ...p, 
-            cartId, 
-            selSize: selectedSize, // Теперь тут всегда будет строка (например, "42")
-            selColor: currentColor, 
-            qty: 1, 
-            price: Number(p.price) 
-        });
+        // Добавляем объект, заменяя 'product' на 'p'
+        this.cart.push({ ...p, cartId, selColor: currentColor, qty: 1, price: Number(p.price) });
     }
     
     this.saveCart();
-    this.selP = null; // Закрываем карточку
-    this.view = 'catalog'; // Возвращаемся в каталог, если нужно
-    
-    if (window.tg && window.tg.HapticFeedback) {
-        window.tg.HapticFeedback.notificationOccurred('success');
-    }
+    this.selP = null;
+    tg.HapticFeedback.notificationOccurred('success');
 },
+
 quickAddToCart(p) {
     this.vib();
     
@@ -1119,47 +1030,31 @@ quickAddToCart(p) {
         },
 
         async saveProduct() {
-    if (!this.newP.title || !this.newP.price || this.newP.images.length === 0) {
-        return alert('Заполните название, цену и добавьте фото');
-    }
-    this.loading = true;
-    try {
-        // --- ОБРАБОТКА РАЗМЕРОВ ---
-        let processedSizes = [];
-        if (typeof this.newP.sizes === 'string') {
-            // Если введена строка (например, "42, 44"), разбиваем её в массив объектов
-            processedSizes = this.newP.sizes.split(',')
-                .map(s => s.trim())
-                .filter(s => s !== "")
-                .map(s => ({ value: s, visible: true }));
-        } else {
-            // Если мы редактируем и там уже массив
-            processedSizes = this.newP.sizes;
-        }
+            if (!this.newP.title || !this.newP.price || this.newP.images.length === 0) {
+                return alert('Заполните название, цену и добавьте фото');
+            }
+            this.loading = true;
+            try {
+                const data = {
+                    ...this.newP,
+                    price: Number(this.newP.price),
+                    oldPrice: this.newP.oldPrice ? Number(this.newP.oldPrice) : null,
+                    updatedAt: Date.now()
+                };
 
-        const data = {
-            ...this.newP,
-            price: Number(this.newP.price),
-            oldPrice: this.newP.oldPrice ? Number(this.newP.oldPrice) : null,
-            sizes: processedSizes, // Сохраняем как массив объектов
-            updatedAt: Date.now()
-        };
-
-        if (this.editId) {
-            await window.fb.updateDoc(window.fb.doc(window.db, "products", this.editId), data);
-            this.editId = null;
-        } else {
-            data.createdAt = Date.now();
-            data.hidden = false;
-            await window.fb.addDoc(window.fb.collection(window.db, "products"), data);
-        }
-
-        // Очистка формы
-        this.newP = { title: '', desc: '', price: '', oldPrice: '', category: '', sizes: '42, 44, 46', color: '', images: [] };
-        alert('Готово!');
-    } catch (e) { alert(e.message); }
-    this.loading = false;
-},
+                if (this.editId) {
+                    await window.fb.updateDoc(window.fb.doc(window.db, "products", this.editId), data);
+                    this.editId = null;
+                } else {
+                    data.createdAt = Date.now();
+                    data.hidden = false;
+                    await window.fb.addDoc(window.fb.collection(window.db, "products"), data);
+                }
+                this.newP = { title: '', desc: '', price: '', oldPrice: '', category: '', sizes: '42, 44, 46', color: '', images: [] };
+                alert('Готово!');
+            } catch (e) { alert(e.message); }
+            this.loading = false;
+        },
 
         editProduct(p) {
             this.editId = p.id;
@@ -1340,39 +1235,6 @@ async updateStatus(order, newStatus) {
         order.isUpdating = false;
     }
 },
-// Переключение статуса конкретного размера (скрыть/показать)
-async toggleSizeStatus(product, sizeObj) {
-    // Инвертируем видимость
-    sizeObj.visible = sizeObj.visible === false;
-    
-    try {
-        const productRef = window.fb.doc(window.db, "products", product.id);
-        await window.fb.updateDoc(productRef, {
-            sizes: product.sizes
-        });
-        if (window.Telegram?.WebApp?.HapticFeedback) {
-            window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
-        }
-    } catch (e) {
-        console.error("Ошибка обновления размера:", e);
-        alert("Не удалось обновить статус размера");
-    }
-},
-
-// Удаление товара из Firebase с подтверждением
-async deleteProductFromCloud(id) {
-    if (confirm("Вы уверены, что хотите полностью удалить этот товар из базы данных?")) {
-        try {
-            await window.fb.deleteDoc(window.fb.doc(window.db, "products", id));
-            if (window.Telegram?.WebApp?.HapticFeedback) {
-                window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
-            }
-        } catch (e) {
-            console.error("Ошибка удаления:", e);
-            alert("Ошибка при удалении товара");
-        }
-    }
-}, 
 
 async deleteOrder(docId) {
     const confirmText = "⚠️ Удалить заказ навсегда?";
