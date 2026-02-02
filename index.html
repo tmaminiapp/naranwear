@@ -834,10 +834,11 @@ Vue.createApp({
 
         // 3. Считает ВЫРУЧКУ всех заказов (только для админ-панели)
         revenue() {
-            return this.allOrders
-                .filter(o => o.status !== 'Отменен')
-                .reduce((sum, order) => sum + (Number(order.order_total) || 0), 0);
-        },
+                return this.allOrders.reduce((sum, o) => {
+                    const val = Number(String(o.order_total || o.total || 0).replace(/\s/g, ''));
+                    return sum + val;
+                }, 0);
+            },
     },
     methods: {
         vib() { tg.HapticFeedback.impactOccurred('light'); },
@@ -1096,15 +1097,13 @@ quickAddToCart(p) {
 
         openSupport() { window.open('https://t.me/opttania', '_blank'); },
         
-       total() {
-        if (!this.cart || this.cart.length === 0) return 0;
-        return this.cart.reduce((sum, item) => {
-            // Очистка от пробелов (чтобы "1 200" стало 1200)
-            const price = Number(String(item.price || 0).replace(/\s/g, ''));
-            const qty = Number(item.qty || 0);
-            return sum + (price * qty);
-        }, 0);
-    },
+      total() {
+                return this.cart.reduce((sum, item) => {
+                    // Очищаем цену от пробелов и считаем
+                    const p = Number(String(item.price || 0).replace(/\s/g, ''));
+                    return sum + (p * (item.qty || 1));
+                }, 0);
+            },
 
         async uploadImages(e) {
             this.loading = true;
@@ -1323,7 +1322,7 @@ async manageCategory(action, id) { // Добавь async здесь
             `📍 Доставка: ${this.deliv}\n` +
             `🏠 Адрес: ${this.address}\n\n` +
             `📦 Состав заказа:\n${itemsText}\n\n` +
-            `💰 *Итого: ${finalTotal} ₽*`; // Используем переменную finalTotal
+            `💰 Итого: ${finalTotal} ₽`;
 
         await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, { 
             method: 'POST',
