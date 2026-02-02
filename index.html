@@ -819,6 +819,7 @@
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
     import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, deleteDoc, updateDoc, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyC6fihIMtOYZuPh-db3Tc6eiRgSikzydVw",
@@ -831,8 +832,9 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
+    const storage = getStorage(app); // инициализируем storage
     window.db = db;
-    window.fb = { collection, addDoc, onSnapshot, query, orderBy, doc, deleteDoc, updateDoc, where, serverTimestamp };
+    window.fb = { collection, addDoc, onSnapshot, query, orderBy, doc, deleteDoc, updateDoc, where, getStorage, ref, uploadBytes, getDownloadURL, serverTimestamp };
 </script>
 
 <script>
@@ -1270,10 +1272,12 @@ quickAddToCart(p) {
             this.loading = false;
         },
 async uploadFile(file) {
-    const storage = window.fb.getStorage();
-    const storageRef = window.fb.ref(storage, 'products/' + Date.now() + '_' + file.name);
-    await window.fb.uploadBytes(storageRef, file);
-    return await window.fb.getDownloadURL(storageRef);
+    const fb = window.fb;
+    const storage = fb.getStorage(); // теперь это сработает
+    const storageRef = fb.ref(storage, 'products/' + Date.now() + '_' + file.name);
+    
+    await fb.uploadBytes(storageRef, file);
+    return await fb.getDownloadURL(storageRef);
 },
         async saveProduct() {
     // Проверка: теперь смотрим и на готовые картинки (если редактируем), 
