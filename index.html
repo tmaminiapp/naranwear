@@ -900,9 +900,21 @@ Vue.createApp({
 
         addToCart(p) {
     if (!p) return;
-    const selectedSize = p.tempSize || (p.sizes ? String(p.sizes).split(',')[0].trim() : 'Универсал');
-    
-    if (p.hiddenSizes && p.hiddenSizes.includes(selectedSize)) return;
+
+    // СНАЧАЛА проверяем tempSize (то, что кликнули в модалке)
+    // Если его нет — берем первый из списка sizes
+    // Если и списка нет — Универсал
+    let finalSize = '';
+    if (p.tempSize) {
+        finalSize = p.tempSize;
+    } else if (p.sizes) {
+        finalSize = String(p.sizes).split(',')[0].trim();
+    } else {
+        finalSize = 'Универсал';
+    }
+
+    // Проверка на скрытость
+    if (p.hiddenSizes && p.hiddenSizes.includes(finalSize)) return;
 
     const currentColor = p.color || (p.colors && p.colors[p.aIdx] ? p.colors[p.aIdx] : 'Белый');
     const cartId = p.id + selectedSize + currentColor;
