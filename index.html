@@ -256,13 +256,13 @@
                     </div>
                     
                     <div class="card-sizes">
-    <div v-for="s in p.sizes" :key="s.value"
-     class="size-chip"
-     @click.stop="s.visible ? (p.selSize = s.value, vib()) : null"
-     :style="s.visible ? {} : { background: '#f2f2f7', color: '#bbb', textDecoration: 'line-through', pointerEvents: 'none' }"
-     :class="{ active: p.selSize === s.value && s.visible }">
-    {{ s.value }}
-     </div>
+    <div v-for="s in (String(p.sizes || '').split(','))" 
+         v-if="p.sizes"
+         :key="s" 
+         @click="p.tempSize = s.trim(); vib()" 
+         :class="['size-chip', {active: (p.tempSize || String(p.sizes).split(',')[0].trim()) === s.trim()}]">
+        {{s.trim()}}
+    </div>
 </div>
                     <button class="btn-black" style="width: 100%;" @click.stop="quickAddToCart(p)">
                         В КОРЗИНУ
@@ -299,12 +299,12 @@
                         <span class="price">{{p.price}} ₽</span>
                     </div>
                     <div class="card-sizes">
-    <div v-for="s in p.sizes" :key="s.value"
-         class="size-chip"
-         @click.stop="s.visible ? (p.selSize = s.value, vib()) : null"
-         :style="s.visible ? {} : { background: '#f2f2f7', color: '#bbb', textDecoration: 'line-through', pointerEvents: 'none' }"
-         :class="{ active: p.selSize === s.value && s.visible }">
-        {{ s.value }}
+    <div v-for="s in (String(p.sizes || '').split(','))" 
+         v-if="p.sizes"
+         :key="s"
+         @click="p.tempSize = s.trim(); vib()"
+         :class="['size-chip', {active: (p.tempSize || String(p.sizes).split(',')[0].trim()) === s.trim()}]">
+        {{s.trim()}}
     </div>
 </div>
                     <button class="btn-black" style="width: 100%; margin-top: 5px;" @click.stop="quickAddToCart(p)">
@@ -487,35 +487,29 @@
 
 
 
-                <div v-for="p in products" :key="p.id" style="display: flex; gap: 12px; padding: 15px; border-bottom: 1px solid #eee; align-items: flex-start;">
-    <img :src="p.images[0]" style="width: 50px; height: 65px; object-fit: cover; border-radius: 6px;">
-    
-    <div style="flex: 1;">
-        <div style="display: flex; justify-content: space-between;">
-            <div style="font-weight: 800; font-size: 14px;">
-                {{ p.title }} <span style="color: var(--gray); font-weight: 400; font-size: 12px;">| {{ p.color }}</span>
-            </div>
-            <div style="display: flex; gap: 12px;">
-                <span @click="editProduct(p)" style="cursor: pointer;">✏️</span>
-                <span @click="deleteProductFromCloud(p.id)" style="cursor: pointer; color: var(--red);">🗑️</span>
-            </div>
+                <div class="admin-products-list">
+    <div v-for="p in products" :key="p.id" class="admin-product-item" style="border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;">
+        <div>
+            <strong>Название:</strong> {{ p.name }} <br>
+            <strong>Цвет:</strong> {{ p.color || 'Не указан' }}
+        </div>
+        
+        <div style="margin-top: 10px;">
+            <strong>Размеры:</strong>
+            <ul style="list-style: none; padding: 0;">
+                <li v-for="size in p.sizes" :key="size" style="display: flex; align-items: center; justify-content: space-between; width: 200px; margin-bottom: 5px;">
+                    <span :style="{ color: isSizeHidden(p, size) ? '#ccc' : '#000' }">{{ size }}</span>
+                    <button @click="toggleSizeVisibility(p, size)" 
+                            :style="{ backgroundColor: isSizeHidden(p, size) ? '#4CAF50' : '#f44336', color: 'white', border: 'none', padding: '2px 10px', cursor: 'pointer' }">
+                        {{ isSizeHidden(p, size) ? 'Показать' : 'Скрыть' }}
+                    </button>
+                </li>
+            </ul>
         </div>
 
-        <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 6px;">
-            <div v-for="(sz, idx) in (Array.isArray(p.sizes) ? p.sizes : [])" :key="idx" 
-                 style="display: flex; align-items: center; justify-content: space-between; background: #f9f9f9; padding: 6px 10px; border-radius: 8px;">
-                
-                <span :style="{ textDecoration: sz.visible ? 'none' : 'line-through', color: sz.visible ? '#000' : 'var(--gray)' }" style="font-size: 12px; font-weight: 700;">
-                    Размер: {{ sz.value }}
-                </span>
-
-                <button @click.stop="toggleSizeStatus(p, sz)" 
-                        style="border: none; border-radius: 6px; padding: 4px 10px; font-size: 10px; font-weight: 800; cursor: pointer;"
-                        :style="{ background: sz.visible ? '#eee' : 'var(--red)', color: sz.visible ? '#000' : '#fff' }">
-                    {{ sz.visible ? 'СКРЫТЬ' : 'ПОКАЗАТЬ' }}
-                </button>
-            </div>
-        </div>
+        <button @click="deleteProductWithConfirm(p.id)" style="margin-top: 10px; background: black; color: white; padding: 5px 15px; border: none; cursor: pointer;">
+            Удалить товар полностью
+        </button>
     </div>
 </div>
 
@@ -554,7 +548,7 @@
             <div v-for="item in o.items" :key="item.id" style="font-size: 12px; margin-bottom: 6px; border-bottom: 1px solid #e5e5ea; padding-bottom: 4px; color: #000;">
                 <div style="font-weight: 700;">{{ item.title }} — {{ item.count || 1 }} шт.</div>
                 <div style="font-size: 11px; color: #8e8e93;">
-                    🎨 Цвет: {{ item.color || '-' }} | 📏 Разм: {{ typeof item.selSize === 'object' ? item.selSize.value : item.selSize }}
+                    🎨 Цвет: {{ item.color || '-' }} | 📏 Разм: {{ item.size || item.selSize || '-' }}
                 </div>
             </div>
         </div>
@@ -617,9 +611,17 @@
             
             <div style="font-size: 10px; font-weight: 800; text-transform: uppercase;">ВЫБЕРИТЕ РАЗМЕР</div>
             <div class="size-grid">
-                <button v-for="s in selP.sizes.split(',')" :key="s" @click="selP.selSize = s.trim(); vib()" :class="['size-btn', {active: selP.selSize === s.trim()}]">
-                    {{s.trim()}}
-                </button>
+                <button v-for="s in p.sizes" 
+        :key="s"
+        :disabled="isSizeHidden(p, s)"
+        :style="{ 
+            backgroundColor: isSizeHidden(p, s) ? '#f2f2f7' : '', 
+            color: isSizeHidden(p, s) ? '#ccc' : '',
+            cursor: isSizeHidden(p, s) ? 'not-allowed' : 'pointer'
+        }"
+        @click="!isSizeHidden(p, s) && selectSize(s)">
+    {{ s }}
+</button>
             </div>
 
             <div style="font-size: 10px; font-weight: 800; text-transform: uppercase;">ЦВЕТ: {{selP.color}}</div>
@@ -843,25 +845,9 @@ Vue.createApp({
         },
 
         openProduct(p) {
-    this.vib();
-    let initialSize = '';
-    
-    // Универсальная проверка: строка или массив
-    if (Array.isArray(p.sizes)) {
-        // Если массив, берем значение первого видимого размера
-        const firstVisible = p.sizes.find(s => s.visible !== false) || p.sizes[0];
-        initialSize = firstVisible ? (firstVisible.value || firstVisible) : '';
-    } else if (typeof p.sizes === 'string') {
-        initialSize = p.sizes.split(',')[0].trim();
-    }
-
-    this.selP = { 
-        ...p, 
-        aIdx: 0, 
-        selSize: initialSize, 
-        selColor: p.color || (p.colors ? p.colors[0] : 'Белый') 
-    };
-},
+            this.vib();
+            this.selP = { ...p, aIdx: 0, selSize: p.sizes.split(',')[0].trim(), selColor: p.color };
+        },
 
         isFav(p) { return p && this.favorites.includes(p.id); },
         
@@ -876,112 +862,51 @@ Vue.createApp({
             localStorage.setItem('naran_favs_v3', JSON.stringify(this.favorites));
         },
 
-      addToCart(p) {
+        addToCart(p) {
     this.vib();
-    
-    // 1. Извлекаем ЧИСТОЕ значение размера (строку), даже если там объект
-    let sizeValue = p.selSize;
-    if (typeof sizeValue === 'object' && sizeValue !== null) {
-        sizeValue = sizeValue.value; 
-    }
-    const finalSize = sizeValue || 'Универсал';
-
-    // 2. Определяем цвет
+    // Определяем текущий цвет (если есть массив colors, берем по индексу aIdx)
     const currentColor = (p.colors && p.colors[p.aIdx]) ? p.colors[p.aIdx] : (p.selColor || 'Белый');
     
-    // 3. Собираем уникальный ID для корзины (теперь без [object Object])
-    const cartId = p.id + finalSize + currentColor;
-    
+    // Безопасно собираем ID
+    const cartId = p.id + (p.selSize || '') + currentColor;
     const exist = this.cart.find(i => i.cartId === cartId);
     
     if (exist) {
         exist.qty++;
     } else {
-        // Создаем чистую копию объекта товара для корзины
-        const cartItem = {
-            id: p.id,
-            title: p.title,
-            price: Number(p.price),
-            images: p.images,
-            selSize: finalSize,   // Сохраняем как строку!
-            selColor: currentColor,
-            cartId: cartId,
-            qty: 1
-        };
-        this.cart.push(cartItem);
+        // Добавляем объект, заменяя 'product' на 'p'
+        this.cart.push({ ...p, cartId, selColor: currentColor, qty: 1, price: Number(p.price) });
     }
     
     this.saveCart();
-    this.selP = null; // Закрываем карточку
-    if (window.tg?.HapticFeedback) {
-        tg.HapticFeedback.notificationOccurred('success');
-    }
+    this.selP = null;
+    tg.HapticFeedback.notificationOccurred('success');
 },
 
-// Метод переключения видимости размера
-async toggleSizeStatus(product, sizeObj) {
-    sizeObj.visible = !sizeObj.visible; // Инвертируем статус
-    try {
-        await window.fb.updateDoc(window.fb.doc(window.db, "products", product.id), {
-            sizes: product.sizes
-        });
-        this.vib(); // Твоя функция вибрации
-    } catch (e) { alert("Ошибка обновления: " + e.message); }
-},
-
-async toggleProductVisibility(p) {
-    try {
-        await window.fb.updateDoc(window.fb.doc(window.db, "products", p.id), {
-            hidden: !p.hidden
-        });
-        this.vib();
-    } catch (e) { alert("Ошибка видимости: " + e.message); }
-},
-// Метод удаления из облака
-async deleteProductFromCloud(id) {
-    if (confirm("Вы уверены, что хотите полностью удалить этот товар из облака?")) {
-        try {
-            await window.fb.deleteDoc(window.fb.doc(window.db, "products", id));
-            this.vib();
-        } catch (e) { alert("Ошибка при удалении: " + e.message); }
-    }
-},
 quickAddToCart(p) {
     this.vib();
     
-    // 1. ОПРЕДЕЛЯЕМ РАЗМЕР (чистый текст)
-    let rawSize = p.tempSize || p.selSize; 
+    // 1. Берем выбранный размер или первый доступный
+    const selectedSize = p.tempSize || (p.sizes ? String(p.sizes).split(',')[0].trim() : 'Универсал');
     
-    // Если размера нет вообще, берем первый из списка
-    if (!rawSize && p.sizes) {
-        rawSize = Array.isArray(p.sizes) ? p.sizes[0] : p.sizes.split(',')[0];
-    }
-
-    // Если размер — это объект {value: '42', visible: true}, берем только value
-    let finalSize = (typeof rawSize === 'object' && rawSize !== null) 
-        ? rawSize.value 
-        : (rawSize || 'Универсал');
-
-    // 2. ОПРЕДЕЛЯЕМ ЦВЕТ
+    // 2. ИСПРАВЛЕННАЯ ЛОГИКА ЦВЕТА:
+    // Сначала ищем поле color (из админки), если его нет - ищем в массиве, если и его нет - Белый
     const currentColor = p.color || (p.colors && p.colors[p.aIdx] ? p.colors[p.aIdx] : 'Белый');
     
-    // 3. СОЗДАЕМ ID (теперь точно строка + строка + строка)
-    const cartId = String(p.id) + String(finalSize) + String(currentColor);
-    
+    const cartId = p.id + selectedSize + currentColor;
     const exist = this.cart.find(i => i.cartId === cartId);
     
     if (exist) {
         exist.qty++;
     } else {
+        // Добавляем в корзину со всеми параметрами
         this.cart.push({ 
-            id: p.id,
-            title: p.title,
-            price: Number(p.price),
-            images: p.images,
-            cartId: cartId, 
-            selSize: String(finalSize), // Сохраняем как строку!
+            ...p, 
+            cartId, 
+            selSize: selectedSize, 
             selColor: currentColor, 
-            qty: 1
+            qty: 1, 
+            price: Number(p.price) 
         });
     }
     this.saveCart();
@@ -1180,7 +1105,15 @@ quickAddToCart(p) {
         if (confirm(msg)) runDelete();
     }
 },
-
+async toggleSizeStatus(product, sizeObj) {
+    sizeObj.visible = !sizeObj.visible; 
+    try {
+        await window.fb.updateDoc(window.fb.doc(window.db, "products", product.id), {
+            sizes: product.sizes
+        });
+        this.vib();
+    } catch (e) { alert("Ошибка обновления размера: " + e.message); }
+},
         async toggleVisibility(p) {
     if (!p || !p.id) return;
     
@@ -1237,13 +1170,9 @@ async manageCategory(action, id) { // Добавь async здесь
         // 1. Формируем текст состава заказа с учетом Размера и Цвета
         const itemsText = this.cart.map(item => {
             // Создаем массив характеристик
-           let specs = [];
-// Безопасно извлекаем значение размера
-if (item.selSize) {
-    const sizeValue = typeof item.selSize === 'object' ? item.selSize.value : item.selSize;
-    specs.push(sizeValue); 
-}
-if (item.selColor) specs.push(item.selColor);
+            let specs = [];
+            if (item.selSize) specs.push(item.selSize); // Размер
+            if (item.selColor) specs.push(item.selColor); // Цвет (Белый, Черный и т.д.)
             
             // Если характеристики есть, пишем их в скобках, если нет — оставляем пусто
             const details = specs.length > 0 ? `(${specs.join(', ')})` : '';
@@ -1330,7 +1259,45 @@ async updateStatus(order, newStatus) {
         order.isUpdating = false;
     }
 },
+// Проверка, скрыт ли конкретный размер
+isSizeHidden(product, size) {
+    if (!product.hiddenSizes) return false;
+    return product.hiddenSizes.includes(size);
+},
 
+// Переключение видимости размера
+async toggleSizeVisibility(product, size) {
+    let hiddenSizes = product.hiddenSizes || [];
+    
+    if (hiddenSizes.includes(size)) {
+        // Если уже скрыт — убираем из списка скрытых
+        hiddenSizes = hiddenSizes.filter(s => s !== size);
+    } else {
+        // Если не скрыт — добавляем в скрытые
+        hiddenSizes.push(size);
+    }
+
+    try {
+        await window.fb.updateDoc(window.fb.doc(window.db, "products", product.id), {
+            hiddenSizes: hiddenSizes
+        });
+        // Данные обновятся автоматически через onSnapshot
+    } catch (e) {
+        console.error("Ошибка обновления видимости:", e);
+    }
+},
+
+// Удаление товара с подтверждением
+async deleteProductWithConfirm(productId) {
+    if (confirm("Вы уверены, что хотите безвозвратно удалить этот товар из облака?")) {
+        try {
+            await window.fb.deleteDoc(window.fb.doc(window.db, "products", productId));
+            alert("Товар удален");
+        } catch (e) {
+            alert("Ошибка при удалении");
+        }
+    }
+},
 async deleteOrder(docId) {
     const confirmText = "⚠️ Удалить заказ навсегда?";
     
