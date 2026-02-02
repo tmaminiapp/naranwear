@@ -842,6 +842,17 @@ Vue.createApp({
     },
     methods: {
         vib() { tg.HapticFeedback.impactOccurred('light'); },
+        total() {
+            // Если в корзине пусто, сумма 0
+            if (!this.cart || this.cart.length === 0) return 0;
+
+            return this.cart.reduce((sum, item) => {
+                // Очищаем цену от пробелов и лишних символов (₽, букв)
+                const price = Number(String(item.price || 0).replace(/[^\d]/g, ''));
+                // Считаем: сумма + (цена * количество)
+                return sum + (price * (item.qty || 1));
+            }, 0);
+        },
         
         setCategory(name) {
             try {
@@ -877,6 +888,7 @@ Vue.createApp({
             const idx = Math.round(e.target.scrollLeft / e.target.offsetWidth);
             p.aIdx = idx;
         },
+
 
         openProduct(p) {
     this.selP = { ...p };
@@ -1097,25 +1109,6 @@ quickAddToCart(p) {
 
         openSupport() { window.open('https://t.me/opttania', '_blank'); },
         
-     total() {
-    // 1. Проверяем, есть ли что-то в корзине
-    if (!this.cart || this.cart.length === 0) return 0;
-
-    return this.cart.reduce((sum, item) => {
-        // 2. Берем цену (если ее нет, берем 0)
-        let rawPrice = item.price || 0;
-        
-        // 3. ОЧИСТКА ЦЕНЫ: оставляем только цифры
-        // Это уберет пробелы, символ ₽, текст и т.д.
-        let cleanPrice = String(rawPrice).replace(/[^\d]/g, '');
-        
-        // 4. Превращаем в число (если вдруг цена пустая, берем 0)
-        let priceNumber = Number(cleanPrice) || 0;
-        
-        // 5. Умножаем на количество и прибавляем к сумме
-        return sum + (priceNumber * (item.qty || 1));
-    }, 0);
-},
 
         async uploadImages(e) {
             this.loading = true;
