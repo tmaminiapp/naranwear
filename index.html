@@ -1338,7 +1338,7 @@ async compressImage(file) {
             img.src = event.target.result;
             img.onload = () => {
                 const canvas = document.createElement('canvas');
-                const MAX_WIDTH = 1200; // Оптимально для магазина
+                const MAX_WIDTH = 1000; // Оптимальный размер для магазина
                 let width = img.width;
                 let height = img.height;
 
@@ -1352,14 +1352,14 @@ async compressImage(file) {
                 ctx.drawImage(img, 0, 0, width, height);
                 
                 canvas.toBlob((blob) => {
-                    // Возвращаем сжатый файл
                     resolve(new File([blob], file.name, { type: 'image/jpeg' }));
-                }, 'image/jpeg', 0.7); // Качество 70% — визуально не отличить
+                }, 'image/jpeg', 0.7); // Качество 70% — визуально не отличается, но весит в 10 раз меньше
             };
         };
     });
 },
         async saveProduct() {
+    // 1. Проверки данных
     const hasLocal = this.newP.localFiles && this.newP.localFiles.length > 0;
     const hasImages = this.newP.images && this.newP.images.length > 0;
 
@@ -1367,56 +1367,99 @@ async compressImage(file) {
         return alert('Заполните название, цену и добавьте фото');
     }
 
-   this.loading = true;
+    this.loading = true;
+    this.vib(); // Даем виброотклик о начале процесса
+
     try {
         let uploadedUrls = [];
         
+        // 2. Загрузка файлов с защитой от ошибок
         if (hasLocal) {
             for (let item of this.newP.localFiles) {
-                // ВАЖНО: Сначала сжимаем, потом загружаем
-                const compressedFile = await this.compressImage(item.file);
-                const url = await this.uploadFile(compressedFile); 
-                uploadedUrls.push(url);
+                try {
+                    // Сжимаем
+                    const compressedFile = await this.compressImage(item.file);
+                    // Загружаем
+                    const url = await this.uploadFile(compressedFile); 
+                    
+                    // Проверяем, что URL действительно пришел
+                    if (url) {
+                        uploadedUrls.push(url);
+                    }
+                } catch (fileError) {
+                    console.error("Ошибка при загрузке одного из файлов:", fileError);
+                    // Мы не прерываем весь цикл, чтобы остальные фото могли загрузиться
+                }
             }
         }
 
-        // Собираем всё вместе
-        const finalImages = [...(this.newP.images || []), ...uploadedUrls];
+        // 3. Формируем итоговый массив картинок
+        // Используем filter(Boolean), чтобы в массиве не было пустых значений или undefined
+        const finalImages = [...(this.newP.images || []), ...uploadedUrls].filter(Boolean);
 
+        if (finalImages.length === 0) {
+            throw new Error('Не удалось загрузить ни одного фото. Проверьте интернет.');
+        }
+
+        // 4. Подготовка объекта данных
         const data = {
-            title: this.newP.title,
-            desc: this.newP.desc || '',
+            title: this.newP.title.trim(),
+            desc: (this.newP.desc || '').trim(),
             price: Number(this.newP.price),
             oldPrice: this.newP.oldPrice ? Number(this.newP.oldPrice) : null,
             category: this.newP.category || '',
-            sizes: this.newP.sizes || '',
+            sizes: String(this.newP.sizes || ''),
             color: this.newP.color || '',
             images: finalImages,
             updatedAt: Date.now()
         };
 
+        // 5. Сохранение в Firebase
         if (this.editId) {
-            await window.fb.updateDoc(window.fb.doc(window.db, "products", this.editId), data);
+            const docRef = window.fb.doc(window.db, "products", this.editId);
+            await window.fb.updateDoc(docRef, data);
             this.editId = null;
         } else {
             data.createdAt = Date.now();
             data.hidden = false;
+            data.hiddenSizes = []; // Сразу создаем пустой массив для будущих скрытий
             await window.fb.addDoc(window.fb.collection(window.db, "products"), data);
         }
 
-        // Очистка Blob ссылок для освобождения памяти
+        // 6. Очистка ресурсов
         if (hasLocal) {
-            this.newP.localFiles.forEach(f => URL.revokeObjectURL(f.preview));
+            this.newP.localFiles.forEach(f => {
+                if (f.preview) URL.revokeObjectURL(f.preview);
+            });
         }
 
-        this.newP = { title: '', desc: '', price: '', oldPrice: '', category: '', sizes: '42, 44, 46', color: '', images: [], localFiles: [] };
-        alert('Готово!');
+        // 7. Полный сброс формы (используем функцию для чистоты)
+        this.resetForm();
+        alert('Товар успешно сохранен!');
+
     } catch (e) { 
+        console.error("Критическая ошибка:", e);
         alert('Ошибка при сохранении: ' + e.message); 
+    } finally {
+        // Выполняется всегда: и при успехе, и при ошибке
+        this.loading = false;
     }
-    this.loading = false;
 },
 
+// Добавь этот вспомогательный метод в methods:
+resetForm() {
+    this.newP = { 
+        title: '', 
+        desc: '', 
+        price: '', 
+        oldPrice: '', 
+        category: '', 
+        sizes: '42, 44, 46', 
+        color: '', 
+        images: [], 
+        localFiles: [] 
+    };
+},
         editProduct(p) {
     this.editId = p.id;
     // Создаем копию товара и гарантируем, что localFiles существует
