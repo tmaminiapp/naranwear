@@ -1375,18 +1375,18 @@ async compressImage(file) {
     });
 },
        async saveProduct() {
-    // Проверка обязательных полей
+    // 1. Проверяем, заполнены ли поля
     if (!this.newP.title || !this.newP.price) {
         return alert('Заполните название и цену!');
     }
 
-    this.loading = true;
-    const imgbbKey = '839e62907e9a52f0159461b7771bcb2f'; // Твой ключ ImgBB
+    this.loading = true; // Включаем индикатор "ЗАГРУЗКА..."
+    const imgbbKey = '839e62907e9a52f0159461b7771bcb2f'; // Ваш ключ ImgBB
 
     try {
-        let finalImages = [...(this.newP.images || [])]; // Сохраняем старые фото, если они есть
+        let finalImages = [...(this.newP.images || [])]; 
 
-        // 1. Загружаем новые фото на ImgBB, если они выбраны
+        // 2. Загружаем новые фотографии на ImgBB
         if (this.newP.localFiles && this.newP.localFiles.length > 0) {
             for (let item of this.newP.localFiles) {
                 const formData = new FormData();
@@ -1399,24 +1399,24 @@ async compressImage(file) {
 
                 const result = await response.json();
                 if (result.success) {
-                    finalImages.push(result.data.url);
+                    finalImages.push(result.data.url); // Сохраняем ссылку от ImgBB
                 } else {
                     throw new Error('Ошибка ImgBB: ' + result.error.message);
                 }
             }
         }
 
-        // Подготовка данных для базы
+        // 3. Подготовка объекта для Firebase Firestore
         const productData = {
             title: this.newP.title,
             desc: this.newP.desc || '',
             price: Number(this.newP.price),
             category: this.newP.category || 'all',
-            images: finalImages,
+            images: finalImages, // Здесь будут ссылки от ImgBB
             updatedAt: Date.now()
         };
 
-        // 2. Сохраняем: либо обновляем старый, либо создаем новый
+        // 4. Сохранение в Firebase (Ваш проект naran-80077)
         if (this.editId) {
             await window.fb.updateDoc(window.fb.doc(window.db, "products", this.editId), productData);
             alert('Изменения сохранены!');
@@ -1426,14 +1426,13 @@ async compressImage(file) {
             alert('Товар опубликован!');
         }
 
-        // Очистка после успеха
-        this.cancelEdit(); // Метод, который сбрасывает форму (у тебя он должен быть)
+        this.cancelEdit(); // Сброс формы
         
     } catch (e) {
-        console.error("Критическая ошибка:", e);
+        console.error("Ошибка:", e);
         alert('Не удалось сохранить: ' + e.message);
     } finally {
-        this.loading = false; // Кнопка снова станет активной
+        this.loading = false; // Выключаем индикатор загрузки
     }
 },
 
