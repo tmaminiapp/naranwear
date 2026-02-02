@@ -13,16 +13,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
     
     <style>
-        * { 
-    box-sizing: border-box; 
-    /* Запрещает синюю подсветку для ВСЕХ элементов на мобильных */
-    -webkit-tap-highlight-color: transparent !important; 
-    -webkit-touch-callout: none;
-         }
-
-button, a, div[role="button"] {
-    outline: none !important;
-         }
         :root {
             --bg: #ffffff;
             --dark: #000000;
@@ -35,42 +25,14 @@ button, a, div[role="button"] {
     pointer-events: none !important;
     opacity: 0.5;
 }
-    /* Общие стили для кнопок размеров */
-.size-chip { 
-    /* Ваши текущие стили */
-    font-size: 9px; 
-    font-weight: 700; 
-    padding: 4px 8px; 
-    border: 1px solid #ddd; 
-    color: #000;
-    border-radius: 2px; 
-    white-space: nowrap;
-    cursor: pointer;
-
-    /* ИСПРАВЛЕНИЕ СИНЕГО ЦВЕТА НА ТЕЛЕФОНЕ */
-    -webkit-tap-highlight-color: transparent !important;
-    outline: none !important;                    
-}
-
-/* Убедитесь, что активное состояние четко прописано */
-.size-chip.active { 
-    background-color: #000000 !important; 
-    color: #ffffff !important;
-    border-color: #000000 !important;
-}
-/* Отключенный размер (серый/перечеркнутый) */
-.size-chip.disabled, 
-.size-btn.disabled {
+        .size-chip.disabled, .size-btn.disabled {
     opacity: 0.4 !important;
-    background: #f2f2f7 !important; /* Используем вашу переменную --light */
-    color: #8e8e93 !important; /* Ваша переменная --gray */
+    background: #e5e5ea !important;
+    color: #8e8e93 !important;
     border-color: #d1d1d6 !important;
-    pointer-events: none; 
-    text-decoration: line-through;
-}
-.size-chip:active {
-    transform: scale(0.92); /* Кнопка будет слегка сжиматься при нажатии */
-    transition: transform 0.1s;
+    cursor: not-allowed !important;
+    pointer-events: none; /* Полностью отключает клики */
+    text-decoration: line-through; /* Визуально перечеркиваем для ясности */
 }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
@@ -127,6 +89,11 @@ button, a, div[role="button"] {
     display: flex; gap: 5px; overflow-x: auto; padding: 5px 0; 
     scrollbar-width: none; margin-bottom: 8px;
 }
+.size-chip { 
+    font-size: 9px; font-weight: 700; padding: 4px 8px; 
+    border: 1px solid #ddd; border-radius: 2px; white-space: nowrap;
+}
+.size-chip.active { background: #000; color: #fff; border-color: #000; }
 
         /* Grid */
         .products-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
@@ -149,148 +116,18 @@ button, a, div[role="button"] {
         .old-price { font-size: 11px; color: var(--gray); text-decoration: line-through; }
         .sale-badge { background: #000; color: #fff; font-size: 9px; padding: 2px 4px; font-weight: 800; }
 
-     /* Buttons */
-.btn-row { 
-    display: flex !important; 
-    gap: 8px !important; 
-    margin-top: 10px !important;
-    /* Это выровняет обе кнопки по нижней линии, если они разной высоты */
-    align-items: flex-end !important; 
-}
-
-.btn-black { 
-    background: #000 !important; 
-    color: #fff !important; 
-    border: none !important; 
-    height: 48px !important; /* Жесткая высота */
-    flex: 1 !important; 
-    padding: 0 !important;
-    font-weight: 700 !important; 
-    font-size: 11px !important; 
-    text-transform: uppercase !important; 
-    cursor: pointer !important; 
-    border-radius: 2px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-}
-
-.btn-fav { 
-    background: #fff !important; 
-    border: 1px solid #000 !important; 
-    width: 50px !important;  
-    height: 50px !important; 
-    
-    /* Эти три строки опустят сердце в центр */
-    display: flex !important; 
-    align-items: center !important; 
-    justify-content: center !important; 
-    
-    padding: 0 !important;   
-    flex-shrink: 0 !important;
-    box-sizing: border-box !important;
-}
-
-/* Размер иконки внутри кнопки */
-.btn-fav svg {
-    margin: 0 auto !important;
-    width: 24px !important; 
-    height: 24px !important;
-    display: block !important;
-    stroke: #000 !important; /* Черный контур */
-    color: #000 !important;
-}
-/* Маленькие превью фото */
-.preview-container {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    margin: 10px 0;
-}
-.preview-card {
-    position: relative;
-    width: 60px; /* Фиксированный размер */
-    height: 60px;
-}
-.preview-card img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover; /* Чтобы фото не растягивалось */
-    border-radius: 6px;
-    border: 1px solid #ddd;
-}
-
-/* Кнопка удаления на превью */
-.remove-preview-btn {
-    position: absolute;
-    top: -5px;
-    right: -5px;
-    background: #ff3b30;
-    color: white;
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
-    border: 1px solid white;
-    cursor: pointer;
-}
-
+        /* Buttons */
+        .btn-row { display: flex; gap: 5px; }
+        .btn-black { background: #000; color: #fff; border: none; padding: 12px; font-weight: 700; font-size: 11px; text-transform: uppercase; flex: 1; cursor: pointer; border-radius: 2px; }
+        .btn-fav { background: #fff; border: 1px solid #000; padding: 10px; width: 40px; display: flex; align-items: center; justify-content: center; border-radius: 2px; }
 
         /* Modal Product View */
         .modal { position: fixed; inset: 0; background: #fff; z-index: 2000; overflow-y: auto; padding-bottom: 50px; }
-       .close-modal { 
-    position: fixed; 
-    top: 15px; 
-    right: 15px; 
-    z-index: 2100; 
-    background: #fff !important; 
-    color: #000 !important; 
-    border: 1px solid #000 !important; 
-    width: 35px; 
-    height: 35px; 
-    display: flex; 
-    align-items: center; 
-    justify-content: center; 
-    font-weight: 800;
-    /* Убирает синий цвет на телефоне */
-    -webkit-tap-highlight-color: transparent !important; 
-    outline: none !important;
-}
-        .size-grid { 
-    display: flex; 
-    gap: 10px; 
-    margin: 15px 0; 
-}
-
-.size-btn { 
-    flex: 1; 
-    padding: 12px; 
-    border: 1px solid #eee !important; 
-    background: #fff !important; 
-    color: #000 !important; 
-    font-size: 12px; 
-    font-weight: 700; 
-    border-radius: 2px; 
-    cursor: pointer;
-    /* Убирает синий блик при нажатии на Айфонах/Андроидах */
-    -webkit-tap-highlight-color: transparent !important; 
-}
-
-/* Состояние, когда размер ВЫБРАН */
-.size-btn.active, .deliv-btn.active { 
-    border-color: #000 !important; 
-    background: #000 !important; 
-    color: #fff !important; 
-}
-
-/* Эффект нажатия (чтобы кнопка визуально "прожималась") */
-.size-btn:active {
-    transform: scale(0.95);
-    transition: transform 0.1s;
-}
+        .close-modal { position: fixed; top: 15px; right: 15px; z-index: 2100; background: #fff; border: 1px solid #000; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; font-weight: 800; }
+        
+        .size-grid { display: flex; gap: 10px; margin: 15px 0; }
+        .size-btn { flex: 1; padding: 12px; border: 1px solid #eee; background: #fff; font-size: 12px; font-weight: 700; border-radius: 2px; }
+        .size-btn.active, .deliv-btn.active { border-color: #000; background: #000; color: #fff; }
     
 
         /* Bottom Nav */
@@ -537,7 +374,7 @@ button, a, div[role="button"] {
         <div v-if="address" style="font-size:12px; font-weight:700; margin-bottom: 20px;">📍 {{address}}</div>
 
         <div style="font-size: 9px; color: var(--gray); line-height: 1.2; margin-bottom: 15px; text-align: center;">
-            Нажимая на кнопку, вы даете согласие на обработку персональных данных в соответствии с 152-Ф3 для оформления и доставки заказа.
+            Нажимая на кнопку, вы даете согласие на обработку персональных данных.
         </div>
 
         <button class="btn-black" style="width:100%; height:60px; font-size: 14px;" @click="checkout">
@@ -655,17 +492,8 @@ button, a, div[role="button"] {
                 <input v-model="newP.color" class="input-admin">
             </div>
             <div class="field">
-    <label>ФОТО (МОЖНО НЕСКОЛЬКО)</label>
-    <input type="file" multiple @change="handleFiles" class="input-admin" style="padding: 8px;">
-</div>
-
-<div class="preview-container" v-if="newP.localFiles && newP.localFiles.length > 0">
-    <div v-for="(item, index) in newP.localFiles" :key="index" class="preview-card">
-        <img :src="item.preview" />
-        <div class="remove-preview-btn" @click="removePhoto(index)">×</div>
-    </div>
-</div>
-    
+                <label>ФОТО (МОЖНО НЕСКОЛЬКО)</label>
+                <input type="file" multiple @change="uploadImages" class="input-admin" style="padding: 8px;">
             </div>
 
             <button class="btn-black" style="width:100%; margin-top:10px;" @click="saveProduct" :disabled="loading">
@@ -861,9 +689,8 @@ button, a, div[role="button"] {
 </div>
 
 <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, deleteDoc, updateDoc, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, deleteDoc, updateDoc, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyC6fihIMtOYZuPh-db3Tc6eiRgSikzydVw",
@@ -876,9 +703,8 @@ button, a, div[role="button"] {
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    const storage = getStorage(app); // инициализируем storage
     window.db = db;
-    window.fb = { collection, addDoc, onSnapshot, query, orderBy, doc, deleteDoc, updateDoc, where, serverTimestamp, getStorage: () => storage, ref, uploadBytes, getDownloadURL };
+    window.fb = { collection, addDoc, onSnapshot, query, orderBy, doc, deleteDoc, updateDoc, where, serverTimestamp };
 </script>
 
 <script>
@@ -920,7 +746,6 @@ Vue.createApp({
             showProductList: false,
             allOrders: [],
             chart: null,
-            localFiles: [], // Сюда будем сохранять объекты {file, preview}
             myOrders: [],
 
             nav: [
@@ -1101,63 +926,47 @@ Vue.createApp({
        addToCart(p) {
     if (!p) return;
 
-    // 1. ОПРЕДЕЛЯЕМ РАЗМЕР (сохраняем твою логику)
+    // 1. ОПРЕДЕЛЯЕМ РАЗМЕР (только не скрытый)
     let finalSize = '';
     if (p.tempSize) {
         finalSize = p.tempSize;
     } else if (p.sizes) {
         const allSizes = String(p.sizes).split(',').map(s => s.trim());
+        // Находим первый размер, которого НЕТ в списке скрытых
         const firstAvailable = allSizes.find(s => !p.hiddenSizes?.includes(s));
         finalSize = firstAvailable || allSizes[0];
     } else {
         finalSize = 'Универсал';
     }
 
+    // Блокировка, если размер все равно скрыт
     if (p.hiddenSizes && p.hiddenSizes.includes(finalSize)) return;
 
     // 2. ОПРЕДЕЛЯЕМ ЦВЕТ
     const finalColor = p.color || (p.colors && p.colors[p.aIdx] ? p.colors[p.aIdx] : 'Белый');
 
-    // 3. УНИКАЛЬНЫЙ ID
+    // 3. УНИКАЛЬНЫЙ ID (чтобы разные размеры не слипались в одну строку)
     const cartId = p.id + finalSize + finalColor;
 
     const exist = this.cart.find(i => i.cartId === cartId);
     if (exist) {
-        exist.qty++;
+        exist.qty++; // используем qty, так как в HTML у вас qty
     } else {
         this.cart.push({
             ...p,
             cartId: cartId,
-            selSize: finalSize,
-            selColor: finalColor,
+            selSize: finalSize,  // ВАШЕ НОВОЕ НАЗВАНИЕ
+            selColor: finalColor, // ВАШЕ НОВОЕ НАЗВАНИЕ
             qty: 1
         });
     }
     
-    // --- УЛУЧШЕНИЯ ДЛЯ "БЕСШОВНОСТИ" ---
-    
     this.saveCart();
-    this.vib('success'); // Используем успех для вибрации
-
-    // Показываем уведомление
+    this.vib();
     this.showCartNotify = true;
     setTimeout(() => { this.showCartNotify = false; }, 2000);
+},
 
-    // ЗАКРЫВАЕМ КАРТОЧКУ (если она была открыта)
-    // Это позволит тебе сразу увидеть Избранное или Каталог под карточкой
-    if (this.activeP) {
-        setTimeout(() => {
-            this.activeP = null; 
-            // Очищаем временный размер для следующего открытия
-            if (p.tempSize) p.tempSize = null; 
-        }, 300); // Небольшая задержка, чтобы юзер увидел нажатие кнопки
-    }
-},
-removePhoto(index) {
-    // Освобождаем память браузера
-    URL.revokeObjectURL(this.newP.localFiles[index].preview);
-    this.newP.localFiles.splice(index, 1);
-},
 quickAddToCart(p) {
     this.vib();
     
@@ -1311,78 +1120,55 @@ quickAddToCart(p) {
         openSupport() { window.open('https://t.me/opttania', '_blank'); },
         
 
-async uploadFile(file) {
-    const storageInstance = window.fb.getStorage(); 
-    const storageRef = window.fb.ref(storageInstance, 'products/' + Date.now() + '_' + file.name);
-    await window.fb.uploadBytes(storageRef, file);
-    return await window.fb.getDownloadURL(storageRef);
-},
-        async saveProduct() {
-    const hasLocal = this.newP.localFiles && this.newP.localFiles.length > 0;
-    const hasImages = this.newP.images && this.newP.images.length > 0;
-
-    if (!this.newP.title || !this.newP.price || (!hasLocal && !hasImages)) {
-        return alert('Заполните название, цену и добавьте фото');
-    }
-
-    this.loading = true;
-    try {
-        let uploadedUrls = [];
-        
-        // Загружаем новые файлы, если они есть
-        if (hasLocal) {
-            for (let item of this.newP.localFiles) {
-                const url = await this.uploadFile(item.file);
-                uploadedUrls.push(url);
+        async uploadImages(e) {
+            this.loading = true;
+            const files = e.target.files;
+            for (let f of files) {
+                const fd = new FormData();
+                fd.append('image', f);
+                try {
+                    const r = await fetch('https://api.imgbb.com/1/upload?key=839e62907e9a52f0159461b7771bcb2f', { method: 'POST', body: fd });
+                    const d = await r.json();
+                    if (d.data?.url) this.newP.images.push(d.data.url);
+                } catch (err) {
+                    alert('Ошибка загрузки фото. Проверьте соединение.');
+                }
             }
-        }
+            this.loading = false;
+        },
 
-        // Собираем всё вместе
-        const finalImages = [...(this.newP.images || []), ...uploadedUrls];
+        async saveProduct() {
+            if (!this.newP.title || !this.newP.price || this.newP.images.length === 0) {
+                return alert('Заполните название, цену и добавьте фото');
+            }
+            this.loading = true;
+            try {
+                const data = {
+                    ...this.newP,
+                    price: Number(this.newP.price),
+                    oldPrice: this.newP.oldPrice ? Number(this.newP.oldPrice) : null,
+                    updatedAt: Date.now()
+                };
 
-        const data = {
-            title: this.newP.title,
-            desc: this.newP.desc || '',
-            price: Number(this.newP.price),
-            oldPrice: this.newP.oldPrice ? Number(this.newP.oldPrice) : null,
-            category: this.newP.category || '',
-            sizes: this.newP.sizes || '',
-            color: this.newP.color || '',
-            images: finalImages,
-            updatedAt: Date.now()
-        };
-
-        if (this.editId) {
-            await window.fb.updateDoc(window.fb.doc(window.db, "products", this.editId), data);
-            this.editId = null;
-        } else {
-            data.createdAt = Date.now();
-            data.hidden = false;
-            await window.fb.addDoc(window.fb.collection(window.db, "products"), data);
-        }
-
-        // Очистка Blob ссылок для освобождения памяти
-        if (hasLocal) {
-            this.newP.localFiles.forEach(f => URL.revokeObjectURL(f.preview));
-        }
-
-        this.newP = { title: '', desc: '', price: '', oldPrice: '', category: '', sizes: '42, 44, 46', color: '', images: [], localFiles: [] };
-        alert('Готово!');
-    } catch (e) { 
-        alert('Ошибка при сохранении: ' + e.message); 
-    }
-    this.loading = false;
-},
+                if (this.editId) {
+                    await window.fb.updateDoc(window.fb.doc(window.db, "products", this.editId), data);
+                    this.editId = null;
+                } else {
+                    data.createdAt = Date.now();
+                    data.hidden = false;
+                    await window.fb.addDoc(window.fb.collection(window.db, "products"), data);
+                }
+                this.newP = { title: '', desc: '', price: '', oldPrice: '', category: '', sizes: '42, 44, 46', color: '', images: [] };
+                alert('Готово!');
+            } catch (e) { alert(e.message); }
+            this.loading = false;
+        },
 
         editProduct(p) {
-    this.editId = p.id;
-    // Создаем копию товара и гарантируем, что localFiles существует
-    this.newP = { 
-        ...p, 
-        localFiles: [] 
-    };
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-},
+            this.editId = p.id;
+            this.newP = { ...p };
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        },
 
         cancelEdit() {
             this.editId = null;
@@ -1596,40 +1382,12 @@ async manageCategory(action, id) { // Добавь async здесь
 
 // Метод для кнопок "В пути" и "Готов"
 async updateStatus(order, newStatus) {
-    // Если статус уже такой же, ничего не делаем
-    if (order.status === newStatus) return;
-
     try {
         order.isUpdating = true;
         const orderRef = window.fb.doc(window.db, "orders", order.id);
         await window.fb.updateDoc(orderRef, { status: newStatus });
         
-        // --- БЛОК УВЕДОМЛЕНИЯ КЛИЕНТА ---
-        const botToken = '8546116032:AAGHzNWm8ueB5ynxIgzf6OLM7EdbA2geEbk';
-        const customerId = order.user ? order.user.id : null;
-
-        if (customerId && customerId !== 0) {
-            let message = "";
-            if (newStatus === 'Отправлен') {
-                message = `🚀 *Ваш заказ №${order.order_id} отправлен!*\n📦 Мы передали его в службу доставки. Скоро он будет у вас! Спасибо за покупку!`;
-            } else if (newStatus === 'Доставлен') {
-                message = `✅ *Ваш заказ №${order.order_id} доставлен!*\n📦 Будем рады вашему отзыву!`;
-            }
-
-            if (message) {
-                await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        chat_id: customerId,
-                        text: message,
-                        parse_mode: 'Markdown'
-                    })
-                });
-            }
-        }
-        // --- КОНЕЦ БЛОКА УВЕДОМЛЕНИЯ ---
-
+        // Безопасная вибрация (проверяем версию API)
         if (window.tg && window.tg.version && parseFloat(window.tg.version) >= 6.1) {
             if (window.tg.HapticFeedback) window.tg.HapticFeedback.impactOccurred('medium');
         }
@@ -1639,18 +1397,6 @@ async updateStatus(order, newStatus) {
     } finally {
         order.isUpdating = false;
     }
-},
-handleFiles(e) {
-    const files = Array.from(e.target.files);
-    if (!this.newP.localFiles) this.newP.localFiles = [];
-    
-    files.forEach(file => {
-        this.newP.localFiles.push({
-            file: file,
-            preview: URL.createObjectURL(file) // Ссылка для отображения в <img>
-        });
-    });
-    e.target.value = ''; // Очистка инпута
 },
 
 async deleteOrder(docId) {
@@ -1793,146 +1539,101 @@ async deleteOrder(docId) {
 },
 updateChart() {
     const ctx = document.getElementById('orderChart');
-    if (!ctx) return; // Важно: если мы не на вкладке админа, выходим
+    if (!ctx) return;
 
-    // Инициализируем данные, если их еще нет
-    const orders = this.allOrders || [];
     const labels = [];
     const counts = [];
     const now = new Date();
+
+    const orders = this.allOrders || [];
 
     for (let i = 6; i >= 0; i--) {
         const d = new Date();
         d.setDate(now.getDate() - i);
         labels.push(d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }));
         
+        // Считаем заказы за этот день
         const dayStart = new Date(d.setHours(0,0,0,0)).getTime();
         const dayEnd = new Date(d.setHours(23,59,59,999)).getTime();
         
-        const dayOrders = orders.filter(o => {
-            // Проверка: o.createdAt может быть либо Timestamp, либо числом Date.now()
-            let t = 0;
-            if (o.createdAt?.seconds) t = o.createdAt.seconds * 1000;
-            else if (typeof o.createdAt === 'number') t = o.createdAt;
-            
+        const dayOrders = this.allOrders.filter(o => {
+            const t = o.createdAt?.seconds ? o.createdAt.seconds * 1000 : 0;
             return t >= dayStart && t <= dayEnd;
         });
         counts.push(dayOrders.length);
     }
 
-    // Уничтожаем старый график перед созданием нового
-    if (this.chart && typeof this.chart.destroy === 'function') {
-        this.chart.destroy();
-    }
+    if (this.chart) this.chart.destroy();
 
-    // Создаем новый график
-    try {
-        this.chart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Заказы',
-                    data: counts,
-                    borderColor: '#000',
-                    backgroundColor: 'rgba(0,0,0,0.05)',
-                    borderWidth: 3,
-                    tension: 0.4,
-                    fill: true,
-                    pointRadius: 4,
-                    pointBackgroundColor: '#000'
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false, // Чтобы график не "прыгал" по высоте
-                animation: { duration: 500 }, // Немного уменьшим время анимации
-                plugins: { legend: { display: false } },
-                scales: {
-                    y: { beginAtZero: true, grid: { display: false }, ticks: { stepSize: 1 } },
-                    x: { grid: { display: false } }
-                }
+    this.chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Заказы',
+                data: counts,
+                borderColor: '#000',
+                backgroundColor: 'rgba(0,0,0,0.05)',
+                borderWidth: 3,
+                tension: 0.4, // Делает линию плавной (премиально)
+                fill: true,
+                pointRadius: 4,
+                pointBackgroundColor: '#000'
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, grid: { display: false }, ticks: { stepSize: 1 } },
+                x: { grid: { display: false } }
             }
-        });
-    } catch (err) {
-        console.error("Ошибка отрисовки графика:", err);
-    }
+        }
+    });
 }
     },
      mounted() {
-    tg.ready();
-    tg.expand();
-    
-    // Получаем данные пользователя
-    this.user = tg.initDataUnsafe?.user || { id: 387881523, first_name: 'Admin_Test' };
-    
-    // Принудительная проверка админа
-    this.isAdmin = Number(this.user.id) === this.adminId;
-    console.log("Admin Status:", this.isAdmin, "User ID:", this.user.id);
+        tg.ready();
+        tg.expand();
+        this.user = tg.initDataUnsafe?.user || { id: 387881523, first_name: 'Admin_Test' };
+        
+        // Принудительная проверка админа
+        this.isAdmin = Number(this.user.id) === this.adminId;
+        console.log("Admin Status:", this.isAdmin, "User ID:", this.user.id);
 
-    // Улучшенная функция инициализации данных
-    const initFirebaseData = () => {
-        if (window.db && window.fb) {
-            console.log("Firebase detected, starting listeners...");
-            
-            // 1. Загрузка товаров
-            window.fb.onSnapshot(
-                window.fb.query(window.fb.collection(window.db, "products"), window.fb.orderBy("createdAt", "desc")), 
-                snap => {
+        const checkFb = setInterval(() => {
+            if (window.db && window.fb) {
+                clearInterval(checkFb);
+                
+                // Загрузка товаров
+                window.fb.onSnapshot(window.fb.query(window.fb.collection(window.db, "products"), window.fb.orderBy("createdAt", "desc")), snap => {
                     this.products = snap.docs.map(doc => ({ id: doc.id, ...doc.data(), aIdx: 0 }));
-                },
-                err => console.error("Products leak:", err)
-            );
+                });
 
-            // 2. Загрузка категорий
-            window.fb.onSnapshot(
-                window.fb.collection(window.db, "categories"), 
-                snap => {
+                // Загрузка категорий
+                window.fb.onSnapshot(window.fb.collection(window.db, "categories"), snap => {
                     this.categories = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                }
-            );
+                });
 
-            // 3. Загрузка всех заказов (только для админа)
-            if (this.isAdmin) {
-                window.fb.onSnapshot(
-                    window.fb.query(window.fb.collection(window.db, "orders"), window.fb.orderBy("createdAt", "desc")), 
-                    snap => {
+                // Загрузка всех заказов (для админа)
+                if (this.isAdmin) {
+                    window.fb.onSnapshot(window.fb.query(window.fb.collection(window.db, "orders"), window.fb.orderBy("createdAt", "desc")), snap => {
                         this.allOrders = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                        
-                        // Рисуем график только если админ сейчас видит этот экран
-                        if (this.tab === 'admin') {
-                            this.$nextTick(() => { 
-                                if (typeof this.updateChart === 'function') this.updateChart(); 
-                            });
-                        }
-                    }
-                );
+                        this.$nextTick(() => { this.updateChart(); });
+                    });
+                }
+
+                // Загрузка личных заказов
+                const qMy = window.fb.query(window.fb.collection(window.db, "orders"), window.fb.where("user.id", "==", this.user.id));
+                window.fb.onSnapshot(qMy, snap => {
+                    this.myOrders = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                });
             }
+        }, 100);
 
-            // 4. Загрузка личных заказов текущего пользователя
-            const qMy = window.fb.query(
-                window.fb.collection(window.db, "orders"), 
-                window.fb.where("user.id", "==", this.user.id)
-            );
-            window.fb.onSnapshot(qMy, snap => {
-                this.myOrders = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            });
-
-        } else {
-            // Если Firebase еще не готов, пробуем снова через 100мс
-            setTimeout(initFirebaseData, 100);
-        }
-    };
-
-    // Запускаем процесс
-    initFirebaseData();
-
-    // Восстановление адреса из локального хранилища
-    const savedAddr = localStorage.getItem('naran_last_addr');
-    if (savedAddr) {
-        this.address = savedAddr; // предполагаем, что в data есть поле address
+        // Восстановление адреса
+        address = localStorage.getItem('naran_last_addr') || '';
     }
-}
 }).mount('#app');
 </script>
 
