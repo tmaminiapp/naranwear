@@ -44,9 +44,9 @@
 
 /* Убедитесь, что активное состояние четко прописано */
 .size-chip.active { 
-    background: #000 !important; 
-    color: #fff !important; 
-    border-color: #000 !important; 
+    background-color: #000000 !important; 
+    color: #ffffff !important;
+    border-color: #000000 !important;
 }
 /* Отключенный размер (серый/перечеркнутый) */
 .size-chip.disabled, 
@@ -231,22 +231,43 @@
     cursor: pointer;
 }
 
-/* Исправление синего цвета на телефонах */
-.size-chip {
-    -webkit-tap-highlight-color: transparent !important; /* Убирает синий блик */
-    user-select: none; /* Убирает синее выделение текста */
-}
-.size-chip.active {
-    background: #000 !important;
-    color: #fff !important;
-}
+
         /* Modal Product View */
         .modal { position: fixed; inset: 0; background: #fff; z-index: 2000; overflow-y: auto; padding-bottom: 50px; }
-        .close-modal { position: fixed; top: 15px; right: 15px; z-index: 2100; background: #fff; border: 1px solid #000; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; font-weight: 800; }
+        .close-modal { position: fixed; top: 15px; right: 15px; z-index: 2100; background: #fff; border: 3px solid #000; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; font-weight: 800; }
         
-        .size-grid { display: flex; gap: 10px; margin: 15px 0; }
-        .size-btn { flex: 1; padding: 12px; border: 1px solid #eee; background: #fff; font-size: 12px; font-weight: 700; border-radius: 2px; }
-        .size-btn.active, .deliv-btn.active { border-color: #000; background: #000; color: #fff; }
+        .size-grid { 
+    display: flex; 
+    gap: 10px; 
+    margin: 15px 0; 
+}
+
+.size-btn { 
+    flex: 1; 
+    padding: 12px; 
+    border: 1px solid #eee !important; 
+    background: #fff !important; 
+    color: #000 !important; 
+    font-size: 12px; 
+    font-weight: 700; 
+    border-radius: 2px; 
+    cursor: pointer;
+    /* Убирает синий блик при нажатии на Айфонах/Андроидах */
+    -webkit-tap-highlight-color: transparent !important; 
+}
+
+/* Состояние, когда размер ВЫБРАН */
+.size-btn.active, .deliv-btn.active { 
+    border-color: #000 !important; 
+    background: #000 !important; 
+    color: #fff !important; 
+}
+
+/* Эффект нажатия (чтобы кнопка визуально "прожималась") */
+.size-btn:active {
+    transform: scale(0.95);
+    transition: transform 0.1s;
+}
     
 
         /* Bottom Nav */
