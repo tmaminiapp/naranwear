@@ -306,8 +306,12 @@
     <div v-for="s in (String(p.sizes || '').split(','))" 
          v-if="p.sizes"
          :key="s"
-         @click="p.tempSize = s.trim(); vib()"
-         :class="['size-chip', {active: (p.tempSize || String(p.sizes).split(',')[0].trim()) === s.trim()}]">
+         @click="!p.hiddenSizes?.includes(s.trim()) ? (p.tempSize = s.trim(), vib()) : null"
+         :class="['size-chip', {
+            active: (p.tempSize || String(p.sizes).split(',')[0].trim()) === s.trim() && !p.hiddenSizes?.includes(s.trim()),
+            'hidden-size': p.hiddenSizes?.includes(s.trim())
+         }]"
+         :style="p.hiddenSizes?.includes(s.trim()) ? { opacity: '0.4', background: '#e5e5ea', color: '#8e8e93', borderColor: '#d1d1d6', cursor: 'not-allowed' } : {}">
         {{s.trim()}}
     </div>
 </div>
