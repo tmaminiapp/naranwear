@@ -1082,12 +1082,13 @@
     <div style="font-size: 9px; color: #999;"></div>
 </div>
 
+<!-- Найдите этот блок в cart и ЗАМЕНИТЕ: -->
 <div style="margin-top: 20px; padding: 15px; background: #f9f9f9; border-radius: 2px; border: 1px solid #eee;">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-size: 13px; font-weight: 800;">ИТОГО К ОПЛАТЕ:</span>
-            <span style="font-size: 18px; font-weight: 800;">{{ total().toLocaleString() }} ₽</span>
-        </div>
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-size: 13px; font-weight: 800;">ИТОГО К ОПЛАТЕ:</span>
+        <span style="font-size: 18px; font-weight: 800;">{{ total() }} ₽</span>
     </div>
+</div>
 
         <div style="font-size: 9px; color: var(--gray); line-height: 1.2; margin-bottom: 15px; text-align: center;">
             Нажимая на кнопку, вы соглашаетесь с условиями заказа и даете согласие на обработку персональных данных в соответствии с 152-Ф3 для оформления и доставки заказа.
@@ -2018,9 +2019,7 @@ Vue.createApp({
     return { todayCount, todayRev, monthCount, monthRev, allCount, allRev };
 },
     cartTotal() {
-    const itemsSum = this.cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
-    // БЕЗ доставки 200 руб
-    return itemsSum;
+    return this.total(); // Не добавляйте 200 рублей!
 },
     adminProducts() {
         if (!this.products) return [];
@@ -2119,21 +2118,26 @@ selVariant() {
     methods: {
         vib() { tg.HapticFeedback.impactOccurred('light'); },
 total() {
-    let itemsTotal = 0;
-    if (this.cart && this.cart.length > 0) {
-        itemsTotal = this.cart.reduce((sum, item) => {
-            let rawPrice = item.price || 0;
-            let priceNumber = typeof rawPrice === 'string' 
-                ? parseInt(rawPrice.replace(/[^\d]/g, '')) || 0 
-                : Number(rawPrice);
-            let quantity = parseInt(item.count || item.qty || 1);
-            return sum + (priceNumber * quantity);
-        }, 0);
+    if (!this.cart || !Array.isArray(this.cart) || this.cart.length === 0) {
+        return 0;
     }
-
-    // УБРАТЬ добавление 200 рублей
+    
+    const itemsTotal = this.cart.reduce((sum, item) => {
+        // Безопасное преобразование цены
+        let price = 0;
+        if (typeof item.price === 'number') {
+            price = item.price;
+        } else if (typeof item.price === 'string') {
+            price = parseFloat(item.price.replace(/[^\d.]/g, '')) || 0;
+        }
+        
+        const qty = parseInt(item.qty || item.count || 1) || 0;
+        return sum + (price * qty);
+    }, 0);
+    
     return itemsTotal;
 },
+
 removeEditImage(imgIdx) {
     if (confirm("Удалить это фото из товара?")) {
         this.editImages.splice(imgIdx, 1);
@@ -3499,55 +3503,40 @@ openProductFromCart(item) {
         this.openProduct(fullProduct);
     }
 },
+// ЗАМЕНИТЕ метод getProductImages() на этот:
 getProductImages(product) {
-    if (!product) {
-        return ['https://placehold.co/300x400/f5f5f5/999999?text=No+Image'];
+    if (!product || !product.id || !product.variants) {
+        return [this.defaultPlaceholder];
     }
     
-    // 1. ПЕРВЫЙ ПРИОРИТЕТ: Новый формат с вариантами цветов
-    if (product.variants && 
-        Array.isArray(product.variants) && 
-        product.variants.length > 0) {
-        
-        // Берем первый вариант (первый цвет)
-        const firstVariant = product.variants[0];
-        
-        if (firstVariant.images && 
-            Array.isArray(firstVariant.images) && 
-            firstVariant.images.length > 0) {
-            
-            // Возвращаем ВСЕ изображения первого варианта
-            // Упрощаем: не фильтруем, доверяем данным из базы
-            return firstVariant.images.filter(img => 
-                img && typeof img === 'string' && img.trim() !== ''
-            );
-        }
+    // Получаем ТОЛЬКО НЕ СКРЫТЫЕ варианты
+    const visibleVariants = product.variants.filter(v => !v.hidden);
+    if (!visibleVariants || visibleVariants.length === 0) {
+        return [this.defaultPlaceholder];
     }
     
-    // 2. ВТОРОЙ ПРИОРИТЕТ: Старый формат (images)
-    if (product.images && 
-        Array.isArray(product.images) && 
-        product.images.length > 0) {
-        
-        return product.images.filter(img => 
-            img && typeof img === 'string' && img.trim() !== ''
+    // ⚡ ВАЖНО: НЕ вызываем getActiveColorIndex(), используем catalogActiveColors напрямую
+    let activeIndex = this.catalogActiveColors[product.id] || 0;
+    
+    // Проверяем границы массива
+    if (activeIndex >= visibleVariants.length) {
+        activeIndex = 0;
+        // Просто обновляем, без рекурсии
+        this.catalogActiveColors[product.id] = 0;
+    }
+    
+    const activeVariant = visibleVariants[activeIndex];
+    if (activeVariant && activeVariant.images && activeVariant.images.length > 0) {
+        return activeVariant.images.filter(img => 
+            img && typeof img === 'string' && 
+            (img.startsWith('http://') || 
+             img.startsWith('https://') || 
+             img.startsWith('data:image/'))
         );
     }
     
-    // 3. ТРЕТИЙ ПРИОРИТЕТ: Единое поле image
-    if (product.image && typeof product.image === 'string') {
-        return [product.image.trim()];
-    }
-    
-    // 4. ЧЕТВЕРТЫЙ ПРИОРИТЕТ: Единое поле img
-    if (product.img && typeof product.img === 'string') {
-        return [product.img.trim()];
-    }
-    
-    // 5. ПОСЛЕДНИЙ ВАРИАНТ: Плейсхолдер (ОБЯЗАТЕЛЬНО правильный URL)
-    return ['https://placehold.co/300x400/f5f5f5/999999?text=No+Image'];
+    return [this.defaultPlaceholder];
 },
-
        handleScroll(e, p) {
     if (!p) return;
     const images = this.getProductImages(p);
@@ -3856,52 +3845,71 @@ removeFromCart(cartId) {
         },
 
          setDelivery(d) {
-    this.deliv = d; // Записываем в deliv, так как она у тебя в data()
+    this.deliv = d;
     this.vib();
-    // Если у тебя инициализируется карта при выборе:
-    if (this.initMap) this.initMap();
-        },
+    // Задержка перед инициализацией карты
+    setTimeout(() => {
+        if (this.deliv && document.getElementById('map')) {
+            this.initMap();
+        }
+    }, 100);
+},
 
-        initMap() {
-            try {
-                if (this.map) { this.map.destroy(); this.map = null; }
-                
-                // Исправляем ошибку ключа: используем ключ напрямую
-                const currentKey = 'a3fb6133-4bcf-46d3-9a05-c7d8b5812144';
-                
-                this.map = new mapgl.Map('map', {
-                    center: [37.6175, 55.7558],
-                    zoom: 13,
-                    key: currentKey
-                });
+       // ЗАМЕНИТЕ метод initMap() на этот:
+initMap() {
+    // Защита от множественных инициализаций
+    if (this.mapInitializing) return;
+    this.mapInitializing = true;
+    
+    try {
+        if (this.map) { 
+            this.map.destroy(); 
+            this.map = null; 
+        }
+        
+        const currentKey = 'a3fb6133-4bcf-46d3-9a05-c7d8b5812144';
+        const mapContainer = document.getElementById('map');
+        
+        if (!mapContainer) {
+            this.mapInitializing = false;
+            return;
+        }
+        
+        this.map = new mapgl.Map('map', {
+            center: [37.6175, 55.7558],
+            zoom: 13,
+            key: currentKey
+        });
 
-                const setPos = (lat, lon) => {
-                    this.map.setCenter([lon, lat]);
-                    this.map.setZoom(15);
-                    this.getAddress(lat, lon);
-                };
+        const setPos = (lat, lon) => {
+            if (!this.map) return;
+            this.map.setCenter([lon, lat]);
+            this.map.setZoom(15);
+            this.getAddress(lat, lon);
+        };
 
-                // ИСПРАВЛЕНИЕ: Проверяем наличие Telegram перед вызовом
-                // Если мы в браузере на ПК, код просто пойдет дальше без ошибки
-                if (window.Telegram?.WebApp?.initData !== "") {
-                    try {
-                        window.Telegram.WebApp.requestLocation((data) => {
-                            if (data?.location) setPos(data.location.latitude, data.location.longitude);
-                        });
-                    } catch (e) { console.log("TG Geo skip"); }
-                } 
-                
-                // Всегда пробуем стандартный браузерный метод (он работает на ПК)
-                navigator.geolocation.getCurrentPosition(
-                    (p) => setPos(p.coords.latitude, p.coords.longitude),
-                    (err) => console.log("Гео не поддерживается браузером")
-                );
+        // ТОЛЬКО ОДИН ИСТОЧНИК ГЕОЛОКАЦИИ
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (p) => setPos(p.coords.latitude, p.coords.longitude),
+                (err) => console.log("Гео не поддерживается", err),
+                { timeout: 5000, maximumAge: 60000 }
+            );
+        }
 
-                this.map.on('click', (e) => {
-                    this.getAddress(e.lngLat[1], e.lngLat[0]);
-                });
-            } catch (e) { console.error("Map error", e); }
-        },
+        // Убираем дублирование обработчика клика
+        this.map.on('click', (e) => {
+            if (e.lngLat) {
+                this.getAddress(e.lngLat[1], e.lngLat[0]);
+            }
+        });
+        
+    } catch (e) { 
+        console.error("Map error", e); 
+    } finally {
+        setTimeout(() => { this.mapInitializing = false; }, 1000);
+    }
+},
 
       getAddress(lat, lon) {
     const currentKey = 'a3fb6133-4bcf-46d3-9a05-c7d8b5812144';
