@@ -1781,8 +1781,8 @@
         @click="setTab(btn.id)" 
         :class="['nav-item', {active: tab === btn.id}]"> 
         <div v-if="btn.id === 'cart' && cart.length > 0" class="badge">
-            {{cart.length}}
-        </div>
+    {{ cartCount() }}  <!-- Вместо cart.length -->
+</div>
         <svg v-html="btn.icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>
         <span>{{btn.label}}</span>
     </button>
@@ -2083,9 +2083,11 @@ selVariant() {
         },
 
         // 2. Считает количество ШТУК в корзине (для красного кружка на иконке)
-        cartCount() {
-            return this.cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
-        },
+       cartCount() {
+    return this.cart.reduce((sum, item) => 
+        sum + (item.qty || item.count || 1), 0
+    );
+},
 
         // 3. Считает ВЫРУЧКУ всех заказов (только для админ-панели)
         revenue() {
@@ -2119,20 +2121,14 @@ selVariant() {
     methods: {
         vib() { tg.HapticFeedback.impactOccurred('light'); },
 total() {
-    let itemsTotal = 0;
-    if (this.cart && this.cart.length > 0) {
-        itemsTotal = this.cart.reduce((sum, item) => {
-            let rawPrice = item.price || 0;
-            let priceNumber = typeof rawPrice === 'string' 
-                ? parseInt(rawPrice.replace(/[^\d]/g, '')) || 0 
-                : Number(rawPrice);
-            let quantity = parseInt(item.count || item.qty || 1);
-            return sum + (priceNumber * quantity);
-        }, 0);
-    }
-
-    // УБРАТЬ добавление 200 рублей
-    return itemsTotal;
+    if (!this.cart || this.cart.length === 0) return 0;
+    
+    return this.cart.reduce((sum, item) => {
+        const price = Number(item.price) || 0;
+        // ВСЕГДА используем item.qty как основной источник
+        const qty = Number(item.qty || item.count || 1);
+        return sum + (price * qty);
+    }, 0);
 },
 removeEditImage(imgIdx) {
     if (confirm("Удалить это фото из товара?")) {
@@ -3679,16 +3675,16 @@ getProductImages(product) {
             }
         } else {
             this.cart.push({
-                id: p.id,
-                cartId: cartId,
-                title: p.title || 'Товар',
-                price: Number(p.price) || 0,
-                // Безопасно берем фото именно этого варианта
-                img: (variant.images && variant.images[0]) ? variant.images[0] : (p.images ? p.images[0] : ''),
-                selSize: finalSize,
-                selColor: finalColor,
-                qty: 1
-            });
+        id: p.id,
+        cartId: cartId,
+        title: p.title || 'Товар',
+        price: Number(p.price) || 0,
+        img: (variant.images && variant.images[0]) ? variant.images[0] : '',
+        selSize: finalSize,     // Единое поле для размера
+        selColor: finalColor,   // Единое поле для цвета
+        qty: 1,                // Единое поле для количества
+        count: 1              // Дублируем для обратной совместимости
+    });
         }
         
         // 5. ЭФФЕКТЫ И СОХРАНЕНИЕ
@@ -3813,36 +3809,41 @@ quickAddToCart(p) {
     this.showCartNotify = true;
     setTimeout(() => { this.showCartNotify = false; }, 2000);
 },
-      changeQty(item, delta) {
-    // 1. Находим товар в общем списке products, чтобы проверить актуальный склад
-    const product = this.products.find(p => p.id === item.id);
+     changeQty(item, delta) {
+    // Ищем товар по cartId, а не по product.id
+    const product = this.products.find(p => 
+        item.cartId.startsWith(p.id + '_')
+    );
+    
     if (!product) return;
 
-    // 2. Находим нужный склад (stock) для выбранного цвета
-    const variant = product.variants.find(v => v.color === item.selColor);
+    // Используем единое поле - selColor
+    const variant = product.variants.find(v => 
+        v.color === (item.selColor || item.color)
+    );
     if (!variant) return;
 
-    const maxStock = variant.stocks[item.selSize] || 0;
+    const maxStock = variant.stocks[item.selSize || item.size] || 0;
 
     if (delta > 0) {
-        // Проверяем, есть ли еще место на складе
-        if (item.qty < maxStock) {
-            item.qty++;
-            this.vib('light');
+        if ((item.qty || 1) < maxStock) {
+            item.qty = (item.qty || 1) + 1;
         } else {
-            // Можно показать маленькое уведомление "Больше нет в наличии"
-            if(window.Telegram?.WebApp) window.Telegram.WebApp.showAlert("К сожалению, это всё, что есть в наличии");
+            if (window.Telegram?.WebApp) 
+                window.Telegram.WebApp.showAlert("Больше нет в наличии");
         }
     } else {
-        // Уменьшаем или удаляем
-        if (item.qty > 1) {
-            item.qty--;
-            this.vib('light');
+        if ((item.qty || 1) > 1) {
+            item.qty = (item.qty || 1) - 1;
         } else {
             this.removeFromCart(item.cartId);
         }
     }
+    
+    // Единообразно сохраняем количество
+    item.count = item.qty; // Синхронизируем поля
     this.saveCart();
+    this.vib();
 },
 
 removeFromCart(cartId) {
@@ -5023,6 +5024,14 @@ updateChart() {
     };
     
     console.log('User:', this.user);
+    this.cart = this.cart.map(item => ({
+        ...item,
+        qty: item.qty || item.count || 1,
+        count: item.qty || item.count || 1,
+        selSize: item.selSize || item.size,
+        selColor: item.selColor || item.color
+    }));
+    this.saveCart();
     
     // 3. Проверка админа
     this.isAdmin = this.adminIds.includes(Number(this.user.id));
@@ -5153,7 +5162,16 @@ updateChart() {
             }, 100);
         }
     };
-    window.addEventListener('resize', this.resizeHandler);
+    window.addEventListener('resize', this.resizeHandler);window.addEventListener('focus', () => {
+    // Перезагружаем корзину из localStorage при возвращении на вкладку
+    const savedCart = localStorage.getItem('naran_cart_v3');
+    if (savedCart) {
+        this.cart = JSON.parse(savedCart).map(item => ({
+            ...item,
+            qty: item.qty || item.count || 1
+        }));
+    }
+});
 },
 
 
