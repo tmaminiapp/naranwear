@@ -220,23 +220,29 @@
         text-transform: uppercase; 
     }
 
-    .price-row { 
-        display: flex; 
-        align-items: center; 
-        gap: 8px; 
-        margin-bottom: 10px; 
-    }
+   /* ========== PRICE STYLES ========== */
+.price-row { 
+    display: flex; 
+    align-items: center; 
+    gap: 8px; 
+    margin-bottom: 10px;
+    justify-content: flex-start;  /* Прижимает к левому краю */
+    width: 100%;                  /* Занимает всю ширину */
+    flex-wrap: wrap;             /* Перенос на мобильных если нужно */
+}
 
-    .price { 
-        font-weight: 800; 
-        font-size: 14px; 
-    }
+.price { 
+    font-weight: 800; 
+    font-size: 14px; 
+    line-height: 1.2;           /* Фиксированная высота строки */
+}
 
-    .old-price { 
-        font-size: 11px; 
-        color: var(--gray); 
-        text-decoration: line-through; 
-    }
+.old-price { 
+    font-size: 11px; 
+    color: var(--gray); 
+    text-decoration: line-through;
+    line-height: 1.2;           /* Фиксированная высота строки */
+}
 
     .sale-badge { 
         background: #000; 
@@ -895,8 +901,6 @@
             <div v-if="p.oldPrice" class="sale-badge" style="position:absolute; top:10px; left:10px;">SALE</div>
             <div v-if="p.isNew" class="new-badge" :style="{ position: 'absolute', top: p.oldPrice ? '35px' : '10px', left: '10px', background: '#000', color: '#fff', fontSize: '10px', fontWeight: '800', padding: '4px 8px', borderRadius: '4px', zIndex: 5 }">NEW</div>
 
-           <!-- В блоке products-grid, замените существующий блок с выбором цвета: -->
-<!-- В блоке products-grid, замените существующий блок с выбором цвета: -->
 <div v-if="p.variants && getVisibleVariants(p).length > 1" 
              style="position: absolute; bottom: 8px; right: 8px; display: flex; gap: 4px; z-index: 10;">
             <div v-for="(v, vIdx) in getVisibleVariants(p)" 
@@ -917,7 +921,9 @@
         </div>
 
        <div class="card-info">
-        <div class="card-title" @click="openProduct(p)">{{p.title}}</div>
+      <div class="card-title" @click="openProduct(p)" style="font-size: 10px; font-weight: 600; height: auto; min-height: 10px; margin-bottom: 4px; line-height: 1.3;">
+        {{p.title}}
+    </div>
         <div class="price-row" @click="openProduct(p)">
             <span class="price">{{p.price}} ₽</span>
             <span v-if="p.oldPrice" class="old-price">{{p.oldPrice}} ₽</span>
@@ -985,10 +991,13 @@
             </div>
 
             <div class="card-info">
-                <div class="card-title" @click="openProduct(p)">{{p.title}}</div>
-                <div class="price-row" @click="openProduct(p)">
-                    <span class="price">{{p.price}} ₽</span>
-                </div>
+                <div class="card-title" @click="openProduct(p)" style="font-size: 10px; font-weight: 600; height: auto; min-height: 10px; margin-bottom: 4px; line-height: 1.3;">
+        {{p.title}}
+    </div>
+        <div class="price-row" @click="openProduct(p)">
+            <span class="price">{{p.price}} ₽</span>
+            <span v-if="p.oldPrice" class="old-price">{{p.oldPrice}} ₽</span>
+        </div>
                 
              <!-- В разделе favs ЗАМЕНИТЕ -->
 <div class="card-sizes" v-if="p.variants && getVisibleVariants(p).length > 0">
@@ -1023,7 +1032,6 @@
      @click="openProductFromCart(item)" 
      style="cursor:pointer; width: 70px; height: 90px; object-fit: cover; border-radius: 8px;">
      
-
     <div style="flex:1; margin-left: 12px;">
         <div @click="openProduct(item)" style="cursor:pointer;">
             <div style="font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing: 0.5px;">
@@ -1289,13 +1297,9 @@
             </div>
         </div>
 
-        <!-- РАЗМЕРЫ И ОСТАТКИ ДЛЯ ЭТОГО ЦВЕТА -->
-        <!-- ФОТО ДЛЯ ЭТОГО ЦВЕТА (ОТДЕЛЬНО ДЛЯ КАЖДОГО ЦВЕТА) -->
-<!-- ФОТО ДЛЯ ЭТОГО ЦВЕТА (ОТДЕЛЬНО ДЛЯ КАЖДОГО ЦВЕТА) -->
 <div class="field" style="margin-top: 15px;">
     <label>ФОТО ДЛЯ ЦВЕТА "{{ v.color || '...' }}"</label>
     
-    <!-- ЕДИНАЯ КНОПКА ЗАГРУЗКИ -->
     <input 
         type="file" 
         multiple 
@@ -1684,13 +1688,17 @@
 
     <div v-if="selP.variants && selP.variants[currentVariantIndex]" style="padding: 25px;">
         
-        <div style="display:flex; justify-content:space-between; align-items: flex-start;">
-            <h2 class="brand-name" style="font-size: 18px; margin:0; text-transform: uppercase;">{{ selP.title }}</h2>
-            <div class="price" style="font-size: 20px; font-weight: 800;">{{ selP.price }} ₽</div>
-        </div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+    <h2 class="brand-name" style="font-size: 12px; margin:0; text-transform: uppercase; font-weight: 700;">
+        {{ selP.title }}
+    </h2>
+    <div class="price" style="font-size: 18px; font-weight: 800; margin-left: auto;">
+        {{ selP.price }} ₽
+    </div>
+</div>
         
         
-      <div style="display: flex; gap: 8px; margin-bottom: 25px; overflow-x: auto; padding-bottom: 5px; scrollbar-width: none;">
+      <div style="display: flex; gap: 8px; margin-bottom: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none;">
     <div v-for="(v, idx) in visibleVariants" :key="idx" 
          @click="currentVariantIndex = getOriginalIndexFromVisible(selP, idx); selP.tempSize = null; vib();"
          :class="['color-badge', { active: currentVariantIndex === getOriginalIndexFromVisible(selP, idx) }]"
@@ -1699,8 +1707,6 @@
         {{ v.color }}
     </div>
 </div>
-
-        
 
        <div class="size-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 30px;">
     <template v-for="(qty, sz) in (selP.variants[currentVariantIndex]?.stocks || {})" :key="sz">
