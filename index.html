@@ -1870,6 +1870,9 @@ const tg = window.Telegram.WebApp;
 Vue.createApp({
   data() {
     return {
+
+        openedProduct: null,
+        fullEditMode: false,
          editNewFiles: [],      // Для новых файлов при редактировании
         localFiles: [],        // Если используется
         uploadFiles: [],       // Если используется
@@ -2092,8 +2095,8 @@ selVariant() {
 
         // 2. Считает количество ШТУК в корзине (для красного кружка на иконке)
         cartCount() {
-            return this.cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
-        },
+    return this.cart.reduce((sum, item) => sum + (item.qty || 1), 0);
+},
 
         // 3. Считает ВЫРУЧКУ всех заказов (только для админ-панели)
         revenue() {
@@ -2651,7 +2654,7 @@ removeSizeFromVariant(product, variantIndex, sizeName) {
     }
     
     // Сохраняем индекс видимого варианта
-    this.$set(this.catalogActiveColors, product.id, visibleIndex);
+    this.catalogActiveColors[product.id] = visibleIndex;
     
     // Вибрация
     this.vib();
@@ -3353,31 +3356,7 @@ removeSavedSize(vIdx, sizeName) {
 },
 
 // При добавлении нового варианта цвета
-addVariant() {
-    const newIndex = this.newP.variants.length;
-    
-    // Добавляем новый вариант
-    this.newP.variants.push({
-        color: '',
-        images: [],
-        stocks: {}
-    });
-    
-    // Инициализируем tempSizes для нового варианта
-    // Используем Vue.set для реактивности
-    if (!this.tempSizes[newIndex]) {
-        this.tempSizes[newIndex] = [];
-    } else {
-        this.tempSizes.splice(newIndex, 0, []);
-    }
-    
-    // Добавляем первое пустое поле для размера
-    this.tempSizes[newIndex].push({
-        name: '',
-        qty: 0,
-        savedName: ''
-    });
-},
+
 // В методе editProduct добавьте:
 initTempSizesForEdit(variant) {
     const sizes = variant.stocks || {};
@@ -3600,7 +3579,7 @@ getProductImages(product) {
                 title: p.title || 'Товар',
                 price: Number(p.price) || 0,
                 // Безопасно берем фото именно этого варианта
-                img: (variant.images && variant.images[0]) ? variant.images[0] : (p.images ? p.images[0] : ''),
+                img: (variant.images && variant.images[0]) ? variant.images[0] : this.defaultPlaceholder,
                 selSize: finalSize,
                 selColor: finalColor,
                 qty: 1
@@ -4262,9 +4241,8 @@ cleanupAfterSave() {
     // Сбрасываем временные размеры
     this.tempSizes = [[]];
    // Удалить эту строку ИЛИ заменить на:
-if (this.tempSizes && this.tempSizes[0]) {
-    this.tempSizes = [[{ name: '', qty: 0, savedName: '' }]];
-};
+this.tempSizes = [[{ name: '', qty: 0, savedName: '' }]];
+// Убрать лишний if
     
     // Сбрасываем режим редактирования
     this.editId = null;
@@ -4288,10 +4266,7 @@ haptic() {
     }; 
 },
 
-// Альтернатива compressImageForUpload (если нужно)
-compressImageForUpload(file) {
-    return this.compressImageFast(file); // Используем существующий метод
-},
+// ДОБАВИТЬ МЕТОД
 
 // Обновление favList (используется в setTab)
 updateFavListWithTempSize() {
@@ -4330,7 +4305,7 @@ fileToDataURL(file) {
 },
 
 
-        async deleteProduct(id) {
+        async deleteOrder(id) {
             const msg = "⚠️ Удалить заказ навсегда?";
     
     const runDelete = async () => {
@@ -4343,9 +4318,9 @@ fileToDataURL(file) {
         }
     };
 
-    if (window.tg && window.tg.showConfirm) {
+    if (window.Telegram && window.Telegram.showConfirm) {
         // Если в телеграме
-        window.tg.showConfirm(msg, (yes) => { if (yes) runDelete(); });
+        window.Telegram.showConfirm(msg, (yes) => { if (yes) runDelete(); });
     } else {
         // Если на компьютере
         if (confirm(msg)) runDelete();
@@ -4372,7 +4347,7 @@ async manageCategory(action, id) {
             this.newCat = '';
         } else if (action === 'del') {
             if(confirm("Удалить категорию?")) {
-                await window.fb.deleteDoc(window.fb.doc(window.db, "categories", id));
+               await window.fb.deleteDoc(window.fb.doc(window.db, "categories", String(id)));
             }
         }
     } catch (e) {
@@ -4392,7 +4367,7 @@ async checkout() {
     this.loading = true;
     
     try {
-        const tgUser = window.tg?.initDataUnsafe?.user;
+        const tgUser = window.Telegram?.initDataUnsafe?.user;
         const username = tgUser?.username ? `@${tgUser.username}` : 'нет ника';
 
         // --- ГЕНЕРАЦИЯ НОВОГО ФОРМАТА НОМЕРА (ДДММ-Рандом) ---
@@ -4444,7 +4419,7 @@ async checkout() {
         order_total: finalTotal, 
         status: 'Новый',
         // ИСПРАВЛЕННЫЙ ВАРИАНТ: serverTimestamp нужно вызвать как функцию
-        createdAt: window.fb.serverTimestamp(), // ← ВЫЗВАТЬ ФУНКЦИЮ!
+        createdAt: serverTimestamp(),// ← ВЫЗВАТЬ ФУНКЦИЮ!
         user: {
             id: tgUser?.id || 0,
             username: username
@@ -4497,12 +4472,11 @@ closeProductModal() {
     setTimeout(() => {
         this.selP = null;
         this.currentVariantIndex = 0;
-        this.openedProduct = null;
         this.selVariantIdx = 0;
     }, 50);
 },
 async updateStatus(order, newStatus) {
-    if (order.status === newStatus) return;
+   if (order?.status === newStatus) return;
 
     try {
         order.isUpdating = true;
@@ -4553,7 +4527,7 @@ async updateStatus(order, newStatus) {
         }
         // --- КОНЕЦ БЛОКА УВЕДОМЛЕНИЙ ---
 
-        if (window.tg?.HapticFeedback) window.tg.HapticFeedback.impactOccurred('medium');
+        if (window.Telegram?.HapticFeedback) window.Telegram.HapticFeedback.impactOccurred('medium');
 
     } catch (e) {
         console.error("Ошибка обновления:", e);
@@ -4589,28 +4563,6 @@ calculateListHeight() {
                 listContainer.style.height = Math.max(300, availableHeight) + 'px';
             }
         });
-    }
-},
-
-async deleteOrder(docId) {
-    const confirmText = "⚠️ Удалить заказ навсегда?";
-    
-    const proceedDelete = async () => {
-        try {
-            await window.fb.deleteDoc(window.fb.doc(window.db, "orders", docId));
-            if (window.tg && window.tg.version && parseFloat(window.tg.version) >= 6.1) {
-                window.tg.HapticFeedback.notificationOccurred('success');
-            }
-        } catch (e) {
-            alert("Не удалось удалить: " + e.message);
-        }
-    };
-
-    // Универсальный запрос подтверждения (ПК + ТГ)
-    if (window.tg && window.tg.showConfirm && parseFloat(window.tg.version) >= 6.2) {
-        window.tg.showConfirm(confirmText, (yes) => { if (yes) proceedDelete(); });
-    } else {
-        if (confirm(confirmText)) proceedDelete();
     }
 },
 
