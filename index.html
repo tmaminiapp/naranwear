@@ -1693,8 +1693,25 @@
     <h2 class="brand-name" style="font-size: 12px; margin:0; text-transform: uppercase; font-weight: 700;">
         {{ selP.title }}
     </h2>
-    <div class="price" style="font-size: 18px; font-weight: 800;">
-        {{ selP.price }} ₽
+    
+    <!-- БЛОК С ЦЕНАМИ, СТАРОЙ ЦЕНОЙ И ПРОЦЕНТОМ СКИДКИ -->
+    <div style="display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;">
+        <!-- Текущая цена (как было) -->
+        <div class="price" style="font-size: 18px; font-weight: 800;">
+            {{ selP.price }} ₽
+        </div>
+        
+        <!-- Старая цена (зачеркнутая) - только если есть -->
+        <span v-if="selP.oldPrice" 
+              style="font-size: 14px; color: #8e8e93; text-decoration: line-through; font-weight: 600;">
+            {{ selP.oldPrice }} ₽
+        </span>
+        
+        <!-- Процент скидки - только если есть старая цена -->
+        <span v-if="selP.oldPrice" 
+              style="background: #ff3b30; color: white; font-size: 11px; font-weight: 800; padding: 2px 6px; border-radius: 2px; margin-left: 4px;">
+            -{{ Math.round((1 - selP.price / selP.oldPrice) * 100) }}%
+        </span>
     </div>
 </div>
         
