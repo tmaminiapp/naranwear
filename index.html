@@ -1689,17 +1689,12 @@
 
     <div v-if="selP.variants && selP.variants[currentVariantIndex]" style="padding: 25px;">
         
-     <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px; margin-bottom: 16px;">
+       <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px; margin-bottom: 16px;">
     <h2 class="brand-name" style="font-size: 12px; margin:0; text-transform: uppercase; font-weight: 700;">
         {{ selP.title }}
     </h2>
-    <div class="price-row" style="display: flex; align-items: center; gap: 8px; justify-content: flex-start; width: 100%; flex-wrap: wrap;">
-        <span class="price" style="font-weight: 800; font-size: 18px; line-height: 1.2;">
-            {{ selP.price }} ₽
-        </span>
-        <span v-if="selP.oldPrice" class="old-price" style="font-size: 14px; color: var(--gray); text-decoration: line-through; line-height: 1.2;">
-            {{ selP.oldPrice }} ₽
-        </span>
+    <div class="price" style="font-size: 18px; font-weight: 800;">
+        {{ selP.price }} ₽
     </div>
 </div>
         
@@ -1870,13 +1865,6 @@ const tg = window.Telegram.WebApp;
 Vue.createApp({
   data() {
     return {
-
-        openedProduct: null,
-        fullEditMode: false,
-         editNewFiles: [],      // Для новых файлов при редактировании
-        localFiles: [],        // Если используется
-        uploadFiles: [],       // Если используется
-        unsubscribers: [], 
         catalogActiveColors: {}, // { productId: colorIndex }
          productActiveVariantIndex: {},
         // === КОНФИГУРАЦИЯ ===
@@ -2095,8 +2083,8 @@ selVariant() {
 
         // 2. Считает количество ШТУК в корзине (для красного кружка на иконке)
         cartCount() {
-    return this.cart.reduce((sum, item) => sum + (item.qty || 1), 0);
-},
+            return this.cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+        },
 
         // 3. Считает ВЫРУЧКУ всех заказов (только для админ-панели)
         revenue() {
@@ -2267,9 +2255,10 @@ countTotalImages() {
     if (!this.newP.variants) return 0;
     
     this.newP.variants.forEach(variant => {
+        // ТОЛЬКО два массива: images и fileQueue
         if (variant.images) count += variant.images.length;
-        if (variant.localFiles) count += variant.localFiles.length;
-        if (variant.uploadingFiles) count += variant.uploadingFiles.length;
+        if (variant.fileQueue) count += variant.fileQueue.length;
+        // УДАЛИТЬ: localFiles и uploadingFiles - не используем
     });
     
     return count;
@@ -2385,21 +2374,55 @@ async uploadVariantFiles(variantIndex) {
     this.uploadState.isUploading = false;
     return uploadedUrls;
 },
-
-handleImageError(event) {
-    const img = event.target;
+handleImageError(e) {
+    // Проверяем, не пытаемся ли мы заменить уже замененное
+    if (e.target.src && e.target.src.includes('data:image/svg')) {
+        return; // Уже заменили, выходим
+    }
     
-    // Если уже заменяли - выходим
-    if (img.src.includes('base64')) return;
+    // Создаем простой SVG плейсхолдер
+    const svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="400" viewBox="0 0 300 400">
+        <rect width="300" height="400" fill="#f5f5f5"/>
+        <text x="150" y="200" font-family="Arial" font-size="14" fill="#666" text-anchor="middle">
+            No Image
+        </text>
+    </svg>`;
     
-    // Заменяем на плейсхолдер
-    img.src = this.defaultPlaceholder;
-    
-    // Добавляем класс для стилизации
-    img.classList.add('image-error');
-    
-    // Отключаем дальнейшие обработчики ошибок
-    img.onerror = null;
+    // Правильное кодирование в base64
+    try {
+        // Метод для корректного кодирования
+        const encodeSVG = (svg) => {
+            // Убираем лишние пробелы и переносы
+            const cleaned = svg.replace(/\s+/g, ' ').trim();
+            // Кодируем
+            return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(cleaned)));
+        };
+        
+        const dataUrl = encodeSVG(svgString);
+        
+        // Заменяем битое изображение
+        e.target.src = dataUrl;
+        
+        // Предотвращаем дальнейшие ошибки
+        e.target.onerror = null;
+        
+        // Добавляем стили для плейсхолдера
+        e.target.style.opacity = '0.8';
+        e.target.style.backgroundColor = '#f9f9f9';
+        
+    } catch (error) {
+        console.warn('Ошибка создания SVG:', error);
+        // Fallback на текстовый placeholder
+        e.target.src = '';
+        e.target.alt = 'No Image';
+        e.target.style.backgroundColor = '#eee';
+        e.target.style.display = 'flex';
+        e.target.style.alignItems = 'center';
+        e.target.style.justifyContent = 'center';
+        e.target.style.color = '#999';
+        e.target.style.fontSize = '12px';
+        e.target.style.fontWeight = 'bold';
+    }
 },
     setCategory(name) {
     try {
@@ -2436,16 +2459,27 @@ getActiveColorIndex(product) {
     if (!product || !product.id || !product.variants) return 0;
     
     let currentIndex = this.catalogActiveColors[product.id] || 0;
+    
+    // Получаем видимые варианты
     const visibleVariants = product.variants.filter(v => !v.hidden);
     
+    // Если нет видимых вариантов
     if (visibleVariants.length === 0) return 0;
     
+    // Находим, соответствует ли текущий индекс видимому варианту
     if (currentIndex >= visibleVariants.length) {
         currentIndex = 0;
-        this.catalogActiveColors[product.id] = 0;
     }
     
-    return currentIndex; // ← ПРОСТО ВОЗВРАЩАЕМ, БЕЗ РЕКУРСИИ
+    // Проверяем, не скрыт ли текущий вариант
+    const originalIndex = this.getOriginalIndexFromVisible(product, currentIndex);
+    if (product.variants[originalIndex]?.hidden) {
+        currentIndex = 0;
+    }
+    
+    // В Vue 3 используем прямое присваивание
+    this.catalogActiveColors[product.id] = currentIndex;
+    return currentIndex;
 },
 // Получить оригинальный индекс из видимого индекса
 getOriginalIndexFromVisible(product, visibleIndex) {
@@ -2519,6 +2553,21 @@ selectVisibleColor(product, variant) {
     
     return [this.defaultPlaceholder];
 },
+handleImageError(event) {
+    const img = event.target;
+    
+    // Если уже заменяли - выходим
+    if (img.src.includes('base64')) return;
+    
+    // Заменяем на плейсхолдер
+    img.src = this.defaultPlaceholder;
+    
+    // Добавляем класс для стилизации
+    img.classList.add('image-error');
+    
+    // Отключаем дальнейшие обработчики ошибок
+    img.onerror = null;
+},
 
     getShortDescription(fullDesc) {
         if (!fullDesc) return 'Нажмите для просмотра описания';
@@ -2576,6 +2625,20 @@ correctAllActiveColors() {
 },
 // Удаление файла по I
 
+countTotalImages() {
+    let count = 0;
+    
+    if (!this.newP.variants) return 0;
+    
+    this.newP.variants.forEach(variant => {
+        if (variant.images) count += variant.images.length;
+        if (variant.localFiles) count += variant.localFiles.length;
+        if (variant.uploadingFiles) count += variant.uploadingFiles.length;
+    });
+    
+    return count;
+},
+
 // Сохранить размеры варианта в Firebase
 async saveVariantSizes(product, variantIndex) {
     try {
@@ -2624,6 +2687,13 @@ removeSizeFromVariant(product, variantIndex, sizeName) {
         this.vib();
     }
 },
+// Удалить фото из варианта
+removeVariantImage(vIdx, imgIdx) {
+        if (confirm("Удалить это фото?")) {
+            this.newP.variants[vIdx].images.splice(imgIdx, 1);
+            this.vib();
+        }
+    },
 
     removeVariant(vIdx) {
         if (confirm(`Удалить цвет "${this.newP.variants[vIdx].color || 'без названия'}"?`)) {
@@ -2654,7 +2724,7 @@ removeSizeFromVariant(product, variantIndex, sizeName) {
     }
     
     // Сохраняем индекс видимого варианта
-    this.catalogActiveColors[product.id] = visibleIndex;
+    this.$set(this.catalogActiveColors, product.id, visibleIndex);
     
     // Вибрация
     this.vib();
@@ -3356,7 +3426,31 @@ removeSavedSize(vIdx, sizeName) {
 },
 
 // При добавлении нового варианта цвета
-
+addVariant() {
+    const newIndex = this.newP.variants.length;
+    
+    // Добавляем новый вариант
+    this.newP.variants.push({
+        color: '',
+        images: [],
+        stocks: {}
+    });
+    
+    // Инициализируем tempSizes для нового варианта
+    // Используем Vue.set для реактивности
+    if (!this.tempSizes[newIndex]) {
+        this.tempSizes[newIndex] = [];
+    } else {
+        this.tempSizes.splice(newIndex, 0, []);
+    }
+    
+    // Добавляем первое пустое поле для размера
+    this.tempSizes[newIndex].push({
+        name: '',
+        qty: 0,
+        savedName: ''
+    });
+},
 // В методе editProduct добавьте:
 initTempSizesForEdit(variant) {
     const sizes = variant.stocks || {};
@@ -3579,7 +3673,7 @@ getProductImages(product) {
                 title: p.title || 'Товар',
                 price: Number(p.price) || 0,
                 // Безопасно берем фото именно этого варианта
-                img: (variant.images && variant.images[0]) ? variant.images[0] : this.defaultPlaceholder,
+                img: (variant.images && variant.images[0]) ? variant.images[0] : (p.images ? p.images[0] : ''),
                 selSize: finalSize,
                 selColor: finalColor,
                 qty: 1
@@ -4216,7 +4310,9 @@ cleanupAfterSave() {
     // Очищаем файлы из всех вариантов
     this.newP.variants?.forEach(variant => {
         cleanupFileQueue(variant);
-        // ⚡ Убрали удаление несуществующих полей
+        // Удаляем старые массивы если они есть
+        delete variant.localFiles;
+        delete variant.uploadingFiles;
     });
     
     // Сбрасываем форму к исходному состоянию
@@ -4240,9 +4336,7 @@ cleanupAfterSave() {
     
     // Сбрасываем временные размеры
     this.tempSizes = [[]];
-   // Удалить эту строку ИЛИ заменить на:
-this.tempSizes = [[{ name: '', qty: 0, savedName: '' }]];
-// Убрать лишний if
+    this.addSizeField(0);
     
     // Сбрасываем режим редактирования
     this.editId = null;
@@ -4263,10 +4357,14 @@ this.tempSizes = [[{ name: '', qty: 0, savedName: '' }]];
 haptic() {
     if (window.Telegram?.WebApp?.HapticFeedback) {
         window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
-    }; 
+    }
+    this.vib(); // Вызываем существующий метод
 },
 
-// ДОБАВИТЬ МЕТОД
+// Альтернатива compressImageForUpload (если нужно)
+compressImageForUpload(file) {
+    return this.compressImageFast(file); // Используем существующий метод
+},
 
 // Обновление favList (используется в setTab)
 updateFavListWithTempSize() {
@@ -4305,22 +4403,23 @@ fileToDataURL(file) {
 },
 
 
-        async deleteOrder(id) {
+        async deleteProduct(id) {
             const msg = "⚠️ Удалить заказ навсегда?";
     
+    // Проверка: как спрашивать подтверждение
     const runDelete = async () => {
         try {
-            // ⚡ Исправлено: используем переданный id
-            await window.fb.deleteDoc(window.fb.doc(window.db, "orders", id));
+            await window.fb.deleteDoc(window.fb.doc(window.db, "orders", docId));
+            if (window.tg && window.tg.HapticFeedback) window.tg.HapticFeedback.notificationOccurred('success');
         } catch (e) {
             console.error(e);
             alert("Ошибка удаления: " + e.message);
         }
     };
 
-    if (window.Telegram && window.Telegram.showConfirm) {
+    if (window.tg && window.tg.showConfirm) {
         // Если в телеграме
-        window.Telegram.showConfirm(msg, (yes) => { if (yes) runDelete(); });
+        window.tg.showConfirm(msg, (yes) => { if (yes) runDelete(); });
     } else {
         // Если на компьютере
         if (confirm(msg)) runDelete();
@@ -4347,7 +4446,7 @@ async manageCategory(action, id) {
             this.newCat = '';
         } else if (action === 'del') {
             if(confirm("Удалить категорию?")) {
-               await window.fb.deleteDoc(window.fb.doc(window.db, "categories", String(id)));
+                await window.fb.deleteDoc(window.fb.doc(window.db, "categories", id));
             }
         }
     } catch (e) {
@@ -4367,7 +4466,7 @@ async checkout() {
     this.loading = true;
     
     try {
-        const tgUser = window.Telegram?.initDataUnsafe?.user;
+        const tgUser = window.tg?.initDataUnsafe?.user;
         const username = tgUser?.username ? `@${tgUser.username}` : 'нет ника';
 
         // --- ГЕНЕРАЦИЯ НОВОГО ФОРМАТА НОМЕРА (ДДММ-Рандом) ---
@@ -4419,7 +4518,7 @@ async checkout() {
         order_total: finalTotal, 
         status: 'Новый',
         // ИСПРАВЛЕННЫЙ ВАРИАНТ: serverTimestamp нужно вызвать как функцию
-        createdAt: serverTimestamp(),// ← ВЫЗВАТЬ ФУНКЦИЮ!
+        createdAt: window.fb.serverTimestamp(), // ← ВЫЗВАТЬ ФУНКЦИЮ!
         user: {
             id: tgUser?.id || 0,
             username: username
@@ -4472,11 +4571,12 @@ closeProductModal() {
     setTimeout(() => {
         this.selP = null;
         this.currentVariantIndex = 0;
+        this.openedProduct = null;
         this.selVariantIdx = 0;
     }, 50);
 },
 async updateStatus(order, newStatus) {
-   if (order?.status === newStatus) return;
+    if (order.status === newStatus) return;
 
     try {
         order.isUpdating = true;
@@ -4527,7 +4627,7 @@ async updateStatus(order, newStatus) {
         }
         // --- КОНЕЦ БЛОКА УВЕДОМЛЕНИЙ ---
 
-        if (window.Telegram?.HapticFeedback) window.Telegram.HapticFeedback.impactOccurred('medium');
+        if (window.tg?.HapticFeedback) window.tg.HapticFeedback.impactOccurred('medium');
 
     } catch (e) {
         console.error("Ошибка обновления:", e);
@@ -4563,6 +4663,28 @@ calculateListHeight() {
                 listContainer.style.height = Math.max(300, availableHeight) + 'px';
             }
         });
+    }
+},
+
+async deleteOrder(docId) {
+    const confirmText = "⚠️ Удалить заказ навсегда?";
+    
+    const proceedDelete = async () => {
+        try {
+            await window.fb.deleteDoc(window.fb.doc(window.db, "orders", docId));
+            if (window.tg && window.tg.version && parseFloat(window.tg.version) >= 6.1) {
+                window.tg.HapticFeedback.notificationOccurred('success');
+            }
+        } catch (e) {
+            alert("Не удалось удалить: " + e.message);
+        }
+    };
+
+    // Универсальный запрос подтверждения (ПК + ТГ)
+    if (window.tg && window.tg.showConfirm && parseFloat(window.tg.version) >= 6.2) {
+        window.tg.showConfirm(confirmText, (yes) => { if (yes) proceedDelete(); });
+    } else {
+        if (confirm(confirmText)) proceedDelete();
     }
 },
 
