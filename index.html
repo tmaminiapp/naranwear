@@ -4428,7 +4428,7 @@ async checkout() {
         await window.fb.addDoc(window.fb.collection(window.db, "orders"), orderData);
         
         // УВЕДОМЛЕНИЕ АДМИНА
-        const botToken = '8546116032:AAGHzNWm8ueB5ynxIgzf6OLM7EdbA2geEbk';
+        const botToken = '8546116032:AAEeKb3J5o-revyZs7KhTV-VoO609tRV0Ek';
         const adminId = 387881523; 
         let itemsText = orderData.items.map(i => `• ${i.title} (${i.color}, ${i.size}) x${i.count}`).join('\n');
         
@@ -4484,7 +4484,7 @@ async updateStatus(order, newStatus) {
         await window.fb.updateDoc(orderRef, { status: newStatus });
         
         // --- БЛОК УВЕДОМЛЕНИЙ ---
-        const botToken = '8546116032:AAGHzNWm8ueB5ynxIgzf6OLM7EdbA2geEbk';
+        const botToken = '8546116032:AAEeKb3J5o-revyZs7KhTV-VoO609tRV0Ek';
         
         // Создаем список тех, кто получит сообщение
         const recipients = [];
