@@ -1,0 +1,36 @@
+name: Deploy Bot
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Download code
+      uses: actions/checkout@v3
+
+    - name: 🔐 Create .env file
+      run: |
+        echo "BOT_TOKEN=${{ secrets.BOT_TOKEN }}" >> .env
+        echo "ADMIN_ID=${{ secrets.ADMIN_ID }}" >> .env
+        echo "WEBAPP_URL=${{ secrets.WEBAPP_URL }}" >> .env
+        echo "IMGBB_API_KEY=${{ secrets.IMGBB_API_KEY }}" >> .env
+        echo "MAP_KEY=${{ secrets.MAP_KEY }}" >> .env
+        echo "FIREBASE_PROJECT_ID=${{ secrets.FIREBASE_PROJECT_ID }}" >> .env
+        echo "FIREBASE_CRED_PATH=firebase-key.json" >> .env
+
+    - name: 🔐 Create firebase-key.json
+      run: echo '${{ secrets.FIREBASE_KEY_JSON }}' > firebase-key.json
+
+    - name: 📦 Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: bot-files
+        path: |
+          *.py
+          requirements.txt
+          .env
+          firebase-key.json
