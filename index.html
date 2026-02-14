@@ -2391,56 +2391,23 @@ async uploadVariantFiles(variantIndex) {
     this.uploadState.isUploading = false;
     return uploadedUrls;
 },
-handleImageError(e) {
-    // Проверяем, не пытаемся ли мы заменить уже замененное
-    if (e.target.src && e.target.src.includes('data:image/svg')) {
-        return; // Уже заменили, выходим
-    }
+
+handleImageError(event) {
+    const img = event.target;
     
-    // Создаем простой SVG плейсхолдер
-    const svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="400" viewBox="0 0 300 400">
-        <rect width="300" height="400" fill="#f5f5f5"/>
-        <text x="150" y="200" font-family="Arial" font-size="14" fill="#666" text-anchor="middle">
-            No Image
-        </text>
-    </svg>`;
+    // Если уже заменяли - выходим
+    if (img.src.includes('base64')) return;
     
-    // Правильное кодирование в base64
-    try {
-        // Метод для корректного кодирования
-        const encodeSVG = (svg) => {
-            // Убираем лишние пробелы и переносы
-            const cleaned = svg.replace(/\s+/g, ' ').trim();
-            // Кодируем
-            return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(cleaned)));
-        };
-        
-        const dataUrl = encodeSVG(svgString);
-        
-        // Заменяем битое изображение
-        e.target.src = dataUrl;
-        
-        // Предотвращаем дальнейшие ошибки
-        e.target.onerror = null;
-        
-        // Добавляем стили для плейсхолдера
-        e.target.style.opacity = '0.8';
-        e.target.style.backgroundColor = '#f9f9f9';
-        
-    } catch (error) {
-        console.warn('Ошибка создания SVG:', error);
-        // Fallback на текстовый placeholder
-        e.target.src = '';
-        e.target.alt = 'No Image';
-        e.target.style.backgroundColor = '#eee';
-        e.target.style.display = 'flex';
-        e.target.style.alignItems = 'center';
-        e.target.style.justifyContent = 'center';
-        e.target.style.color = '#999';
-        e.target.style.fontSize = '12px';
-        e.target.style.fontWeight = 'bold';
-    }
+    // Заменяем на плейсхолдер
+    img.src = this.defaultPlaceholder;
+    
+    // Добавляем класс для стилизации
+    img.classList.add('image-error');
+    
+    // Отключаем дальнейшие обработчики ошибок
+    img.onerror = null;
 },
+
     setCategory(name) {
     try {
         this.vib();
@@ -2570,21 +2537,6 @@ selectVisibleColor(product, variant) {
     
     return [this.defaultPlaceholder];
 },
-handleImageError(event) {
-    const img = event.target;
-    
-    // Если уже заменяли - выходим
-    if (img.src.includes('base64')) return;
-    
-    // Заменяем на плейсхолдер
-    img.src = this.defaultPlaceholder;
-    
-    // Добавляем класс для стилизации
-    img.classList.add('image-error');
-    
-    // Отключаем дальнейшие обработчики ошибок
-    img.onerror = null;
-},
 
     getShortDescription(fullDesc) {
         if (!fullDesc) return 'Нажмите для просмотра описания';
@@ -2642,20 +2594,6 @@ correctAllActiveColors() {
 },
 // Удаление файла по I
 
-countTotalImages() {
-    let count = 0;
-    
-    if (!this.newP.variants) return 0;
-    
-    this.newP.variants.forEach(variant => {
-        if (variant.images) count += variant.images.length;
-        if (variant.localFiles) count += variant.localFiles.length;
-        if (variant.uploadingFiles) count += variant.uploadingFiles.length;
-    });
-    
-    return count;
-},
-
 // Сохранить размеры варианта в Firebase
 async saveVariantSizes(product, variantIndex) {
     try {
@@ -2704,13 +2642,7 @@ removeSizeFromVariant(product, variantIndex, sizeName) {
         this.vib();
     }
 },
-// Удалить фото из варианта
-removeVariantImage(vIdx, imgIdx) {
-        if (confirm("Удалить это фото?")) {
-            this.newP.variants[vIdx].images.splice(imgIdx, 1);
-            this.vib();
-        }
-    },
+
 
     removeVariant(vIdx) {
         if (confirm(`Удалить цвет "${this.newP.variants[vIdx].color || 'без названия'}"?`)) {
@@ -3440,33 +3372,6 @@ removeSavedSize(vIdx, sizeName) {
         delete this.newP.variants[vIdx].stocks[sizeName];
         this.vib();
     }
-},
-
-// При добавлении нового варианта цвета
-addVariant() {
-    const newIndex = this.newP.variants.length;
-    
-    // Добавляем новый вариант
-    this.newP.variants.push({
-        color: '',
-        images: [],
-        stocks: {}
-    });
-    
-    // Инициализируем tempSizes для нового варианта
-    // Используем Vue.set для реактивности
-    if (!this.tempSizes[newIndex]) {
-        this.tempSizes[newIndex] = [];
-    } else {
-        this.tempSizes.splice(newIndex, 0, []);
-    }
-    
-    // Добавляем первое пустое поле для размера
-    this.tempSizes[newIndex].push({
-        name: '',
-        qty: 0,
-        savedName: ''
-    });
 },
 // В методе editProduct добавьте:
 initTempSizesForEdit(variant) {
@@ -4420,29 +4325,6 @@ fileToDataURL(file) {
 },
 
 
-        async deleteProduct(id) {
-            const msg = "⚠️ Удалить заказ навсегда?";
-    
-    // Проверка: как спрашивать подтверждение
-    const runDelete = async () => {
-        try {
-            await window.fb.deleteDoc(window.fb.doc(window.db, "orders", docId));
-            if (window.tg && window.tg.HapticFeedback) window.tg.HapticFeedback.notificationOccurred('success');
-        } catch (e) {
-            console.error(e);
-            alert("Ошибка удаления: " + e.message);
-        }
-    };
-
-    if (window.tg && window.tg.showConfirm) {
-        // Если в телеграме
-        window.tg.showConfirm(msg, (yes) => { if (yes) runDelete(); });
-    } else {
-        // Если на компьютере
-        if (confirm(msg)) runDelete();
-    }
-},
-
 
 async deleteProductWithConfirm(productId) {
     if (confirm("Вы уверены, что хотите навсегда удалить этот товар из облака?")) {
@@ -4704,7 +4586,6 @@ async deleteOrder(docId) {
         if (confirm(confirmText)) proceedDelete();
     }
 },
-
        printOrder(o) {
     try {
         if (this.vib) this.vib(); 
