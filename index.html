@@ -1822,52 +1822,97 @@
         where, 
         getDoc, 
         getDocs,
-        serverTimestamp,  // ← ДОБАВИТЬ ЭТО!
+        serverTimestamp,
         Timestamp 
     } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
-    const firebaseConfig = {
-        apiKey: "AIzaSyC6fihIMtOYZuPh-db3Tc6eiRgSikzydVw",
-  authDomain: "naran-80077.firebaseapp.com",
-  projectId: "naran-80077",
-  storageBucket: "naran-80077.firebasestorage.app",
-  messagingSenderId: "901156477154",
-  appId: "1:901156477154:web:9bf2d604496726b59ae6bb",
-  measurementId: "G-PR8PLCMF3C"
-    };
+    const CONFIG_URL = 'http://localhost:8080/config'; 
+    let ADMIN_ID = null;
+    let MAP_KEY = null;
+    let IMGBB_API_KEY = null;
+    let BOT_TOKEN = null;
+    let FIREBASE_CONFIG = null;
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const storage = getStorage(app);
-    
-    // Экспортируем все нужные функции
-    window.db = db;
-    window.storage = storage;
-    window.fb = {
-        // Firestore функции
-        collection: collection,
-        addDoc: addDoc,
-        onSnapshot: onSnapshot,
-        query: query,
-        getDoc: getDoc,
-        orderBy: orderBy,
-        doc: doc,
-        getFirestore: getFirestore,
-        getDocs: getDocs,
-        deleteDoc: deleteDoc,
-        updateDoc: updateDoc,
-        where: where,
-        db: db,
-        serverTimestamp: serverTimestamp, // ← Теперь это правильная функция!
-        Timestamp: Timestamp,
+    async function loadConfig() {
+        try {
+            console.log('Загружаем конфигурацию с сервера...');
+            const response = await fetch(CONFIG_URL);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const config = await response.json();
+            console.log('✅ Конфигурация загружена');
+            
+            ADMIN_ID = config.adminId;
+            MAP_KEY = config.mapKey;
+            IMGBB_API_KEY = config.imgbbKey;
+            BOT_TOKEN = config.botToken;
+            FIREBASE_CONFIG = config.firebaseConfig;
+            
+            return true;
+        } catch (error) {
+            console.error('❌ Ошибка загрузки конфигурации:', error);
+            return false;
+        }
+    }
+
+    // Ждем загрузки конфигурации
+    (async function init() {
+        const configLoaded = await loadConfig();
         
-        // Storage функции
-        getDownloadURL: getDownloadURL,
-        ref: ref,
-        uploadBytes: uploadBytes,
-        storage: storage  // ← Добавлено для полноты
-    };
+        if (configLoaded) {
+            // Передаем значения в глобальную область перед запуском Vue
+            window.ADMIN_ID = ADMIN_ID;
+            window.MAP_KEY = MAP_KEY;
+            window.IMGBB_API_KEY = IMGBB_API_KEY;
+            window.BOT_TOKEN = BOT_TOKEN;
+            window.FIREBASE_CONFIG = FIREBASE_CONFIG;
+            
+            startVueApp();
+        } else {
+            document.body.innerHTML = '<div style="text-align:center; padding:50px; color:red;">❌ Не удалось загрузить конфигурацию. Убедитесь, что сервер запущен.</div>';
+        }
+    })();
+
+    function startVueApp() {
+        const app = initializeApp(FIREBASE_CONFIG);
+        const db = getFirestore(app);
+        const storage = getStorage(app);
+        
+        // Экспортируем все нужные функции в глобальную область
+        window.db = db;
+        window.storage = storage;
+        window.fb = {
+            // Firestore функции
+            collection: collection,
+            addDoc: addDoc,
+            onSnapshot: onSnapshot,
+            query: query,
+            getDoc: getDoc,
+            orderBy: orderBy,
+            doc: doc,
+            getFirestore: getFirestore,
+            getDocs: getDocs,
+            deleteDoc: deleteDoc,
+            updateDoc: updateDoc,
+            where: where,
+            db: db,
+            serverTimestamp: serverTimestamp,
+            Timestamp: Timestamp,
+            
+            // Storage функции
+            getDownloadURL: getDownloadURL,
+            ref: ref,
+            uploadBytes: uploadBytes,
+            storage: storage
+        };
+        
+        console.log('Vue app will start now...');
+        // Vue приложение запустится автоматически после этого скрипта
+    }
 </script>
 
 <script>
@@ -1882,11 +1927,16 @@ const tg = window.Telegram.WebApp;
 Vue.createApp({
   data() {
     return {
+     adminId: window.ADMIN_ID,
+      mapKey: window.MAP_KEY,
+imgbbKey: window.IMGBB_API_KEY,
+botToken: window.BOT_TOKEN,
+firebaseConfig: window.FIREBASE_CONFIG,
         showCartNotify: false,
         catalogActiveColors: {}, // { productId: colorIndex }
          productActiveVariantIndex: {},
         // === КОНФИГУРАЦИЯ ===
-        IMGBB_API_KEY: '4d4ab43d9b15c3dbadb9058518e4db23',
+        IMGBB_API_KEY: 'IMGBB_API_KEY',
         IMGBB_UPLOAD_URL: 'https://api.imgbb.com/1/upload',
         
         // === ЕДИНОЕ СОСТОЯНИЕ ЗАГРУЗКИ ===
@@ -1937,7 +1987,7 @@ Vue.createApp({
         
         user: {},
         isAdmin: false,
-        adminIds: [387881523],
+        adminIds: [this.adminId],
         
         selP: false,
         currentVariantIndex: 0,
@@ -3790,7 +3840,7 @@ initMap() {
             this.map = null; 
         }
         
-        const currentKey = 'a3fb6133-4bcf-46d3-9a05-c7d8b5812144';
+       const currentKey = this.mapKey;
         const mapContainer = document.getElementById('map');
         
         if (!mapContainer) {
@@ -3835,7 +3885,7 @@ initMap() {
 },
 
       getAddress(lat, lon) {
-    const currentKey = 'a3fb6133-4bcf-46d3-9a05-c7d8b5812144';
+   const currentKey = this.mapKey;
     // Добавили запрос всех полей, где может прятаться город
     const url = `https://catalog.api.2gis.com/3.0/items/geocode?lat=${lat}&lon=${lon}&radius=50&fields=items.adm_div,items.address,items.full_name&key=${currentKey}`;
 
@@ -3889,7 +3939,7 @@ initMap() {
  
  async uploadToImgBB(file, fileObj) {
     return new Promise((resolve, reject) => {
-        const imgbbKey = '4d4ab43d9b15c3dbadb9058518e4db23';
+     const imgbbKey = this.imgbbKey;
         
         // 1. Создаем FormData
         const formData = new FormData();
@@ -3934,8 +3984,7 @@ async uploadFileToImgBB(file) {
     console.log(`=== ЗАГРУЗКА В IMGBB: ${file.name} ===`);
     console.log(`Размер: ${(file.size / 1024).toFixed(1)}KB, Тип: ${file.type}`);
     
-    const imgbbKey = '4d4ab43d9b15c3dbadb9058518e4db23';
-    
+  const imgbbKey = this.imgbbKey;
     // Сначала сжимаем изображение
     const compressedFile = await this.compressImageFast(file);
     console.log(`После сжатия: ${compressedFile.size} байт (${(compressedFile.size / 1024).toFixed(1)}KB)`);
@@ -4428,8 +4477,8 @@ async checkout() {
         await window.fb.addDoc(window.fb.collection(window.db, "orders"), orderData);
         
         // УВЕДОМЛЕНИЕ АДМИНА
-        const botToken = '8546116032:AAEeKb3J5o-revyZs7KhTV-VoO609tRV0Ek';
-        const adminId = 387881523; 
+       const botToken = this.botToken;
+        const adminId = this.adminId; 
         let itemsText = orderData.items.map(i => `• ${i.title} (${i.color}, ${i.size}) x${i.count}`).join('\n');
         
         let adminMsg = `🛍 *НОВЫЙ ЗАКАЗ №${orderData.order_id}*\n` +
@@ -4458,6 +4507,36 @@ async checkout() {
         this.loading = false;
     }
 },
+// ВМЕСТО удаленного checkout() добавьте:
+async sendOrderToBot() {
+    try {
+        const orderData = {
+            order_id: this.generateOrderId(),
+            customer_name: this.form.name,
+            customer_phone: this.form.phone,
+            address: this.address,
+            delivery: this.deliv,
+            total: this.total(),
+            items: this.cart.map(i => ({
+                title: i.title,
+                size: i.selSize,
+                color: i.selColor,
+                price: i.price,
+                count: i.qty
+            }))
+        };
+        
+        // Отправляем данные в Telegram WebApp
+        if (window.Telegram?.WebApp) {
+            window.Telegram.WebApp.sendData(JSON.stringify(orderData));
+            this.cart = [];
+            this.saveCart();
+        }
+    } catch (error) {
+        console.error('Error sending order:', error);
+        alert('Ошибка отправки заказа');
+    }
+},
 closeProductModal() {
     // Разблокируем прокрутку
     document.body.style.overflow = '';
@@ -4484,8 +4563,7 @@ async updateStatus(order, newStatus) {
         await window.fb.updateDoc(orderRef, { status: newStatus });
         
         // --- БЛОК УВЕДОМЛЕНИЙ ---
-        const botToken = '8546116032:AAEeKb3J5o-revyZs7KhTV-VoO609tRV0Ek';
-        
+       const botToken = this.botToken;
         // Создаем список тех, кто получит сообщение
         const recipients = [];
         
@@ -4494,7 +4572,7 @@ async updateStatus(order, newStatus) {
         if (customerId) recipients.push(customerId);
         
         // 2. Добавляем твои дополнительные ID (админы, менеджеры)
-        const extraIds = [387881523]; // ЗАМЕНИ ЭТИ ЦИФРЫ НА НУЖНЫЕ ID
+        const extraIds = [this.adminId]; // ЗАМЕНИ ЭТИ ЦИФРЫ НА НУЖНЫЕ ID
         extraIds.forEach(id => {
             if (!recipients.includes(id)) recipients.push(id);
         });
@@ -4911,7 +4989,7 @@ updateChart() {
         this.cleanupAllPreviews();
     });
     const tg = window.Telegram.WebApp || {};
-     console.log('ImgBB Key:', '4d4ab43d9b15c3dbadb9058518e4db23');
+     console.log('ImgBB Key:', 'IMGBB_API_KEY');
     // 1. Безопасная инициализация Telegram
     if (window.Telegram?.WebApp) {
         try {
@@ -4925,7 +5003,7 @@ updateChart() {
     
     // 2. Данные пользователя с fallback
     this.user = window.Telegram?.WebApp?.initDataUnsafe?.user || { 
-        id: 387881523, 
+        id: this.adminId, 
         first_name: 'Admin_Test' 
     };
     
