@@ -1882,6 +1882,7 @@ const tg = window.Telegram.WebApp;
 Vue.createApp({
   data() {
     return {
+        showCartNotify: false,
         catalogActiveColors: {}, // { productId: colorIndex }
          productActiveVariantIndex: {},
         // === КОНФИГУРАЦИЯ ===
@@ -2099,9 +2100,9 @@ selVariant() {
         },
 
         // 2. Считает количество ШТУК в корзине (для красного кружка на иконке)
-        cartCount() {
-            return this.cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
-        },
+      cartCount() {
+    return this.cart.reduce((sum, item) => sum + (item.qty || 1), 0);
+},
 
         // 3. Считает ВЫРУЧКУ всех заказов (только для админ-панели)
         revenue() {
@@ -4365,7 +4366,7 @@ async checkout() {
     this.loading = true;
     
     try {
-        const tgUser = window.tg?.initDataUnsafe?.user;
+        const tgUser = window.Telegram.WebApp?.initDataUnsafe?.user;
         const username = tgUser?.username ? `@${tgUser.username}` : 'нет ника';
 
         // --- ГЕНЕРАЦИЯ НОВОГО ФОРМАТА НОМЕРА (ДДММ-Рандом) ---
@@ -4526,7 +4527,7 @@ async updateStatus(order, newStatus) {
         }
         // --- КОНЕЦ БЛОКА УВЕДОМЛЕНИЙ ---
 
-        if (window.tg?.HapticFeedback) window.tg.HapticFeedback.impactOccurred('medium');
+        if (window.Telegram.WebApp?.HapticFeedback) window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');
 
     } catch (e) {
         console.error("Ошибка обновления:", e);
@@ -4571,8 +4572,8 @@ async deleteOrder(docId) {
     const proceedDelete = async () => {
         try {
             await window.fb.deleteDoc(window.fb.doc(window.db, "orders", docId));
-            if (window.tg && window.tg.version && parseFloat(window.tg.version) >= 6.1) {
-                window.tg.HapticFeedback.notificationOccurred('success');
+            if (window.Telegram.WebApp && window.Telegram.WebApp.version && parseFloat(window.Telegram.WebApp.version) >= 6.1) {
+                window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
             }
         } catch (e) {
             alert("Не удалось удалить: " + e.message);
@@ -4580,8 +4581,8 @@ async deleteOrder(docId) {
     };
 
     // Универсальный запрос подтверждения (ПК + ТГ)
-    if (window.tg && window.tg.showConfirm && parseFloat(window.tg.version) >= 6.2) {
-        window.tg.showConfirm(confirmText, (yes) => { if (yes) proceedDelete(); });
+    if (window.Telegram.WebApp && window.Telegram.WebApp.showConfirm && parseFloat(window.Telegram.WebApp.version) >= 6.2) {
+        window.Telegram.WebApp.showConfirm(confirmText, (yes) => { if (yes) proceedDelete(); });
     } else {
         if (confirm(confirmText)) proceedDelete();
     }
