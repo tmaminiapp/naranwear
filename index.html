@@ -1827,7 +1827,7 @@
     } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
-const CONFIG_URL = 'http://89.108.113.230:8081/config'; // Ваш локальный IP
+const CONFIG_URL = 'http://localhost:8000/config.json';
 let ADMIN_ID = null;
 let MAP_KEY = null;
 let IMGBB_API_KEY = null;
@@ -1835,20 +1835,29 @@ let BOT_TOKEN = null;
 let FIREBASE_CONFIG = null;
 
 // Функция загрузки конфигурации
+// Функция загрузки конфигурации
 async function loadConfig() {
     try {
         console.log('=== ЗАГРУЗКА КОНФИГУРАЦИИ ===');
         console.log('URL:', CONFIG_URL);
         
+        // Увеличиваем таймаут до 30 секунд и улучшаем обработку
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        const timeoutId = setTimeout(() => {
+            console.log('⏱️ Таймаут 30 сек, отмена запроса...');
+            controller.abort('Timeout after 30 seconds');
+        }, 30000); // Увеличили с 10 до 30 секунд
         
         const response = await fetch(CONFIG_URL, {
             signal: controller.signal,
             mode: 'cors',
             headers: {
-                'Accept': 'application/json'
+                'Accept': 'application/json',
+                'Cache-Control': 'no-cache' // Отключаем кэширование
             }
+        }).catch(error => {
+            clearTimeout(timeoutId);
+            throw error;
         });
         
         clearTimeout(timeoutId);
@@ -1861,18 +1870,8 @@ async function loadConfig() {
         
         const config = await response.json();
         console.log('✅ КОНФИГУРАЦИЯ УСПЕШНО ЗАГРУЖЕНА');
-        console.log('Полученные данные:', {
-            adminId: config.adminId,
-            mapKey: config.mapKey ? '✅' : '❌',
-            imgbbKey: config.imgbbKey ? '✅' : '❌',
-            botToken: config.botToken ? '✅' : '❌',
-            firebaseConfig: config.firebaseConfig ? '✅' : '❌'
-        });
         
-        if (config.firebaseConfig) {
-            console.log('Firebase projectId:', config.firebaseConfig.projectId);
-        }
-        
+        // Присваиваем значения
         ADMIN_ID = config.adminId;
         MAP_KEY = config.mapKey;
         IMGBB_API_KEY = config.imgbbKey;
@@ -1882,10 +1881,33 @@ async function loadConfig() {
         return true;
     } catch (error) {
         console.error('❌ ОШИБКА ЗАГРУЗКИ КОНФИГУРАЦИИ:', error);
+        
+        // Показываем понятное сообщение пользователю
+        const appElement = document.getElementById('app');
+        if (appElement) {
+            appElement.innerHTML = `
+                <div style="text-align:center; padding:50px; font-family: Montserrat;">
+                    <h2 style="color: #ff3b30;">❌ Ошибка подключения</h2>
+                    <p style="margin: 20px 0;">Не удалось загрузить конфигурацию с сервера.</p>
+                    <p style="font-size: 14px; color: #666;">
+                        Проверьте:<br>
+                        1. Запущен ли сервер на Reg.ru<br>
+                        2. Доступен ли порт 8081<br>
+                        3. Правильный ли IP адрес: ${CONFIG_URL}
+                    </p>
+                    <button onclick="location.reload()" 
+                            style="background: #000; color: #fff; border: none; 
+                                   padding: 15px 30px; margin-top: 20px; 
+                                   font-weight: 800; cursor: pointer;">
+                        🔄 ПОВТОРИТЬ
+                    </button>
+                </div>
+            `;
+        }
+        
         return false;
     }
 }
-
 // Функция запуска Vue приложения
 function startVueApp() {
     console.log('=== ЗАПУСК VUE ПРИЛОЖЕНИЯ ===');
