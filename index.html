@@ -1827,7 +1827,7 @@
     } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
-const CONFIG_URL = 'http://89.108.113.230:8081/config.json';
+const CONFIG_URL = 'http://89.108.113.230/config.json';  // Добавить .json  // БЕЗ :8080
 let ADMIN_ID = null;
 let MAP_KEY = null;
 let IMGBB_API_KEY = null;
@@ -2035,7 +2035,6 @@ function startVueApp() {
                         favorites: JSON.parse(localStorage.getItem('naran_favs_v3') || '[]'),
                         user: {},
                         isAdmin: false,
-                        adminIds: [window.ADMIN_ID],
                         selP: false,
                         currentVariantIndex: 0,
                         deliv: '',
@@ -5078,7 +5077,7 @@ updateChart() {
         console.log('🔄 Копируем adminId из window');
         this.adminId = window.ADMIN_ID;
         // Обновляем adminIds
-        this.adminIds = [this.adminId];
+        this.adminId = [this.adminId];
     }
     
     if (!this.mapKey && window.MAP_KEY) {
@@ -5126,7 +5125,7 @@ updateChart() {
     console.log('User:', this.user);
     
     // 3. Проверка админа
-    this.isAdmin = this.adminIds.includes(Number(this.user.id));
+    this.isAdmin = this.adminId.includes(Number(this.user.id));
     console.log('Is admin:', this.isAdmin);
     
     // 4. Восстановление из localStorage
