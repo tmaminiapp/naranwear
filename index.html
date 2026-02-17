@@ -1827,7 +1827,7 @@
     } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
-const CONFIG_URL = 'http://89.108.113.230:8080/config.json';// Добавить .json  // БЕЗ :8080
+const CONFIG_URL = 'config.json';
 let ADMIN_ID = null;
 let MAP_KEY = null;
 let IMGBB_API_KEY = null;
@@ -5125,8 +5125,19 @@ updateChart() {
     console.log('User:', this.user);
     
     // 3. Проверка админа
+   if (typeof this.adminId === 'number') {
+    this.isAdmin = (this.adminId === Number(this.user.id));
+} 
+// Если adminId - массив, используем includes
+else if (Array.isArray(this.adminId)) {
     this.isAdmin = this.adminId.includes(Number(this.user.id));
-    console.log('Is admin:', this.isAdmin);
+} 
+// Иначе false
+else {
+    this.isAdmin = false;
+}
+console.log('Is admin:', this.isAdmin, 'Admin ID:', this.adminId, 'User ID:', this.user.id);
+
     
     // 4. Восстановление из localStorage
     const savedAddr = localStorage.getItem('naran_last_addr');
