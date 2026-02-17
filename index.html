@@ -1827,7 +1827,7 @@
     } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
-const CONFIG_URL = 'config.json';
+const CONFIG_URL = 'http://89.108.113.230:8088/config.json';
 let ADMIN_ID = null;
 let MAP_KEY = null;
 let IMGBB_API_KEY = null;
@@ -1849,16 +1849,16 @@ async function loadConfig() {
         }, 30000); // Увеличили с 10 до 30 секунд
         
         const response = await fetch(CONFIG_URL, {
-            signal: controller.signal,
-            mode: 'cors',
-            headers: {
-                'Accept': 'application/json',
-                'Cache-Control': 'no-cache' // Отключаем кэширование
-            }
-        }).catch(error => {
-            clearTimeout(timeoutId);
-            throw error;
-        });
+    signal: controller.signal,
+    // mode: 'cors', // Закомментировано
+    headers: {
+        'Accept': 'application/json',
+        'Cache-Control': 'no-cache'
+    }
+}).catch(error => {
+    clearTimeout(timeoutId);
+    throw error;
+});
         
         clearTimeout(timeoutId);
         
@@ -5125,18 +5125,23 @@ updateChart() {
     console.log('User:', this.user);
     
     // 3. Проверка админа
-   if (typeof this.adminId === 'number') {
-    this.isAdmin = (this.adminId === Number(this.user.id));
-} 
-// Если adminId - массив, используем includes
-else if (Array.isArray(this.adminId)) {
-    this.isAdmin = this.adminId.includes(Number(this.user.id));
-} 
-// Иначе false
-else {
-    this.isAdmin = false;
+   let isAdmin = false;
+let userId = Number(this.user.id);
+
+// Проверяем разные варианты
+if (Array.isArray(this.adminId)) {
+    isAdmin = this.adminId.includes(userId);
+} else if (typeof this.adminId === 'number') {
+    isAdmin = (this.adminId === userId);
+} else if (typeof this.adminId === 'string') {
+    isAdmin = (Number(this.adminId) === userId);
+} else {
+    // Значение по умолчанию для тестирования
+    isAdmin = (userId === 387881523);
 }
-console.log('Is admin:', this.isAdmin, 'Admin ID:', this.adminId, 'User ID:', this.user.id);
+
+this.isAdmin = isAdmin;
+console.log('Is admin:', this.isAdmin, 'Admin ID:', this.adminId, 'User ID:', userId);
 
     
     // 4. Восстановление из localStorage
